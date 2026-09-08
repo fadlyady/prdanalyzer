@@ -1,0 +1,430 @@
+Product Requirements: Chat Flow Orchestration
+Product Manager: Elsa Vinietta
+Engineering Manager: Rizky Nuredja
+Stakeholders: Mochamad Taufiq HidayahSabila Nurul FauziahTommy Saputra
+Launch Date (target): Jul 21, 2026
+Link to PM Tool: https://project-roadmap.evermosa2z.com/public/projects/2673056
+Version History
+
+--- TABLE START ---
+Version | Date Change | Changelog Summary
+v0.1 | May 29, 2026 | Initial Document
+--- TABLE END ---
+
+Version
+Date Change
+Changelog Summary
+v0.1
+May 29, 2026
+Initial Document
+Approval
+
+--- TABLE START ---
+Created by | Elsa Vinietta(PM) | 
+Reviewed by | M. Reza Mahdar(HoP) | 
+ | Mochamad Taufiq Hidayah(Requestor/Saas Business Ops) | 
+Acknowledge by | Rizky Nuredja(EM) | 
+ | Gaby Satria Perdana(Design) | 
+ | Irfan Septiyana Putra(Data) | 
+ | Muhammad Ikhsan Firmansyah(CIS) | 
+ | Rivo Akbar Maulana Suwasdinar(Finance) | 
+Approved by | A. Afriadi Alamsyah(VP Product & Engineering) | 
+ | Tommy Saputra(Business Managed Services) | 
+--- TABLE END ---
+
+Created by
+Elsa Vinietta(PM)
+Reviewed by
+M. Reza Mahdar(HoP)
+Mochamad Taufiq Hidayah(Requestor/Saas Business Ops)
+Acknowledge by
+Rizky Nuredja(EM)
+Gaby Satria Perdana(Design)
+Irfan Septiyana Putra(Data)
+Muhammad Ikhsan Firmansyah(CIS)
+Rivo Akbar Maulana Suwasdinar(Finance)
+Approved by
+A. Afriadi Alamsyah(VP Product & Engineering)
+Tommy Saputra(Business Managed Services)
+Requirements
+Design/Mockup/User Flow
+Pengaturan Alur Chat here
+User Stories
+Reference deckEverpro Chat Agentic Agentic AI || Everpro Chat by Evermos
+Orchestrator Concept Inbound Chat Orchestration || Everpro Chat by Evermos
+
+--- TABLE START ---
+No | User Story | Acceptance Criteria | Design
+1 | As an owner/supervisor, I want to view the “Pengaturan Alur Chat” list with update columns so that I can understand end-to-end flow of each first chat trigger combinations at a glance | AC1 [Chat Flow] Rename “Chat Automation” FeatureGiven I am Everpro userWhen I logged inThen I can see “Pengaturan Alur Chat” feature replacing formerly “Automasi” featureWhen I click the “Pengaturan Alur Chat” menuThen the feature will be opened and the title of the page will also be “Pengaturan Alur Chat”AC2 [Chat Flow] View updated chat flow list columnsGiven I am an owner/supervisorWhen I open the “Pengaturan Chat Masuk” menuThen I can see the “flow” list table with the following columns:NameAssigned to phone numberLead source {CTWA, LPWA, Balasan broadcast, Organic} single or multipleKeyword source {Default/custom}First responders {Human Agent, AI Agent, or Template}Involve human from the start of conversation {checklist Y/N}Active/inactive {toggle Y/N} | AC1AC2
+2 | As an owner/supervisor, I want to evaluate all my chat configurations in one place:  “chat flow/automation” | AC1 [Chat Flow] Primary default flow (Source = default, Keyword = default) initial conditionGiven I have just finished onboard new number “123” and have not configured anything yet related to that numberThen by default the system will provide “primary default” flow in “chat flow/automation” menu   And the “primary default” flow initial values will be:Name: Tim CS default flowPhone number: 123Source: defaultKeyword: defaultFirst response: Human agentInvolve human from the start: yesActive: yesResponse: transfer directly to “primary” division (divisi utama)   And the “primary default” flow can not be modified or deactivated from chat flow/automation menu   And the “primary default” flow can not be deletedGiven phone number “123” is deleted from my accountThen the “primary default” flow will also be deletedAC2 [Chat Flow] Primary default flow - AI Agent activeGiven “AI Agent A” assigned to phone number “123”When I set the “AI Autoreply (agentic)” toggle to onThen the “primary default” flow will be overridden by these values:Name: AI Agent A default flowPhone number: 123Source: defaultKeyword: defaultFirst response: AI AgentInvolve human from the start: noActive: yesResponse: transfer directly to AI Agent A   And the “primary default” flow can not be modified or deactivated from chat flow/automation menu   And the “primary default” flow can not be deletedWhen I set the “AI Autoreply (agentic)”toggle back to offThen the “primary default” flow will be overridden by these values:Name: Tim CS default flowPhone number: 123Source: defaultKeyword: defaultFirst response: Human agentInvolve human from the start: yesActive: yesResponse: transfer directly to “primary” division (divisi utama)   And the “primary default” flow can not be modified or deactivated from chat flow/automation menu   And the “primary default” flow can not be deletedAC3 [Chat Flow] Prevent different response from the same first trigger combinationGiven I am creating new “flow” from “Chat flow” menuWhen the newly created “flow B” is assigned with the exact same “first trigger combination” (Phone number AND Source AND Keyword) as existing “flow A” in “Chat flow list”Then the system will prevent me to save the newly created “flow B” with error message “flow with Phone number X, source Y, and Keyword Z is already exist”AC4 [Chat Flow] Prioritize source over keywordGiven these chat flows/automations are assigned to phone number “123”NameSourceKeywordTim CS default flow(primary default)defaultdefaultXdefaultAYBdefaultZCDZ default keywordCdefaultWhen there is incoming chat withSource BKeyword AThen the flow “Y” will be executedGiven these chat flows/automations are assigned to phone number “123”NameSourceKeywordAI Agent default flow(primary default)defaultdefaultXdefaultAWhen there is incoming chat withSource BKeyword AThen the flow “X” will be executedAC5 [Chat Flow] Handover probabilities within 1 “chat flow/automation”Given I am configuring a “chat flow/automation”When current card is “template”Then I will be able to select transfer destination to human or AI AgentWhen current card is “AI Agent”Then I will be able to select transfer destination to human AgentAC6 [Chat Flow] Custom keyword - “Chat flow/automation” Given I create “chat flow/automation Z” on phone number “123”   And the source is “C”Then I will be able to toggle on the “use keyword”   And I will be able to input group of keyword that will trigger “chat flow/automation Z”   And I will be able to configure the responseWhen I click saveThen a new “Chat flow/automation Z” with custom keyword will be created  AC7 [Chat Flow] Custom keyword - “Chat flow/automation” default keyword pairGiven I create “chat flow/automation Z” on phone number “123”   And the source is “C”   And the keyword is custom with value “D”Then the system will automatically create a default keyword pair for “chat flow/automation Z”   And the initial value will be:Name: Z - default keywordPhone number: 123Source: CKeyword: defaultFirst response: Human agentInvolve human from the start: yesActive: yesResponse: transfer directly to “primary” division (divisi utama)When I want to modify “chat flow/automation Z - default keyword”Then this parameters will be able to be modifiedResponse (visual builder)   And these parameters will not be able to be modified directlyNamePhone numberSourceKeywordActivation statusWhen I delete chat flow/automation Z   Or when I set chat flow/automation Z  custom keyword toggle back to offThen the “chat flow/automation Z - default keyword” will be deletedWhen I set the “chat flow/automation Z” status to active/inactiveThen the “chat flow/automation Z - default keyword” will be updated to the same valueWhen there is incoming chat withSource CKeyword EThen the flow “Z - default keyword” will be executed | Name | Source | Keyword | Tim CS default flow(primary default) | default | default | X | default | A | Y | B | default | Z | C | D | Z default keyword | C | default | Name | Source | Keyword | AI Agent default flow(primary default) | default | default | X | default | A | AC1, 2, 3, 4AC5AC6, 7
+Name | Source | Keyword
+Tim CS default flow(primary default) | default | default
+X | default | A
+Y | B | default
+Z | C | D
+Z default keyword | C | default
+Name | Source | Keyword
+AI Agent default flow(primary default) | default | default
+X | default | A
+3 | As an owner/supervisor, I want to quickly activate my AI Agent through AI Agent menu without complex setup | AC1 [AI Agent] List of AgentsGiven I am an owner/supervisorWhen I am on “list of agent” menuThen I can see “configuration” button on each agentWhen I click “configuration” menuThen I can see agent configuration form with following tabs:Basic InfoKnowledgeCommunication StyleAC2 [AI Agent] Assign one phone numberGiven I am an owner/supervisorWhen I open one of AI agent configuration “AI agent A”   And click “select Whatsapp number”Then I can assign “AI agent A” to one of registered phone numberGiven “AI agent A” has already assigned to phone number “123”When I click “select Whatsapp number”Then I can replace phone number “123” with other phone number   But I can not add multiple phone numberAC3 [AI Agent] System prioritize chat configuration on “Chat Flow/Automation” over “AI agent”Given in menu “Chat flow/Automation” there is already a listed “chat flow/automation X” assigned to phone number “123” with trigger source “A” and “B”When  I assign “AI agent A” to phone number “123”   And toggle on the “AI Auto-reply (Agentic)” optionThen there is a warning message stating that “New chat with matching conditions will follow the first  response defined in “Chat flow/Automation. “AI agent A” can still serve the chat if defined as a transfer destination.”When there is incoming chat to phone number “123” with source “A” or “B”Then system will execute response as defined in “chat flow/automation X”When there is incoming chat to phone number “123” with source “C”Then the system will assign “AI agent A” to handle the chat | AC1AC2AC3
+4 | As an owner/supervisor, I want to set transfer condition to human agent from my AI agent | AC1 [AI Agent] AI Agent - Set transfer conditions is mandatoryGiven I am an owner/supervisor   And I am on AI Agent configuration menuWhen the AI Auto-reply (Agentic) toggle is onThen the transfer condition section will appear   And I will be required to define intent and handover action to human agent (division or personal)AC2 [AI Agent] AI Agent - FallbackGiven I am an owner/supervisor   And I am on AI Agent configuration menuWhen the AI Auto-reply (Agentic) toggle is onThen the fallback section will appear   And I will be required to select handover destination when fallback conditions happen:Customer chat with undefined intent compared toDomain knowledge; andTransfer condition intentAI service is disruptedAI credit exhaustedAI Repetitive Prevention2x similar response from AI | AC1AC2[tba]
+5 | As an owner/supervisor, I want AI Agent settings in “AI Agent” and “Chat Flow” to always show aligned configuration | AC1 [AI Agent -> Chat Flow] Warning when an AI Agent toggle set to off or unassigned from a phone numberGiven there is “chat flow/automation X” on phone number “123” with “AI Agent A” involved (as first responder or not)When I want to set “AI Autoreply (Agentic)” toggle to off in “AI Agent A configuration” menu   Or I want to unassign “AI Agent A” from phone number “123”Then the system will give me a warning message: “this AI Agent A is involved in chat flow/automation X, continue?”When I click “yes”Then the system will allow me to toggle off the AI Agent or unassign AI agent from phone number   And the “chat flow/automation X” will be left as it is (with AI agent still involved but inactive)AC2 [Chat Flow -> AI Agent] Prevent re-activation a broken chat flow/automation due to AI Agent absenceGiven there is a “chat flow/automation X” with status “deactive”When I want to activate the “chat flow/automation X”Then the system will check the flow integrity firstWhen any of these conditions occurs:The chat flow involves an inactive AI AgentThe chat flow involves an AI Agent that its phone number assignment has been removedThen the system will prevent the automation to be reactivated   And an error message indicating the reason will appear | AC1, 2AC3
+6 | As an owner/supervisor, I want to access the new rearranged human agent menu so that I can get clarity of the feature functions | AC1 [Human Agent Menu Group] Show Daftar Agen submenu under Human Agen/ Tim CS menuGiven I am an owner/supervisorWhen I open the “Human Agent/Tim CS”menuThen I can see the submenusDaftar Tim CSDivisiJam kerjaPengaturan distribusi pesanAC2 [Distribution Management] Rename menu and preserve existing users’ configurationGiven I have existing distribution configuration (sticky, idle, distribution proportion)When the changes deployedThen I can see the menu name has changed from “Pengaturan Chat Masuk” to “Pengaturan Distribusi Pesan”   And my previous distribution configuration will remain unchanged | AC1AC2
+7 | As an owner/supervisor, I want Human Agent setting aligned with chat flow/orchestration menu | AC1 [Human Agent & Chat Flow] Keyword distribution configured in “chat flow/automation” form instead of in “distribution” menuGiven I am an owner/supervisor   And I am on “Tim CS - Pengaturan distribusi pesan” menu for phone number “123”When I want to configure distribution to division based on keywordThen I will be redirected to “chat flow/automation” menu   And new “chat flow/automation” form will be opened   And following parameters will have been prefilled and will not be able to be modified:WABA/phone number: “123”   And I can configure:SourceList of keywordResponseWhen I click “save”Then a new “chat flow/automation” will be created according to my configuration   And the “Source” of the new “chat flow/automation” will be “default”   And the “Keyword” of the new “chat flow/automation” will be “custom”AC2 [Human Agent & Chat Flow] Handle previously saved “distribution” data after changes deployedGiven I have saved 5 pairs of custom distribution (keyword group vs division target pairs)When the new “chat flow/automation” journey deployedThen on my “chat flow/automation” list there will be 5 “chat flows/automations” representing my previously with following values:Name: “CS Custom distribution [n]” n=1, 2, 3, 4, 5Source: defaultKeyword: custom   And each keyword group - division pair will be mapped to each “chat flows/automations”AC3 [Human Agent & Chat Flow] Updated distribution menu if keyword distribution activeGiven there is a “chat flow/automation” other than primary default on phone number “123”When I open “distribution” menu for phone number “123”Then the system will show that “distribution custom” is activeGiven there is no “chat flow/automation” other than primary defaultWhen I open “distribution” menuThen the system will show that “distribution default” is active | AC1 - Initial conditionAC1 - After click “Buka Automasi”AC3
+8 | As an owner/supervisor, I want to configure handover from Chat Automation template to AI Agent through the Chat Flow visual builder, so that template-based conversations can continue to the right AI Agent. | AC1 [Chat Flow] Show AI Agent handover option from template cardGiven I am an owner/supervisorWhen I open the Chat Flow menu   And I select a template card in the visual builderThen I can see an option to handover the conversation to AI Agent   And I can choose whether to handover to:New AI Agent cardExisting AI Agent cardAnd the handover configuration is managed from the Chat Flow visual builderAC2 [Chat Flow] Handover from template to new AI Agent cardGiven I am an owner/supervisor   And I select a template card in the Chat Flow Visual BuilderWhen I choose to handover to a new AI Agent cardThen the system will call AI Agent creation form from in the Chat Flow Visual Builder   And I can configure name, role, goals, description, transfer condition, and fallback   But I will not be able to change phone number or switch toggle AI Auto-reply (agentic) to“ offWhen I click saveThen the new AI Agent card will be connected as the next destination after the selected template card   And I can configure the required AI Agent settings from the new AI Agent card   And the connection is saved as part of the Chat Flow configurationAC3 [Chat Flow] Handover from template to existing AI Agent cardGiven I am an owner/supervisor   And there is at least one existing AI Agent card in the Chat Flow Visual BuilderWhen I select a template card   And I choose to handover to an existing AI Agent cardThen I can select one existing AI Agent card as the handover destination   And the system connects the selected template card to the selected AI Agent card   And the system does not create a duplicate AI Agent card   And the connection is saved as part of the Chat Flow configurationAC4 [Chat Flow] Execute handover from template to AI AgentGiven a customer conversation is currently handled by a Chat Automation template   And the template has AI Agent as the configured next destinationWhen the conversation reaches the configured handover pointThen the system transfers the conversation to the selected AI Agent card   And the selected AI Agent continues the conversation using the available conversation context   And the Chat Automation template stops running for that conversation   And the active handler status is updated in the Chat RoomAC5 [Chat Flow] Prevent inactive AI Agent handover destinationGiven I am an owner/supervisorWhen I configure template handover to AI Agent   And I select “existing AI Agent”   And the selected existing “AI Agent A” is inactiveThen the system will give warning “this action will activate AI Agent A, continue?”When I click “Yes”Then the system will force “AI Agent A” status to “active”   And I will be able to save the configured chat flow | AC1AC2
+9 | As an owner/supervisor/agent, I want messages from Template, AI Agent, and Human Agent to have different bubbles in the Chat Room, so that I can clearly identify who or what sent each message in a conversation. | AC1 [Chat Room] Show different bubble for Template messageGiven I am an owner/supervisor/agentWhen I open a conversation in Chat Room   And the conversation contains a message sent by TemplateThen the system shows the message using the Template bubble style   And the message clearly indicates that it was sent by Template   And the Template bubble is visually different from AI Agent and Human Agent bubblesAC2 [Chat Room] Show different bubble for AI Agent messageGiven I am an owner/supervisor/agentWhen I open a conversation in Chat Room   And the conversation contains a message sent by AI AgentThen the system shows the message using the AI Agent bubble style   And the message clearly indicates that it was sent by AI Agent   And the AI Agent bubble is visually different from Template and Human Agent bubblesAC3 [Chat Room] Show different bubble for Human Agent messageGiven I am an owner/supervisor/agentWhen I open a conversation in Chat Room   And the conversation contains a message sent by Human AgentThen the system shows the message using the Human Agent bubble style   And the message clearly indicates that it was sent by Human Agent   And the Human Agent bubble is visually different from Template and AI Agent bubblesAC4 [Chat Room] Show sender information in message bubbleGiven I am an owner/supervisor/agentWhen I view messages in Chat RoomThen each outgoing message bubble shows the sender type   And the sender type can be:TemplateAI AgentHuman AgentWhen the message is sent by AI AgentThen the bubble can show the AI Agent nameWhen the message is sent by Human AgentThen the bubble can show the Human Agent nameAC5 [Chat Room] Keep customer message bubble unchangedGiven I am an owner/supervisor/agentWhen I open a conversation in Chat Room   And the conversation contains messages from the customerThen the customer message bubble remains unchanged   And the customer message bubble is visually different from Template, AI Agent, and Human Agent bubblesAC6 [Chat Room] Preserve bubble type in conversation historyGiven a conversation has messages sent by Template, AI Agent, or Human AgentWhen I reopen the conversation historyThen the system still shows the correct bubble type for each message   And the sender type does not change after the conversation is transferred to another handler | AC1, 2, 3, 4, 5
+10 | As an owner/supervisor/agent, I want to take over the active AI Agent/ automation for a specific conversation from the Chat Room, so that I continue the conversation manually when needed | AC1 [Chat Room] Show turn off flow action for active Chat Flow conversationGiven I am an owner/supervisor/agent   And a conversation is currently handled by an active Chat FlowWhen I open the conversation in Chat RoomThen I can see an action to turn off the flow for that conversation   And the action is only available for users with permission to manage the conversationAC2 [Chat Room] Turn off flow for selected conversationGiven I am an owner/supervisor/agent   And a conversation is currently handled by an active Chat FlowWhen I click the turn off flow action within the Chat RoomThen the system turns off the active Chat Flow for that specific conversation   And the flow stops sending automated responses for that conversation   And the flow stops moving the conversation to the next card in the Chat Flow   And the conversation remains visible in Chat RoomAC3 [Chat Room] Allow Human Agent to handle conversation after flow is turned offGiven the active Chat Flow has been turned off for a conversationWhen I open the conversation in Chat RoomThen a Human Agent can reply manually to the customer   And the automated handler does not respond again in that conversation   And the active handler status is updated in Chat RoomAC4 [Chat Room] Prevent automated trigger after flow is turned offGiven the active Chat Flow has been turned off for a conversationWhen the customer sends a new message that matches an automation, AI Agent, or handover conditionThen the system does not trigger the turned off flow again for that conversation   And the conversation remains under manual handling of an Human AgentAC5 [Chat Room] Hide overlay button after takeoverGiven I have taken over a conversation from AI AgentWhen the takeover is completedThen the Ambil Alih Chat button is no longer shown for that conversation   And the conversation can be handled manually by Human Agent   And the Human Agent is able to type within the Chat Room   And the AI Agent/automation template does not continue responding | AC1, 2, 3, 4, 5
+--- TABLE END ---
+
+No
+User Story
+Acceptance Criteria
+Design
+1
+As an owner/supervisor, I want to view the “Pengaturan Alur Chat” list with update columns so that I can understand end-to-end flow of each first chat trigger combinations at a glance
+AC1 [Chat Flow] Rename “Chat Automation” Feature
+Given I am Everpro user
+When I logged in
+Then I can see “Pengaturan Alur Chat” feature replacing formerly “Automasi” feature
+When I click the “Pengaturan Alur Chat” menu
+Then the feature will be opened and the title of the page will also be “Pengaturan Alur Chat”
+AC2 [Chat Flow] View updated chat flow list columns
+Given I am an owner/supervisor
+When I open the “Pengaturan Chat Masuk” menu
+Then I can see the “flow” list table with the following columns:
+Name
+Assigned to phone number
+Lead source {CTWA, LPWA, Balasan broadcast, Organic} single or multiple
+Keyword source {Default/custom}
+First responders {Human Agent, AI Agent, or Template}
+Involve human from the start of conversation {checklist Y/N}
+Active/inactive {toggle Y/N}
+ 
+AC1
+AC2
+2
+As an owner/supervisor, I want to evaluate all my chat configurations in one place:  “chat flow/automation”
+AC1 [Chat Flow] Primary default flow (Source = default, Keyword = default) initial condition
+Given I have just finished onboard new number “123” and have not configured anything yet related to that number
+Then by default the system will provide “primary default” flow in “chat flow/automation” menu
+   And the “primary default” flow initial values will be:
+Name: Tim CS default flow
+Phone number: 123
+Source: default
+Keyword: default
+First response: Human agent
+Involve human from the start: yes
+Active: yes
+Response: transfer directly to “primary” division (divisi utama)
+   And the “primary default” flow can not be modified or deactivated from chat flow/automation menu
+   And the “primary default” flow can not be deleted
+Given phone number “123” is deleted from my account
+Then the “primary default” flow will also be deleted
+AC2 [Chat Flow] Primary default flow - AI Agent active
+Given “AI Agent A” assigned to phone number “123”
+When I set the “AI Autoreply (agentic)” toggle to on
+Then the “primary default” flow will be overridden by these values:
+Name: AI Agent A default flow
+Phone number: 123
+Source: default
+Keyword: default
+First response: AI Agent
+Involve human from the start: no
+Active: yes
+Response: transfer directly to AI Agent A
+   And the “primary default” flow can not be modified or deactivated from chat flow/automation menu
+   And the “primary default” flow can not be deleted
+When I set the “AI Autoreply (agentic)”toggle back to off
+Then the “primary default” flow will be overridden by these values:
+Name: Tim CS default flow
+Phone number: 123
+Source: default
+Keyword: default
+First response: Human agent
+Involve human from the start: yes
+Active: yes
+Response: transfer directly to “primary” division (divisi utama)
+   And the “primary default” flow can not be modified or deactivated from chat flow/automation menu
+   And the “primary default” flow can not be deleted
+AC3 [Chat Flow] Prevent different response from the same first trigger combination
+Given I am creating new “flow” from “Chat flow” menu
+When the newly created “flow B” is assigned with the exact same “first trigger combination” (Phone number AND Source AND Keyword) as existing “flow A” in “Chat flow list”
+Then the system will prevent me to save the newly created “flow B” with error message “flow with Phone number X, source Y, and Keyword Z is already exist”
+AC4 [Chat Flow] Prioritize source over keyword
+Given these chat flows/automations are assigned to phone number “123”
+
+--- TABLE START ---
+Name | Source | Keyword
+Tim CS default flow(primary default) | default | default
+X | default | A
+Y | B | default
+Z | C | D
+Z default keyword | C | default
+--- TABLE END ---
+
+Name
+Source
+Keyword
+Tim CS default flow
+(primary default)
+default
+default
+X
+default
+A
+Y
+B
+default
+Z
+C
+D
+Z default keyword
+C
+default
+When there is incoming chat with
+Source B
+Keyword A
+Then the flow “Y” will be executed
+Given these chat flows/automations are assigned to phone number “123”
+
+--- TABLE START ---
+Name | Source | Keyword
+AI Agent default flow(primary default) | default | default
+X | default | A
+--- TABLE END ---
+
+Name
+Source
+Keyword
+AI Agent default flow
+(primary default)
+default
+default
+X
+default
+A
+When there is incoming chat with
+Source B
+Keyword A
+Then the flow “X” will be executed
+AC5 [Chat Flow] Handover probabilities within 1 “chat flow/automation”
+Given I am configuring a “chat flow/automation”
+When current card is “template”
+Then I will be able to select transfer destination to human or AI Agent
+When current card is “AI Agent”
+Then I will be able to select transfer destination to human Agent
+AC6 [Chat Flow] Custom keyword - “Chat flow/automation” 
+Given I create “chat flow/automation Z” on phone number “123”
+   And the source is “C”
+Then I will be able to toggle on the “use keyword”
+   And I will be able to input group of keyword that will trigger “chat flow/automation Z”
+   And I will be able to configure the response
+When I click save
+Then a new “Chat flow/automation Z” with custom keyword will be created 
+ 
+AC7 [Chat Flow] Custom keyword - “Chat flow/automation” default keyword pair
+Given I create “chat flow/automation Z” on phone number “123”
+   And the source is “C”
+   And the keyword is custom with value “D”
+Then the system will automatically create a default keyword pair for “chat flow/automation Z”
+   And the initial value will be:
+Name: Z - default keyword
+Phone number: 123
+Source: C
+Keyword: default
+First response: Human agent
+Involve human from the start: yes
+Active: yes
+Response: transfer directly to “primary” division (divisi utama)
+When I want to modify “chat flow/automation Z - default keyword”
+Then this parameters will be able to be modified
+Response (visual builder)
+   And these parameters will not be able to be modified directly
+Name
+Phone number
+Source
+Keyword
+Activation status
+When I delete chat flow/automation Z
+   Or when I set chat flow/automation Z  custom keyword toggle back to off
+Then the “chat flow/automation Z - default keyword” will be deleted
+When I set the “chat flow/automation Z” status to active/inactive
+Then the “chat flow/automation Z - default keyword” will be updated to the same value
+When there is incoming chat with
+Source C
+Keyword E
+Then the flow “Z - default keyword” will be executed
+AC1, 2, 3, 4
+AC5
+AC6, 7
+3
+As an owner/supervisor, I want to quickly activate my AI Agent through AI Agent menu without complex setup
+AC1 [AI Agent] List of Agents
+Given I am an owner/supervisor
+When I am on “list of agent” menu
+Then I can see “configuration” button on each agent
+When I click “configuration” menu
+Then I can see agent configuration form with following tabs:
+Basic Info
+Knowledge
+Communication Style
+AC2 [AI Agent] Assign one phone number
+Given I am an owner/supervisor
+When I open one of AI agent configuration “AI agent A”
+   And click “select Whatsapp number”
+Then I can assign “AI agent A” to one of registered phone number
+Given “AI agent A” has already assigned to phone number “123”
+When I click “select Whatsapp number”
+Then I can replace phone number “123” with other phone number
+   But I can not add multiple phone number
+AC3 [AI Agent] System prioritize chat configuration on “Chat Flow/Automation” over “AI agent”
+Given in menu “Chat flow/Automation” there is already a listed “chat flow/automation X” assigned to phone number “123” with trigger source “A” and “B”
+When  I assign “AI agent A” to phone number “123”
+   And toggle on the “AI Auto-reply (Agentic)” option
+Then there is a warning message stating that “New chat with matching conditions will follow the first  response defined in “Chat flow/Automation. “AI agent A” can still serve the chat if defined as a transfer destination.”
+When there is incoming chat to phone number “123” with source “A” or “B”
+Then system will execute response as defined in “chat flow/automation X”
+When there is incoming chat to phone number “123” with source “C”
+Then the system will assign “AI agent A” to handle the chat
+AC1
+AC2
+AC3
+4
+As an owner/supervisor, I want to set transfer condition to human agent from my AI agent
+AC1 [AI Agent] AI Agent - Set transfer conditions is mandatory
+Given I am an owner/supervisor
+   And I am on AI Agent configuration menu
+When the AI Auto-reply (Agentic) toggle is on
+Then the transfer condition section will appear
+   And I will be required to define intent and handover action to human agent (division or personal)
+AC2 [AI Agent] AI Agent - Fallback
+Given I am an owner/supervisor
+   And I am on AI Agent configuration menu
+When the AI Auto-reply (Agentic) toggle is on
+Then the fallback section will appear
+   And I will be required to select handover destination when fallback conditions happen:
+Customer chat with undefined intent compared to
+Domain knowledge; and
+Transfer condition intent
+AI service is disrupted
+AI credit exhausted
+AI Repetitive Prevention
+2x similar response from AI
+AC1
+AC2
+[tba]
+5
+As an owner/supervisor, I want AI Agent settings in “AI Agent” and “Chat Flow” to always show aligned configuration 
+AC1 [AI Agent -> Chat Flow] Warning when an AI Agent toggle set to off or unassigned from a phone number
+Given there is “chat flow/automation X” on phone number “123” with “AI Agent A” involved (as first responder or not)
+When I want to set “AI Autoreply (Agentic)” toggle to off in “AI Agent A configuration” menu
+   Or I want to unassign “AI Agent A” from phone number “123”
+Then the system will give me a warning message: “this AI Agent A is involved in chat flow/automation X, continue?”
+When I click “yes”
+Then the system will allow me to toggle off the AI Agent or unassign AI agent from phone number
+   And the “chat flow/automation X” will be left as it is (with AI agent still involved but inactive)
+AC2 [Chat Flow -> AI Agent] Prevent re-activation a broken chat flow/automation due to AI Agent absence
+Given there is a “chat flow/automation X” with status “deactive”
+When I want to activate the “chat flow/automation X”
+Then the system will check the flow integrity first
+When any of these conditions occurs:
+The chat flow involves an inactive AI Agent
+The chat flow involves an AI Agent that its phone number assignment has been removed
+Then the system will prevent the automation to be reactivated
+   And an error message indicating the reason will appear
+AC1, 2
+AC3
+6
+As an owner/supervisor, I want to access the new rearranged human agent menu so that I can get clarity of the feature functions
+AC1 [Human Agent Menu Group] Show Daftar Agen submenu under Human Agen/ Tim CS menuGiven I am an owner/supervisorWhen I open the “Human Agent/Tim CS”menuThen I can see the submenus
+Daftar Tim CS
+Divisi
+Jam kerja
+Pengaturan distribusi pesan
+AC2 [Distribution Management] Rename menu and preserve existing users’ configuration
+Given I have existing distribution configuration (sticky, idle, distribution proportion)
+When the changes deployed
+Then I can see the menu name has changed from “Pengaturan Chat Masuk” to “Pengaturan Distribusi Pesan”
+   And my previous distribution configuration will remain unchanged
+AC1
+AC2
+7
+As an owner/supervisor, I want Human Agent setting aligned with chat flow/orchestration menu
+AC1 [Human Agent & Chat Flow] Keyword distribution configured in “chat flow/automation” form instead of in “distribution” menuGiven I am an owner/supervisor
+   And I am on “Tim CS - Pengaturan distribusi pesan” menu for phone number “123”
+When I want to configure distribution to division based on keyword
+Then I will be redirected to “chat flow/automation” menu
+   And new “chat flow/automation” form will be opened
+   And following parameters will have been prefilled and will not be able to be modified:
+WABA/phone number: “123”
+   And I can configure:
+Source
+List of keyword
+Response
+When I click “save”
+Then a new “chat flow/automation” will be created according to my configuration
+   And the “Source” of the new “chat flow/automation” will be “default”
+   And the “Keyword” of the new “chat flow/automation” will be “custom”
+AC2 [Human Agent & Chat Flow] Handle previously saved “distribution” data after changes deployed
+Given I have saved 5 pairs of custom distribution (keyword group vs division target pairs)
+When the new “chat flow/automation” journey deployed
+Then on my “chat flow/automation” list there will be 5 “chat flows/automations” representing my previously with following values:
+Name: “CS Custom distribution [n]” n=1, 2, 3, 4, 5
+Source: default
+Keyword: custom
+   And each keyword group - division pair will be mapped to each “chat flows/automations”
+AC3 [Human Agent & Chat Flow] Updated distribution menu if keyword distribution active
+Given there is a “chat flow/automation” other than primary default on phone number “123”
+When I open “distribution” menu for phone number “123”
+Then the system will show that “distribution custom” is active
+Given there is no “chat flow/automation” other than primary default
+When I open “distribution” menu
+Then the system will show that “distribution default” is active
+AC1 - Initial condition
+AC1 - After click “Buka Automasi”
+AC3
+8
+As an owner/supervisor, I want to configure handover from Chat Automation template to AI Agent through the Chat Flow visual builder, so that template-based conversations can continue to the right AI Agent.
+AC1 [Chat Flow] Show AI Agent handover option from template cardGiven I am an owner/supervisorWhen I open the Chat Flow menu   And I select a template card in the visual builderThen I can see an option to handover the conversation to AI Agent   And I can choose whether to handover to:
+New AI Agent card
+Existing AI Agent card
+And the handover configuration is managed from the Chat Flow visual builder
+AC2 [Chat Flow] Handover from template to new AI Agent cardGiven I am an owner/supervisor   And I select a template card in the Chat Flow Visual BuilderWhen I choose to handover to a new AI Agent cardThen the system will call AI Agent creation form from in the Chat Flow Visual Builder
+   And I can configure name, role, goals, description, transfer condition, and fallback
+   But I will not be able to change phone number or switch toggle AI Auto-reply (agentic) to“ off
+When I click save
+Then the new AI Agent card will be connected as the next destination after the selected template card   And I can configure the required AI Agent settings from the new AI Agent card   And the connection is saved as part of the Chat Flow configuration
+AC3 [Chat Flow] Handover from template to existing AI Agent cardGiven I am an owner/supervisor   And there is at least one existing AI Agent card in the Chat Flow Visual BuilderWhen I select a template card   And I choose to handover to an existing AI Agent cardThen I can select one existing AI Agent card as the handover destination   And the system connects the selected template card to the selected AI Agent card   And the system does not create a duplicate AI Agent card   And the connection is saved as part of the Chat Flow configuration
+AC4 [Chat Flow] Execute handover from template to AI AgentGiven a customer conversation is currently handled by a Chat Automation template   And the template has AI Agent as the configured next destinationWhen the conversation reaches the configured handover pointThen the system transfers the conversation to the selected AI Agent card   And the selected AI Agent continues the conversation using the available conversation context   And the Chat Automation template stops running for that conversation   And the active handler status is updated in the Chat Room
+AC5 [Chat Flow] Prevent inactive AI Agent handover destinationGiven I am an owner/supervisorWhen I configure template handover to AI Agent
+   And I select “existing AI Agent”
+   And the selected existing “AI Agent A” is inactive
+Then the system will give warning “this action will activate AI Agent A, continue?”
+When I click “Yes”
+Then the system will force “AI Agent A” status to “active”
+   And I will be able to save the configured chat flow
+AC1
+AC2
+9
+As an owner/supervisor/agent, I want messages from Template, AI Agent, and Human Agent to have different bubbles in the Chat Room, so that I can clearly identify who or what sent each message in a conversation. 
+AC1 [Chat Room] Show different bubble for Template messageGiven I am an owner/supervisor/agentWhen I open a conversation in Chat Room   And the conversation contains a message sent by TemplateThen the system shows the message using the Template bubble style   And the message clearly indicates that it was sent by Template   And the Template bubble is visually different from AI Agent and Human Agent bubbles
+AC2 [Chat Room] Show different bubble for AI Agent messageGiven I am an owner/supervisor/agentWhen I open a conversation in Chat Room   And the conversation contains a message sent by AI AgentThen the system shows the message using the AI Agent bubble style   And the message clearly indicates that it was sent by AI Agent   And the AI Agent bubble is visually different from Template and Human Agent bubbles
+AC3 [Chat Room] Show different bubble for Human Agent messageGiven I am an owner/supervisor/agentWhen I open a conversation in Chat Room   And the conversation contains a message sent by Human AgentThen the system shows the message using the Human Agent bubble style   And the message clearly indicates that it was sent by Human Agent   And the Human Agent bubble is visually different from Template and AI Agent bubbles
+AC4 [Chat Room] Show sender information in message bubbleGiven I am an owner/supervisor/agentWhen I view messages in Chat RoomThen each outgoing message bubble shows the sender type   And the sender type can be:
+Template
+AI Agent
+Human Agent
+When the message is sent by AI AgentThen the bubble can show the AI Agent name
+When the message is sent by Human AgentThen the bubble can show the Human Agent name
+AC5 [Chat Room] Keep customer message bubble unchangedGiven I am an owner/supervisor/agentWhen I open a conversation in Chat Room   And the conversation contains messages from the customerThen the customer message bubble remains unchanged   And the customer message bubble is visually different from Template, AI Agent, and Human Agent bubbles
+AC6 [Chat Room] Preserve bubble type in conversation historyGiven a conversation has messages sent by Template, AI Agent, or Human AgentWhen I reopen the conversation historyThen the system still shows the correct bubble type for each message   And the sender type does not change after the conversation is transferred to another handler
+AC1, 2, 3, 4, 5
+10
+As an owner/supervisor/agent, I want to take over the active AI Agent/ automation for a specific conversation from the Chat Room, so that I continue the conversation manually when needed
+AC1 [Chat Room] Show turn off flow action for active Chat Flow conversationGiven I am an owner/supervisor/agent   And a conversation is currently handled by an active Chat FlowWhen I open the conversation in Chat RoomThen I can see an action to turn off the flow for that conversation   And the action is only available for users with permission to manage the conversation
+AC2 [Chat Room] Turn off flow for selected conversationGiven I am an owner/supervisor/agent   And a conversation is currently handled by an active Chat FlowWhen I click the turn off flow action within the Chat RoomThen the system turns off the active Chat Flow for that specific conversation   And the flow stops sending automated responses for that conversation   And the flow stops moving the conversation to the next card in the Chat Flow   And the conversation remains visible in Chat Room
+AC3 [Chat Room] Allow Human Agent to handle conversation after flow is turned offGiven the active Chat Flow has been turned off for a conversationWhen I open the conversation in Chat RoomThen a Human Agent can reply manually to the customer   And the automated handler does not respond again in that conversation   And the active handler status is updated in Chat Room
+AC4 [Chat Room] Prevent automated trigger after flow is turned offGiven the active Chat Flow has been turned off for a conversationWhen the customer sends a new message that matches an automation, AI Agent, or handover conditionThen the system does not trigger the turned off flow again for that conversation   And the conversation remains under manual handling of an Human Agent
+AC5 [Chat Room] Hide overlay button after takeoverGiven I have taken over a conversation from AI AgentWhen the takeover is completedThen the Ambil Alih Chat button is no longer shown for that conversation   And the conversation can be handled manually by Human Agent
+   And the Human Agent is able to type within the Chat Room   And the AI Agent/automation template does not continue responding
+AC1, 2, 3, 4, 5
