@@ -21,3 +21,4 @@ venv/
 *.tmp
 *.bak
 scratch/
+**/otherTasks
