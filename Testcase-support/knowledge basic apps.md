@@ -6,8 +6,8 @@
   - Untuk dapat menggunakan fitur ini, pengguna wajib memiliki paket langganan aktif: **Chat** dan **CRM**.
 
 - **Struktur Dashboard & Path Navigasi:**
-  - **Dashboard Utama (CRM):** Mengacu pada struktur menu di [/Users/eldofadlyady/Documents/eldoTest/strukturmenu/dashboard-crm](file:///Users/eldofadlyady/Documents/eldoTest/strukturmenu/dashboard-crm)
-  - **Dashboard Chatroom:** Mengacu pada struktur menu di [/Users/eldofadlyady/Documents/eldoTest/strukturmenu/chatroom-web](file:///Users/eldofadlyady/Documents/eldoTest/strukturmenu/chatroom-web)
+  - **Dashboard Utama (CRM):** Mengacu pada struktur menu di `./strukturmenu/dashboard-crm/` (jika aplikasi bertipe CRM).
+  - **Dashboard Chatroom:** Mengacu pada struktur menu di `./strukturmenu/chatroom-web/` (jika aplikasi bertipe Chatroom/Agent).
 
 - **Fungsi Dashboard CRM:**
   - Berfungsi untuk melakukan berbagai aksi dan konfigurasi manajemen operasional seperti:
@@ -22,7 +22,7 @@
   - **Akses Masuk:** Hanya Agent yang sudah di-assign/diberi tugas yang dapat mengakses dashboard Chatroom Web.
   - **Visibilitas Role Agent:** Agent hanya dapat melihat dan mengakses chatroom yang secara spesifik di-assign ke dirinya. Jika tidak di-assign, chatroom tersebut tidak akan muncul di antarmuka Agent.
   - **Visibilitas Role Owner & Supervisor:** Dapat melihat, memantau, dan mengakses seluruh chatroom yang ada (semua room percakapan).
-  - **Ketentuan Role Lainnya:** Untuk aturan permission dan pembagian hak akses (RBAC) pada role lainnya, mengacu pada file master: [[SSOT] Requirement for RBAC Customer Dashboard.xlsx](file:///Users/eldofadlyady/Documents/eldoTest/Testcase-support/%5BSSOT%5D%20Requirement%20for%20RBAC%20Customer%20Dashboard.xlsx).
+  - **Ketentuan Role Lainnya:** Untuk aturan permission dan pembagian hak akses (RBAC) pada role lainnya, mengacu pada file master: `[SSOT] Requirement for RBAC Customer Dashboard.xlsx` di `./Testcase-support/`.
 
 ## 2. Broadcast Official Rule
 

@@ -1,9 +1,12 @@
-# 🚀 PRD Analyzer & QA Test Suite Automation Framework
+# 🚀 Universal PRD Analyzer & Enterprise QA Test Automation Framework
 
-Repository ini dirancang untuk tim **Quality Assurance (QA), Product Manager (PM), dan Software Engineer (SWE)** guna mempercepat proses:
-1. **Analisis PRD Mendalam & Penegakan Guardrails**: Mengekstraksi requirement bisnis, batasan kuota/pricing, dan matriks hak akses pengguna (RBAC).
-2. **Pembuatan Master Test Case Suite Lengkap**: Menghasilkan file Excel berstandar industri (15 kolom terstruktur) dan file Markdown bernomor (*Action $\rightarrow$ Assertion*) yang siap dibaca oleh framework otomatisasi testing.
-3. **Ekspor Dokumen Resmi (Word `.docx` / PDF `.pdf`)**: Mengonversi hasil analisis menjadi dokumen berstandar **Everpro TIW (Test Idea & Walkthrough)**.
+Repository ini dirancang untuk tim **Quality Assurance (QA), Product Manager (PM), dan Software Engineer (SWE)** guna mempercepat siklus pengujian perangkat lunak di berbagai domain aplikasi (**Web SPA/SSR, Mobile Android/iOS, Backend REST/GraphQL/gRPC APIs, Microservices, Event-Driven/Webhooks, Data Pipelines, hingga IoT**).
+
+Framework ini didukung oleh **Agentic AI Custom Skills** yang mengimplementasikan standar pengujian tingkat lanjut (*Senior QA / Quality Architecture*):
+1. **Analisis PRD Mendalam & Penegakan Strict Interactive Validation Gate**: Mengekstraksi requirement bisnis, batasan scope, aturan otorisasi (RBAC/ABAC), state transition invariants, NFR (idempotency, concurrency, resilience), dan security guardrails tanpa asumsi liar.
+2. **Pembuatan Master Test Case Suite 3-Tier**: Menghasilkan file Excel berstandar industri (15 kolom terstruktur) dan file Markdown otomasi deklaratif dengan **Triple-Layer Assertions (UI + API Contract + DB State Persistence)** serta **Exploratory Heuristic Charters**.
+3. **Ekspor Dokumen Resmi Layak Audit (Word `.docx` / PDF `.pdf`)**: Mengonversi hasil analisis menjadi dokumen berstandar **TIW (Test Idea & Walkthrough)** dengan Traceability Matrix & Quality Gate.
+4. **Mekanisme Continuous Learning & Review Loop (`qa-review-learning`)**: Menyerap feedback review sprint / bug escape report dan otomatis memperbarui basis pengetahuan (`Testcase-support/qa-learnings.md`) serta heuristik skill.
 
 ---
 
@@ -11,19 +14,18 @@ Repository ini dirancang untuk tim **Quality Assurance (QA), Product Manager (PM
 - [Persyaratan Sistem & Instalasi](#-persyaratan-sistem--instalasi)
 - [Struktur Direktori Workspace](#-struktur-direktori-workspace)
 - [Alur Kerja & Panduan Penggunaan Skill (Step-by-Step)](#-alur-kerja--panduan-penggunaan-skill-step-by-step)
-  - [Step 1: Persiapan Data & Input Awal](#step-1-persiapan-data--input-awal-pre-requisites)
-  - [Step 2: Menjalankan Skill Analisis PRD (`prd-qa-analyzer`)](#step-2-menjalankan-skill-analisis-prd-prd-qa-analyzer)
-  - [Step 3: Gerbang Validasi User & Konfirmasi Ambiguitas (Wajib)](#step-3-gerbang-validasi-user--konfirmasi-ambiguitas-wajib)
+  - [Step 1: Persiapan Dokumen & Input Awal](#step-1-persiapan-dokumen--input-awal)
+  - [Step 2: Menjalankan Analisis PRD (`prd-qa-analyzer`)](#step-2-menjalankan-analisis-prd-prd-qa-analyzer)
+  - [Step 3: Gerbang Klarifikasi Terstruktur (Interactive Gate)](#step-3-gerbang-klarifikasi-terstruktur-interactive-gate---wajib)
   - [Step 4: Menghasilkan Test Cases Suite (`generate-testcase`)](#step-4-menghasilkan-test-cases-suite-generate-testcase)
-  - [Step 5: Mengonversi Hasil ke Word / PDF (`convert-document`)](#step-5-mengonversi-hasil-ke-word--pdf-convert-document)
+  - [Step 5: Ekspor ke Word / PDF (`convert-document`)](#step-5-ekspor-ke-word--pdf-convert-document)
+  - [Step 6: Continuous Learning & Review Feedback (`qa-review-learning`)](#step-6-continuous-learning--review-feedback-qa-review-learning)
 - [Ringkasan Custom Agent Skills](#-ringkasan-custom-agent-skills)
-- [Troubleshooting & FAQ](#-troubleshooting--faq)
+- [3-Tier Test Coverage Matrix & Triple-Layer Assertions](#-3-tier-test-coverage-matrix--triple-layer-assertions)
 
 ---
 
 ## 💻 Persyaratan Sistem & Instalasi
-
-Sebelum menggunakan repository ini, pastikan sistem Anda memenuhi dependensi berikut:
 
 ### 1. Kebutuhan Dasar
 - **Python**: Versi `3.9` atau lebih baru (`python3 --version`).
@@ -36,38 +38,29 @@ Jalankan perintah berikut pada terminal di root direktori project:
 pip3 install python-docx reportlab openpyxl markdown pillow typing-extensions
 ```
 
-> [!NOTE]
-> - `python-docx` digunakan untuk membaca dan membuat dokumen Word (`.docx`).
-> - `reportlab` dan `pillow` digunakan untuk membuat dokumen PDF (`.pdf`).
-> - `openpyxl` digunakan untuk menyusun Master Test Case Excel (`.xlsx`) dengan styling 15 kolom.
-
 ---
 
 ## 🗂️ Struktur Direktori Workspace
 
 ```text
 ├── .agents/skills/                       # Custom AI Agent Skills
-│   ├── prd-qa-analyzer/                  # Skill SOP Analisis PRD & Decision Matrix
-│   ├── generate-testcase/                # Skill Pembuat Master Test Case (Excel & MD)
-│   └── convert-document/                 # Skill Konversi Dokumen ke DOCX & PDF
-│       └── scripts/
-│           ├── md_to_docx.py             # Script converter Word
-│           └── md_to_pdf.py              # Script converter PDF
+│   ├── prd-qa-analyzer/                  # SOP Analisis PRD, SFDIPOT, NFR & Interactive Gate
+│   ├── generate-testcase/                # SOP Master Test Case (Excel 15-Kolom & Markdown Otomasi)
+│   ├── convert-document/                 # SOP Konversi Dokumen ke DOCX & PDF berstandar TIW
+│   │   └── scripts/
+│   │       ├── md_to_docx.py             # Script converter Word dinamis
+│   │       └── md_to_pdf.py              # Script converter PDF dinamis
+│   └── qa-review-learning/               # SOP Continuous Learning & Retrospective Review Loop
 │
-├── Testcase-support/                     # Knowledge Base & SSOT Template
-│   ├── [SSOT] Requirement for RBAC Customer Dashboard.xlsx  # SSOT Hak Akses
-│   ├── [TIW] Everpro Chat Reborn - Webhook OpenAPI.docx     # Template Dokumen Acuan TIW
-│   ├── Test_Cases_Meta_New_Pricing_2026.xlsx                # Template Master Excel 15 Kolom
-│   └── quick-reply-crud.md                                  # Template Markdown Otomasi
+├── Testcase-support/                     # Knowledge Base & SSOT Templates
+│   ├── qa-learnings.md                   # SSOT Catatan Pembelajaran & Pola Edge Cases Baru
+│   ├── [SSOT] Requirement for RBAC.xlsx # Matriks Hak Akses Pengguna
+│   ├── Test_Cases_Meta_New_Pricing_2026.xlsx  # Template Master Excel 15 Kolom
+│   └── quick-reply-crud.md               # Template Markdown Otomasi
 │
-├── strukturmenu/                         # Knowledge Base UI & Screenshot Menu Aplikasi
-│   ├── chatroom-web/                     # Tampilan UI Chatroom Web
-│   ├── customer-dashboard/               # Tampilan UI Customer Dashboard
-│   └── dashboard-crm/                    # Tampilan UI Dashboard CRM
-│
-├── adhoc-document/                       # Dokumen Teknis Ad-hoc (Swagger, API Contract, DB Specs)
+├── strukturmenu/                         # Referensi UI & Screenshot Menu Aplikasi (Modular)
+├── adhoc-document/                       # Dokumen Teknis Ad-hoc (OpenAPI, Postman, DB Schema)
 ├── result-testcase/                      # Folder Output Utama (MD, DOCX, PDF, XLSX)
-├── [PB & PRD] *.docx                     # Berkas PRD Input dari Product Team
 └── README.md
 ```
 
@@ -77,118 +70,56 @@ pip3 install python-docx reportlab openpyxl markdown pillow typing-extensions
 
 ```mermaid
 graph TD
-    A["Step 1: Siapkan PRD, SSOT RBAC, UI Knowledge, & Adhoc Docs"] --> B["Step 2: Jalankan Skill prd-qa-analyzer"]
-    B --> C{"Step 3: Ada Logika Ambigu / Gap PRD?"}
-    C -- "Ya" --> D["⚠️ USER VALIDATION: Klarifikasi & Alignment Keputusan"]
-    D --> E["Finalisasi PRD_Analysis_<Feature>.md"]
-    C -- "Tidak" --> E
-    E --> F{"Step 4: Lanjut ke Generate Testcase?"}
-    F --> G["Jalankan generate-testcase"]
-    G --> H["Output: Test_Cases_*.xlsx & test-cases-*.md"]
-    H --> I{"Step 5: Butuh Format Word / PDF?"}
-    I --> J["Jalankan convert-document"]
-    J --> K["Output: PRD_Analysis_*.docx & *.pdf"]
+    A["Step 1: Siapkan PRD, UI Refs, & Dokumen Teknis"] --> B["Step 2: Jalankan Skill prd-qa-analyzer"]
+    B --> C["Step 3: 🛑 INTERACTIVE CLARIFICATION GATE (Wajib Konfirmasi User)"]
+    C --> D["Finalisasi PRD_Analysis_<Feature>.md"]
+    D --> E["Step 4: Jalankan generate-testcase (Excel & Markdown)"]
+    E --> F["Step 5: Jalankan convert-document (Word & PDF)"]
+    F --> G["Review Meeting / Test Execution"]
+    G --> H["Step 6: Ada Feedback/Temuan? Jalankan qa-review-learning"]
+    H --> B
 ```
 
 ---
 
-### Step 1: Persiapan Data & Input Awal (*Pre-requisites*)
-
-Sebelum meminta AI menganalisis fitur, pastikan data-data berikut telah diletakkan pada folder yang sesuai:
-
-1. **File PRD**: Letakkan dokumen PRD (`.docx`, `.pdf`, atau `.md`) di root workspace.
-2. **Dokumen RBAC**: Pastikan file SSOT RBAC tersedia di `Testcase-support/[SSOT] Requirement for RBAC Customer Dashboard.xlsx`.
-3. **Screenshot UI (`strukturmenu/`)**:
-   - Masukkan screenshot menu/tombol/field baru ke sub-folder terkait:
-     - `strukturmenu/dashboard-crm/` untuk CRM / Merchant admin.
-     - `strukturmenu/chatroom-web/` untuk Chatroom agen/CS.
-     - `strukturmenu/customer-dashboard/` untuk Dashboard pelanggan.
-4. **Dokumen Teknis Ad-hoc (`adhoc-document/`)** *(Opsional)*:
-   - Jika ada spesifikasi API contract / Swagger JSON / schema DB, letakkan di folder ini.
-
-> [!WARNING]
-> **PENTING: Jangan Melewatkan Penyediaan Screenshot UI (`strukturmenu/`)**
-> Jika Anda tidak menyediakan referensi UI atau penamaan menu yang jelas, agent tidak dapat menyusun langkah test case (*Action Steps*) dan label tombol (*CTA*) yang akurat sesuai tampilan sistem nyata.
+### Step 1: Persiapan Dokumen & Input Awal
+Letakkan dokumen PRD (`.docx`, `.pdf`, atau `.md`) di dalam workspace, serta lengkapi dokumen teknis di `adhoc-document/` atau referensi UI di `strukturmenu/` jika tersedia.
 
 ---
 
-### Step 2: Menjalankan Skill Analisis PRD (`prd-qa-analyzer`)
-
-Minta agent untuk membaca dokumen PRD dan memulai proses analisis:
-
-**Contoh Prompt ke Agent:**
-> *"Tolong lakukan analisis PRD untuk file `[PB & PRD] Everpro Chat Meta New Pricing 2026.docx` menggunakan skill `prd-qa-analyzer`."*
-
-Agent akan melakukan hal berikut:
-1. Membaca seluruh isi PRD dan dokumen pendukung di `adhoc-document/`.
-2. Mencocokkan hak akses pengguna dengan SSOT RBAC di `Testcase-support/`.
-3. Meninjau tata letak navigasi di `strukturmenu/`.
-4. Mengidentifikasi apakah ada celah logika (*business logic gap*), rumus harga, batas limit, atau respon gagal yang belum dijelaskan di PRD.
+### Step 2: Menjalankan Analisis PRD (`prd-qa-analyzer`)
+Minta agent menganalisis dokumen PRD:
+> *"Tolong lakukan analisis PRD untuk file `[PRD] Nama_Fitur.docx` menggunakan skill `prd-qa-analyzer`."*
 
 ---
 
-### Step 3: Gerbang Validasi User & Konfirmasi Ambiguitas (Wajib)
-
-> [!CAUTION]
-> **TITIK KRITIS: USER HARUS ME-REVIEW & MEMVALIDASI PERTANYAAN AGENT**
-> - **DILARANG BERASUMSI**: Jika PRD memiliki ambiguitas, agent **WAJIB** berhenti dan mengajukan daftar pertanyaan klarifikasi terstruktur kepada Anda.
-> - **Tanggung Jawab User**: Anda harus meninjau pertanyaan tersebut dan memberikan jawaban/keputusan bisnis yang disepakati bersama tim Product/Dev sebelum dokumen difinalisasi.
-
-Setelah Anda memberikan jawaban konfirmasi:
-- Agent akan menyusun dokumen analisis resmi:
-  📂 `result-testcase/PRD_Analysis_<Nama_Fitur>.md`
-- Dokumen ini berisi: *Scope Guardrails (In/Out-of-Scope), RBAC Matrix, Decision Tables, Boundary Value Analysis (BVA), Integrasi & Error Handling, Regression Scope, dan Clarification Log*.
+### Step 3: Gerbang Klarifikasi Terstruktur (*Interactive Gate* - Wajib)
+> [!IMPORTANT]
+> Agent **DILARANG KERAS** berasumsi sendiri. Agent akan berhenti dan menyajikan pertanyaan terstruktur seputar 7 Dimensi (*Logic, Scope, RBAC, Error Fallbacks, Data Lifecycle, Idempotency, Platform*). Berikan jawaban/keputusan bisnis sebelum agent menyusun dokumen final `result-testcase/PRD_Analysis_<Nama_Fitur>.md`.
 
 ---
 
 ### Step 4: Menghasilkan Test Cases Suite (`generate-testcase`)
+Setelah dokumen analisis disetujui, minta agent menyusun test case:
+> *"Analisis PRD sudah disetujui. Tolong buatkan Master Test Case lengkap (Excel & Markdown) menggunakan skill `generate-testcase`."*
 
-Setelah dokumen analisis `PRD_Analysis_<Nama_Fitur>.md` divalidasi dan disetujui, minta agent membuat master test cases:
-
-**Contoh Prompt ke Agent:**
-> *"Analisis PRD sudah disetujui. Tolong buatkan Test Case lengkap menggunakan skill `generate-testcase` berbasis dokumen `result-testcase/PRD_Analysis_<Nama_Fitur>.md`."*
-
-Agent akan menghasilkan 2 output secara sekuensial:
-
-1. **Master Test Case Spreadsheet (`.xlsx`)**:
-   - Lokasi: `result-testcase/Test_Cases_<Nama_Fitur>.xlsx`
-   - Standar 15 kolom: `project_id`, `suite_id`, `unique_id` (format: `<APP>-<MAINMENU>-<SUBMENU>-<SEQ>`), `title`, `decription`, `precondition`, `priority`, `type`, `status`, `tags`, `steps`, `step_desc`, `expected_desc`, `is_automated`, `user_story`.
-   - Header berwarna Navy (`#1F4E78`) dengan text wrap dan border rapi.
-2. **Automation-Ready Markdown (`.md`)**:
-   - Lokasi: `result-testcase/test-cases-<nama-fitur>.md`
-   - Berisi langkah deklaratif bernomor (*Action $\rightarrow$ Assertion*) lengkap dengan **Tagging Prioritas & Kompleksitas Otomasi** (misal: `[Auto-Critical][Low-Complexity]`).
-
-> [!WARNING]
-> **VALIDASI DISTRIBUSI PRIORITAS (P1 / P2 / P3)**
-> Periksa ringkasan distribusi test case yang dilaporkan oleh agent. Pastikan alur transaksi keuangan, isolasi data, limit kuota, dan integritas rollback masuk ke kategori **Critical (P1)**.
+Output yang dihasilkan:
+1. `result-testcase/Test_Cases_<Nama_Fitur>.xlsx` (Master Spreadsheet 15 Kolom).
+2. `result-testcase/test-cases-<nama-fitur>.md` (Automation-ready dengan Triple-Layer Assertions & Exploratory Charters).
 
 ---
 
-### Step 5: Mengonversi Hasil ke Word / PDF (`convert-document`)
+### Step 5: Ekspor ke Word / PDF (`convert-document`)
+Untuk keperluan pelaporan resmi walkthrough ke manajemen / tim dev:
+> *"Tolong konversikan dokumen `result-testcase/PRD_Analysis_<Nama_Fitur>.md` ke format Word dan PDF menggunakan skill `convert-document`."*
 
-Untuk keperluan pelaporan resmi kepada tim Product, Engineering Lead, atau QA Walkthrough (TIW), konversikan dokumen hasil analisis `.md` menjadi format **Word (`.docx`)** atau **PDF (`.pdf`)**.
+---
 
-**Contoh Prompt ke Agent:**
-> *"Tolong konversikan dokumen `result-testcase/PRD_Analysis_<Nama_Fitur>.md` menjadi file Word (.docx) dan PDF (.pdf) menggunakan skill `convert-document`."*
+### Step 6: Continuous Learning & Review Feedback (`qa-review-learning`)
+Jika ada revisi, masukan dari meeting TIW, atau temuan bug baru di staging/production:
+> *"Tolong review masukan berikut menggunakan skill `qa-review-learning`: [Tuliskan feedback / bug report]. Perbarui knowledge base dan tingkatkan heuristik pengujian kita."*
 
-**Atau Jalankan Manual via Terminal:**
-```bash
-# 1. Konversi ke Word (.docx)
-python3 .agents/skills/convert-document/scripts/md_to_docx.py \
-  result-testcase/PRD_Analysis_<Nama_Fitur>.md \
-  result-testcase/PRD_Analysis_<Nama_Fitur>.docx
-
-# 2. Konversi ke PDF (.pdf)
-python3 .agents/skills/convert-document/scripts/md_to_pdf.py \
-  result-testcase/PRD_Analysis_<Nama_Fitur>.md \
-  result-testcase/PRD_Analysis_<Nama_Fitur>.pdf
-```
-
-Dokumen Word dan PDF yang dihasilkan akan secara otomatis memiliki:
-- ✅ **Header Box TIW Standar** (*Feature Name, Supporting Docs, Contributor, Approver, Informed*).
-- ✅ **Tabel Changelog & Status Approval**.
-- ✅ **Styling Tabel Aksen Cyan (`#00FFFF`)** untuk *Decision Table* dan *Test Scenarios*.
-- ✅ **Tabel Feedback Reviewer** untuk mencatat evaluasi meeting.
+Agent akan menganalisis *root cause gap*, mencatat pelajaran ke `Testcase-support/qa-learnings.md`, dan mengalibrasi SOP skill.
 
 ---
 
@@ -199,26 +130,31 @@ Dokumen Word dan PDF yang dihasilkan akan secara otomatis memiliki:
 | **`prd-qa-analyzer`** | [`.agents/skills/prd-qa-analyzer/`](.agents/skills/prd-qa-analyzer/SKILL.md) | *"Analisis PRD ini...", "Review requirement fitur..."* |
 | **`generate-testcase`** | [`.agents/skills/generate-testcase/`](.agents/skills/generate-testcase/SKILL.md) | *"Generate test case dari hasil analisa...", "Buat test suite Excel..."* |
 | **`convert-document`** | [`.agents/skills/convert-document/`](.agents/skills/convert-document/SKILL.md) | *"Convert dokumen md ke docx/pdf...", "Ekspor hasil analisa ke Word..."* |
+| **`qa-review-learning`** | [`.agents/skills/qa-review-learning/`](.agents/skills/qa-review-learning/SKILL.md) | *"Review hasil testing ini...", "Tingkatkan skill berdasarkan feedback..."* |
 
 ---
 
-## ❓ Troubleshooting & FAQ
+## 📐 3-Tier Test Coverage Matrix & Triple-Layer Assertions
 
-#### 1. Error `ModuleNotFoundError: No module named 'docx'` / `'reportlab'` / `'openpyxl'`
-**Solusi**: Pastikan Anda telah menginstal seluruh paket python:
-```bash
-pip3 install python-docx reportlab openpyxl markdown pillow
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│                        3-TIER TEST COVERAGE MATRIX                     │
+├────────────────────────────────────────────────────────────────────────┤
+│  TIER 1: HAPPY PATH (Golden Business Journey)                          │
+│  - Nominal end-to-end user journeys & authorized standard flows        │
+├────────────────────────────────────────────────────────────────────────┤
+│  TIER 2: BOUNDARY, SYSTEMIC & SECURITY EDGE CASES                      │
+│  - Data Boundaries (Min/Max, Precision, UTF-8/Emoji)                   │
+│  - Concurrency & Idempotency (Double-clicks, simultaneous updates)     │
+│  - Network & Fallbacks (3G throttling, 504 Timeout, offline sync)      │
+│  - Security & RBAC (Direct URL, IDOR/BOLA tampering, expired tokens)   │
+├────────────────────────────────────────────────────────────────────────┤
+│  TIER 3: EXPLORATORY TESTING CHARTERS (Heuristic Tours)                │
+│  - The FedEx Tour, The Saboteur/Chaos, The Rushed User, The Rogue Tour │
+└────────────────────────────────────────────────────────────────────────┘
 ```
 
-#### 2. Tabel pada hasil export Word/PDF terpotong
-**Solusi**: Periksa apakah ada kolom tabel yang terlalu panjang pada file `.md`. Skrip `md_to_docx.py` dan `md_to_pdf.py` sudah memiliki auto-width adapter, namun jika kolom melebihi 7 kolom, pertimbangkan untuk membaginya menjadi 2 tabel logika terpisah.
-
-#### 3. Apakah nama menu/button di test case bisa berbeda dengan aplikasi nyata?
-**Solusi**: Pastikan screenshot di folder `strukturmenu/<app-name>/` selalu diperbarui sesuai mockup Figma atau Staging terbaru sebelum menjalankan skill `generate-testcase`.
-
----
-
-## 👨‍💻 Kontributor & Tim
-- **QA Engineering**: Eldo Fadlyady
-- **Platform**: Google Antigravity (AGY) Agentic Framework
-- **Organisasi**: Everpro QA Team
+**Triple-Layer Assertions**:
+- **Layer 1 (UI/Client State)**: Button states, loading indicators, toast messages, modal lifecycle, badges.
+- **Layer 2 (API/Network Contract)**: HTTP Status Code (2xx/4xx/5xx), payload schema, response time SLA.
+- **Layer 3 (DB/Data Persistence)**: Data mutation in tables, UTC timestamps, audit trail logs, event queue triggers.

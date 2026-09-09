@@ -1,515 +1,457 @@
-# Automation Test Cases: Everpro Chat Meta New Pricing 2026
+# Automation & QA Master Test Case Suite: Meta New Pricing 2026
 
-> Dokumen ini dihasilkan otomatis sebagai turunan dari Master Test Case Excel (`result-testcase/Test_Cases_Meta_New_Pricing_2026.xlsx`) dan disesuaikan untuk instruksi test automation (Playwright / Cypress / Robot Framework).
-
-## Suite: PRECONDITION
-
-### CRC-GEN-PRE-001: Verifikasi pencegahan akses fitur Everpro Chat ketika Subscription tidak aktif / kedaluwarsa `[Auto-Critical]` `[Low-Complexity]`
-- **User Story**: [Priority: Critical] Global Pre-condition
-- **Tipe**: Functional
-- **Deskripsi**: Memastikan akun merchant yang tidak memiliki paket subscription aktif dicegah untuk mengakses fitur Everpro Chat, WABA, dan pengiriman pesan berbayar.
-- **Preconditions**:
-  1. Akun pengguna terdaftar di Everpro.
-  2. Status paket Subscription akun adalah "Inactive" atau "Expired".
-- **Test Steps & Assertions**:
-  1. Login ke Everpro menggunakan akun dengan subscription inactive.
-  2. Navigasikan ke menu Everpro Chat / WhatsApp Credit / Broadcast.
-  3. Coba lakukan inisiasi pengiriman pesan atau broadcast.
-  **Expected Results**:
-  - 1. Sistem menampilkan banner/modal bahwa paket subscription tidak aktif.
-  - 2. Pengguna diblokir untuk mengakses menu Everpro Chat dan tidak dapat mengirim pesan berbayar.
-  - 3. Muncul CTA untuk mengaktifkan/memperpanjang subscription.
+Dokumen ini berisi seluruh skenario pengujian komprehensif (*Master Test Case Suite*) yang diturunkan langsung dari [PRD_Analysis_Meta_New_Pricing_2026.md](file:///Users/fadlyady/Documents/Eldo%20Work/eldoTest/result-testcase/PRD_Analysis_Meta_New_Pricing_2026.md). Format disusun secara deklaratif bernomor (*Action $\rightarrow$ Triple-Layer Assertion*) lengkap dengan **Tagging Prioritas & Kompleksitas Otomasi** untuk framework otomasi (Playwright, Cypress, Pytest, Appium).
 
 ---
 
-### CRC-GEN-PRE-002: Verifikasi kegagalan pengiriman pesan saat nomor WABA belum terdaftar atau berstatus non-aktif `[Auto-Critical]` `[Low-Complexity]`
-- **User Story**: [Priority: Critical] Global Pre-condition
-- **Tipe**: Functional
-- **Deskripsi**: Memastikan sistem memvalidasi status WABA sebelum pengiriman pesan dilakukan (tidak ada proses isolasi/pengiriman jika WABA tidak valid).
-- **Preconditions**:
-  1. Subscription akun berstatus Aktif.
-  2. Organisasi belum mendaftarkan nomor WABA atau status WABA dalam peninjauan/banned.
-- **Test Steps & Assertions**:
-  1. Login sebagai Owner/Supervisor.
-  2. Akses halaman Broadcast atau Chatroom.
-  3. Coba kirim pesan template atau pesan chatroom ke kontak customer.
-  **Expected Results**:
-  - 1. Sistem menampilkan pesan error bahwa nomor WABA belum terdaftar/tidak aktif.
-  - 2. Tombol pengiriman pesan dinonaktifkan.
-  - 3. Tidak ada saldo kredit yang diisolasi.
+## 📊 Ringkasan Distribusi Test Case
+
+| Kategori Pengujian | P1 (Critical) | P2 (High) | P3 (Normal/Low) | Total |
+| :--- | :---: | :---: | :---: | :---: |
+| **Tier 1: Happy Path (Golden Journey)** | 5 | 6 | 0 | **11** |
+| **Tier 2: Boundary, Negative, Security & Concurrency** | 4 | 5 | 1 | **10** |
+| **Tier 3: Heuristic Exploratory Testing Charters** | 2 | 1 | 1 | **4** |
+| **TOTAL KESELURUHAN** | **11** | **12** | **2** | **25** |
 
 ---
 
-### CRC-GEN-PRE-003: Verifikasi kegagalan pengiriman pesan pada WABA yang belum memiliki agent yang di-assign `[Auto-Critical]` `[Low-Complexity]`
-- **User Story**: [Priority: Critical] Global Pre-condition
-- **Tipe**: Functional
-- **Deskripsi**: Memastikan pesan tidak dapat diproses jika pada nomor WABA aktif belum ditugaskan (assigned) agent operasional.
-- **Preconditions**:
-  1. Subscription akun Aktif.
-  2. WABA terdaftar dan aktif.
-  3. Belum ada CS/Agent yang di-assign ke nomor WABA tersebut.
-- **Test Steps & Assertions**:
-  1. Login sebagai Owner/Supervisor.
-  2. Buka menu Chatroom untuk nomor WABA tanpa agent tersebut.
-  3. Coba lakukan inisiasi percakapan/kirim pesan.
-  **Expected Results**:
-  - 1. Sistem memberikan notifikasi bahwa nomor WABA belum memiliki agen yang ditugaskan.
-  - 2. Pengguna diarahkan ke pengaturan Tim/Agen untuk melakukan assignment sebelum dapat beroperasi.
+## Modul 1: Manajemen Harga & Konfigurasi Tarif (Pricing Management)
+
+### API-PRIC-BASE-POS-001: Verifikasi update Base Price per kategori dan negara tujuan di database `[Auto-Critical]` `[Low-Complexity]`
+- **User Story**: [Priority: Critical] US-01: Base Price Management (Covers: AC-1)
+- **Tipe**: Functional / Positive
+- **Precondition**:
+  1. Akses database / internal API pricing aktif.
+  2. Kategori pesan dan kode negara recipient valid.
+- **Test Steps**:
+  1. Kirim request update base price untuk `category = 'SERVICE'`, `country = 'ID'`, `base_price = 300`, `effective_at = '2026-10-01 00:00:00 UTC'`.
+  2. Query tabel `meta_base_prices`.
+  3. Periksa nilai kolom `base_price` dan `effective_at`.
+- **Expected Results (Triple-Layer Assertions)**:
+  1. [API] Response merespons HTTP `200 OK` dengan payload `{ "status": "SUCCESS", "updated_rows": 1 }`.
+  2. [DB] Record tersimpan dengan `base_price = 300` dan status `'ACTIVE'`.
+  3. [DB] Kolom `effective_at` tersimpan sesuai timestamp UTC yang ditentukan.
 
 ---
 
-## Suite: RBAC
-
-### CRC-RBAC-AUTH-004: Verifikasi pembatasan hak akses role CS Operasional / CS Closing terhadap menu Admin Biz Ops & Credit Management `[Auto-Critical]` `[Low-Complexity]`
-- **User Story**: [Priority: Critical] RBAC Authorization
-- **Tipe**: RBAC
-- **Deskripsi**: Memastikan role CS tidak memiliki akses ke halaman Biz Ops Pricing, konfigurasi WhatsApp Credit, Monthly Credit Limit, dan Broadcast Management.
-- **Preconditions**:
-  1. Subscription Aktif, WABA Aktif dengan agent assigned.
-  2. Akun pengguna memiliki role "CS Operasional" atau "CS Closing".
-- **Test Steps & Assertions**:
-  1. Login sebagai CS Operasional / CS Closing.
-  2. Periksa menu navigasi yang tersedia.
-  3. Coba akses direct URL halaman Admin Pricing (/admin/pricing) atau Credit Management (/whatsapp-credit).
-  **Expected Results**:
-  - 1. Menu WhatsApp Credit dan Admin Pricing tidak tampil di sidebar navigasi CS.
-  - 2. Percobaan akses via direct URL menghasilkan respons 403 Forbidden atau redirect otomatis ke Chatroom.
+### API-PRIC-GEN-POS-002: Verifikasi penetapan General Markup Price untuk seluruh pengguna `[Auto-High]` `[Low-Complexity]`
+- **User Story**: [Priority: High] US-01: General Markup Price (Covers: AC-2)
+- **Tipe**: Functional / Positive
+- **Precondition**:
+  1. Data Base Price Meta sudah ada di DB (`SERVICE` = Rp 300).
+  2. Akun merchant umum tidak memiliki custom markup.
+- **Test Steps**:
+  1. Update general markup: `category = 'SERVICE'`, `country = 'ID'`, `markup_price = 150`, `effective_at = '2026-10-01 00:00:00 UTC'`.
+  2. Hit API estimasi biaya pesan untuk user general.
+  3. Verifikasi total tarif pesan yang dihitung oleh sistem.
+- **Expected Results (Triple-Layer Assertions)**:
+  1. [API] General markup tersimpan di tabel `general_markups`.
+  2. [API] Estimasi tarif pesan = Base Price (300) + Markup (150) = `Rp 450` (bulat ke atas).
+  3. [DB] Audit log mencatat konfigurasi general markup baru oleh aktor terkait.
 
 ---
 
-## Suite: PRICING_CONFIG
-
-### DB-PRC-CFG-005: Biz Ops Admin memperbarui Meta Base Price per Kategori x Negara Penerima dengan Effective Date `[Auto-Critical]` `[Low-Complexity]`
-- **User Story**: [Priority: Critical] User Story 1: Admin Paid Message Pricing Management
-- **Tipe**: Functional
-- **Deskripsi**: Memastikan Biz Ops Admin dapat memperbarui base price resmi dari Meta untuk setiap kategori pesan (Marketing, Utility, Auth, Service) per negara tujuan beserta tanggal efektif berlakunya.
-- **Preconditions**:
-  1. Login sebagai Everpro Biz Ops Admin.
-  2. Memiliki otorisasi manajemen harga di database/admin dashboard.
-- **Test Steps & Assertions**:
-  1. Buka dashboard Credit Management Admin > Base Price.
-  2. Pilih Kategori Pesan: "Service", Negara Tujuan: "Indonesia (ID)".
-  3. Masukkan harga dasar baru (misal: Rp300).
-  4. Set Effective Date (misal: H+1 jam 00:00 WIB).
-  5. Klik "Simpan".
-  **Expected Results**:
-  - 1. Base price baru berhasil tersimpan di database dengan status "Scheduled / Pending Effective Date".
-  - 2. Muncul toast konfirmasi keberhasilan update.
+### API-PRIC-CUST-POS-003: Verifikasi Custom Markup Price memprioritaskan override General Markup `[Auto-Critical]` `[Medium-Complexity]`
+- **User Story**: [Priority: Critical] US-01: Customizable Pricing (Covers: AC-3)
+- **Tipe**: Functional / Positive
+- **Precondition**:
+  1. General markup = Rp 150.
+  2. Custom markup untuk `user_id = 'USR-VIP-001'` diset = Rp 100.
+- **Test Steps**:
+  1. Kirim pesan dari akun `'USR-VIP-001'`.
+  2. Cek nilai pemotongan saldo / isolasi kredit.
+  3. Bandingkan dengan pengiriman dari akun reguler `'USR-REG-002'`.
+- **Expected Results (Triple-Layer Assertions)**:
+  1. [API] Tarif pesan untuk USR-VIP-001 = Rp 300 + Rp 100 = `Rp 400`.
+  2. [API] Tarif pesan untuk USR-REG-002 = Rp 300 + Rp 150 = `Rp 450`.
+  3. [DB] Custom markup memprioritaskan override general markup 100%.
 
 ---
 
-### DB-PRC-CFG-006: Biz Ops Admin mengatur General Markup Price per Kategori x Negara Penerima untuk seluruh user umum `[Auto-High]` `[Low-Complexity]`
-- **User Story**: [Priority: High] User Story 1: Admin Paid Message Pricing Management
-- **Tipe**: Functional
-- **Deskripsi**: Memastikan Biz Ops Admin dapat menentukan margin/markup per pesan untuk seluruh general users berdasarkan kombinasi kategori pesan dan negara tujuan.
-- **Preconditions**:
-  1. Login sebagai Everpro Biz Ops Admin.
-  2. Base price untuk kategori & negara terkait sudah terkonfigurasi.
-- **Test Steps & Assertions**:
-  1. Buka menu Admin > Markup Price General.
-  2. Pilih Kategori: "Marketing", Negara: "Indonesia (ID)".
-  3. Input nilai markup (misal: Rp50).
-  4. Set Effective Date.
-  5. Klik "Simpan".
-  **Expected Results**:
-  - 1. Nilai markup general berhasil tersimpan dan akan berlaku bagi seluruh merchant non-kustom saat effective date tiba.
+### API-PRIC-DATE-BVA-004: Boundary Test: Penegakan tanggal efektif (`effective_at`) pada pricing `[Auto-High]` `[Medium-Complexity]`
+- **User Story**: [Priority: High] US-01: Pricing Effective Date (Covers: AC-1, AC-2, AC-3)
+- **Tipe**: Boundary / BVA
+- **Precondition**:
+  1. Tarif lama = Rp 400.
+  2. Tarif baru = Rp 500 dengan `effective_at = '2026-10-01 00:00:00 UTC'`.
+- **Test Steps**:
+  1. Kirim pesan pada waktu T-1 detik (`2026-09-30 23:59:59 UTC`).
+  2. Kirim pesan pada waktu T (`2026-10-01 00:00:00 UTC`).
+  3. Verifikasi pemotongan saldo pada kedua transaksi.
+- **Expected Results (Triple-Layer Assertions)**:
+  1. [DB] Transaksi T-1 dipotong tarif lama (`Rp 400`).
+  2. [DB] Transaksi T dipotong tarif baru (`Rp 500`).
+  3. [UI] Log mutasi saldo mencatat tarif yang tepat per masing-masing timestamp.
 
 ---
 
-### DB-PRC-CFG-007: Biz Ops Admin mengatur Customizable Markup Price untuk User ID spesifik (Special Merchant) `[Auto-Critical]` `[Low-Complexity]`
-- **User Story**: [Priority: Critical] User Story 1: Admin Paid Message Pricing Management
-- **Tipe**: Functional
-- **Deskripsi**: Memastikan Biz Ops Admin dapat memberikan harga markup khusus (custom pricing) untuk merchant tertentu berdasarkan User ID.
-- **Preconditions**:
-  1. Login sebagai Everpro Biz Ops Admin.
-  2. Target User ID merchant valid dan terdaftar di database.
-- **Test Steps & Assertions**:
-  1. Buka menu Admin > Custom User Pricing.
-  2. Masukkan target User ID (misal: USR_100234).
-  3. Pilih Kategori: "Utility", Negara: "Indonesia".
-  4. Masukkan Custom Markup (misal: Rp20, lebih rendah dari General Markup Rp50).
-  5. Set Effective Date dan simpan.
-  **Expected Results**:
-  - 1. Custom pricing untuk User ID tersebut berhasil disimpan.
-  - 2. Merchant dengan User ID terkait akan dikenakan tarif custom, sedangkan merchant lain tetap dikenakan general markup.
+### API-PRIC-AUDT-POS-005: Verifikasi pencatatan Audit Log saat terjadi perubahan harga `[Auto-High]` `[Low-Complexity]`
+- **User Story**: [Priority: High] US-01: Price Change Audit Logging (Covers: AC-4)
+- **Tipe**: Security / Audit
+- **Precondition**:
+  1. Biz Ops Admin melakukan update data harga via backend API.
+- **Test Steps**:
+  1. Eksekusi update harga custom untuk `user_id = 'USR-123'`.
+  2. Query tabel `pricing_change_logs`.
+- **Expected Results (Triple-Layer Assertions)**:
+  1. [DB] Record log terbentuk dengan kolom lengkap: `actor_id`, `new_price`, `category`, `country`, `user_id`, `valid_from`.
+  2. [DB] Timestamp log akurat sesuai waktu modifikasi UTC.
 
 ---
 
-### DB-PRC-CFG-008: Verifikasi masa transisi harga sebelum vs sesudah Effective Date tercapai `[Auto-Critical]` `[Low-Complexity]`
-- **User Story**: [Priority: Critical] User Story 1: Admin Paid Message Pricing Management
-- **Tipe**: Functional
-- **Deskripsi**: Memastikan sistem menerapkan harga lama sebelum Effective Date dan beralih ke harga baru secara otomatis tepat saat Effective Date tiba.
-- **Preconditions**:
-  1. Konfigurasi harga baru dengan Effective Date: 2026-10-01 00:00:00 WIB.
-  2. Harga lama: Rp500, Harga baru: Rp600.
-- **Test Steps & Assertions**:
-  1. Kirim pesan berbayar pada 2026-09-30 23:59:50 WIB.
-  2. Cek nominal kredit yang diisolasi/dipotong.
-  3. Kirim pesan berbayar pada 2026-10-01 00:00:05 WIB.
-  4. Cek nominal kredit yang diisolasi/dipotong.
-  **Expected Results**:
-  - 1. Pesan sebelum Effective Date dikenakan tarif lama (Rp500).
-  - 2. Pesan sesudah Effective Date dikenakan tarif baru (Rp600) secara otomatis tanpa perlu restart server.
+## Modul 2: Eksekusi Pengiriman Pesan & Siklus Kredit (Delivery & Credit Lifecycle)
+
+### WEB-BRD-FEP-POS-006: Verifikasi pengiriman pesan dalam Free Entry Point (FEP) Window tidak memotong kredit `[Auto-Critical]` `[Medium-Complexity]`
+- **User Story**: [Priority: Critical] US-02: Free Entry Point Window (Covers: AC-1)
+- **Tipe**: Functional / Positive
+- **Precondition**:
+  1. Customer melakukan inbound chat via CTWA ad.
+  2. Sesi FEP Window aktif pada room percakapan.
+- **Test Steps**:
+  1. Buka Chatroom pelanggan dengan flag FEP aktif.
+  2. Kirim pesan template Marketing.
+  3. Kirim pesan Service.
+  4. Cek saldo utama WhatsApp Credit.
+- **Expected Results (Triple-Layer Assertions)**:
+  1. [UI] Pesan terkirim sukses tanpa loading isolasi kredit.
+  2. [API] Request kirim pesan menyertakan flag `is_fep = true`.
+  3. [DB] Tidak ada record pemotongan saldo / mutasi kredit (Biaya `Rp 0`).
+  4. [UI] Saldo kredit akun tetap tidak berkurang.
 
 ---
 
-### DB-PRC-CFG-009: Verifikasi kelengkapan pencatatan Audit Log saat terjadi perubahan harga oleh Biz Ops Admin `[Auto-Normal]` `[Low-Complexity]`
-- **User Story**: [Priority: Normal] User Story 1: Admin Paid Message Pricing Management
-- **Tipe**: Functional
-- **Deskripsi**: Memastikan setiap perubahan pada Base Price, General Markup, dan Custom Pricing tercatat lengkap dalam log audit.
-- **Preconditions**:
-  1. Telah dilakukan aktivitas penambahan atau perubahan harga oleh Biz Ops Admin.
-- **Test Steps & Assertions**:
-  1. Akses menu Admin > Audit Log Pricing.
-  2. Cari log transaksi perubahan harga terakhir.
-  3. Verifikasi kolom data yang tercatat.
-  **Expected Results**:
-  - 1. Log audit mencatat detail lengkap: ID/Nama Actor, New Price, Kategori Pesan, Negara Tujuan, Target User ID (jika ada), dan Timestamp validitas.
+### JOB-BRD-ISOL-POS-007: Verifikasi Credit Isolation saat broadcast dijadwalkan dan dieksekusi `[Auto-Critical]` `[High-Complexity]`
+- **User Story**: [Priority: Critical] US-02: Credit Isolation (Covers: AC-2)
+- **Tipe**: Functional / Positive
+- **Precondition**:
+  1. Saldo utama = Rp 100.000.
+  2. Target broadcast = 100 nomor (tarif Rp 450/pesan, total Rp 45.000).
+- **Test Steps**:
+  1. Buat jadwal broadcast untuk 100 nomor pada jam T.
+  2. Saat jam T tiba, amati status pemotongan saldo.
+  3. Periksa tabel `credit_isolations`.
+  4. Tunggu delivery receipt dari Meta.
+- **Expected Results (Triple-Layer Assertions)**:
+  1. [UI] Status campaign berubah menjadi `'Processing'`.
+  2. [DB] Saldo terisolasi sebesar `Rp 45.000` (sisa saldo aktif Rp 55.000).
+  3. [DB] 100 record isolasi terbentuk dengan status `'ISOLATED'`.
+  4. [API] Request outbound dikirim ke Meta API.
 
 ---
 
-## Suite: EXECUTION_FEP
-
-### CRC-BRD-EXEC-010: Verifikasi pesan inbound dari CTWA (Click-to-WhatsApp Ads) mengaktifkan Free Entry Point (FEP) window `[Auto-Critical]` `[High-Complexity]`
-- **User Story**: [Priority: Critical] User Story 2: Execution, Free Entry Point & Credit Lifecycle
-- **Tipe**: Functional
-- **Deskripsi**: Memastikan interaksi pelanggan yang berasal dari iklan CTWA mengaktifkan status Free Entry Point sehingga pesan respons bebas biaya.
-- **Preconditions**:
-  1. Nomor WABA terintegrasi dengan Meta Ads.
-  2. Customer mengklik iklan CTWA dan mengirim pesan pertama ke WABA.
-- **Test Steps & Assertions**:
-  1. Terima pesan inbound dari customer via link CTWA.
-  2. Periksa status window percakapan di sistem backend / header chatroom.
-  **Expected Results**:
-  - 1. Sistem menandai percakapan tersebut berada dalam status Free Entry Point (FEP) aktif sesuai durasi kebijakan Meta.
-
----
-
-### CRC-BRD-EXEC-011: Verifikasi pesan inbound dari WTWA (Website-to-WhatsApp) mengaktifkan Free Entry Point (FEP) window `[Auto-Critical]` `[High-Complexity]`
-- **User Story**: [Priority: Critical] User Story 2: Execution, Free Entry Point & Credit Lifecycle
-- **Tipe**: Functional
-- **Deskripsi**: Memastikan interaksi pelanggan yang berasal dari tombol WhatsApp di Facebook Page / Website (WTWA) mengaktifkan FEP window.
-- **Preconditions**:
-  1. Customer memulai chat melalui tombol call-to-action WTWA resmi.
-- **Test Steps & Assertions**:
-  1. Terima pesan inbound customer via WTWA.
-  2. Periksa status window percakapan.
-  **Expected Results**:
-  - 1. Sistem mendeteksi referral source WTWA dan mengaktifkan window Free Entry Point.
+### WEB-BRD-PART-NEG-008: Verifikasi penanganan broadcast saat saldo parsial (hanya cukup sebagian target) `[Auto-High]` `[Medium-Complexity]`
+- **User Story**: [Priority: High] US-02: Partial Balance Broadcast Handling (Covers: AC-2)
+- **Tipe**: Negative / Resiliency
+- **Precondition**:
+  1. Sisa saldo utama = Rp 27.000.
+  2. Target broadcast = 100 nomor @ Rp 450 (kebutuhan Rp 45.000).
+- **Test Steps**:
+  1. Eksekusi pengiriman broadcast 100 nomor.
+  2. Amati proses isolasi dan pengiriman.
+  3. Periksa detail log pengiriman per nomor penerima.
+  4. Cek sisa saldo akhir.
+- **Expected Results (Triple-Layer Assertions)**:
+  1. [DB] Sistem mengisolasi dan mengirim 60 pesan (60 x Rp 450 = `Rp 27.000`).
+  2. [DB] 40 nomor sisanya berstatus `'FAILED_INSUFFICIENT_BALANCE'`.
+  3. [UI] Dashboard Broadcast menampilkan status: `'Completed (60 Sent, 40 Failed - Saldo Kurang)'`.
+  4. [DB] Saldo utama menjadi `Rp 0` dan tidak bernilai minus.
 
 ---
 
-### CRC-BRD-EXEC-012: Pengiriman pesan Template via Broadcast selama window FEP aktif tanpa pemotongan kredit `[Auto-Critical]` `[Medium-Complexity]`
-- **User Story**: [Priority: Critical] User Story 2: Execution, Free Entry Point & Credit Lifecycle
-- **Tipe**: Functional
-- **Deskripsi**: Memastikan pengiriman pesan broadcast ke nomor yang sedang berada dalam window FEP tidak melakukan isolasi atau pemotongan saldo kredit.
-- **Preconditions**:
-  1. Kontak target broadcast memiliki status FEP aktif.
-- **Test Steps & Assertions**:
-  1. Jadwalkan / kirim broadcast campaign ke target kontak FEP.
-  2. Amati proses validasi kredit dan pengiriman ke Meta.
-  **Expected Results**:
-  - 1. Sistem mem-bypass proses validasi dan isolasi kredit (0 charge).
-  - 2. Pesan terkirim langsung ke Meta tanpa mengurangi saldo kredit organisasi.
+### API-ROLL-FAIL-POS-009: Verifikasi otomatis Credit Rollback saat menerima status Failed dari Meta `[Auto-Critical]` `[Medium-Complexity]`
+- **User Story**: [Priority: Critical] US-02: Credit Rollback (Covers: AC-2)
+- **Tipe**: Functional / Positive
+- **Precondition**:
+  1. Pesan telah terisolasi Rp 450.
+  2. Webhook Meta mengembalikan status failed (error code 131026 / receiver unreachable).
+- **Test Steps**:
+  1. Kirim webhook status `'failed'` dari Meta untuk `message_id = 'MSG-999'`.
+  2. Cek mutasi saldo pada tabel `credit_transactions`.
+  3. Periksa saldo utama akun.
+- **Expected Results (Triple-Layer Assertions)**:
+  1. [API] Webhook handler memproses event failed dan merespons `200 OK`.
+  2. [DB] Status isolasi berubah menjadi `'ROLLED_BACK'`.
+  3. [DB] Saldo akun bertambah kembali sebesar `Rp 450`.
+  4. [UI] Riwayat mutasi mencatat tipe `'ROLLBACK_REFUND'`.
 
 ---
 
-### CRC-BRD-EXEC-013: Pengiriman pesan balasan via Chatroom (Human / AI Bot) dan Open API selama window FEP aktif bebas biaya `[Auto-Critical]` `[Medium-Complexity]`
-- **User Story**: [Priority: Critical] User Story 2: Execution, Free Entry Point & Credit Lifecycle
-- **Tipe**: Functional
-- **Deskripsi**: Memastikan seluruh pengiriman pesan chatroom dan Open API dalam window FEP tidak mendebet saldo kredit.
-- **Preconditions**:
-  1. Sesi percakapan customer berada dalam window FEP aktif.
-- **Test Steps & Assertions**:
-  1. Kirim balasan manual oleh CS di Chatroom.
-  2. Kirim balasan otomatis oleh bot/AI.
-  3. Trigger pengiriman pesan via Open API.
-  **Expected Results**:
-  - 1. Seluruh pesan terkirim dengan sukses tanpa pemotongan saldo kredit.
-  - 2. Nilai running cost sesi tetap Rp0.
+### JOB-ROLL-RDED-POS-010: Resiliency Test: Re-deduct saldo saat webhook Delivered tiba terlambat setelah Rollback `[Auto-High]` `[High-Complexity]`
+- **User Story**: [Priority: High] US-02: Late Webhook Re-Deduct (Covers: AC-2)
+- **Tipe**: Functional / Resiliency
+- **Precondition**:
+  1. Pesan `MSG-001` sempat di-rollback karena timeout / initial failure.
+  2. Saldo akun mencukupi.
+- **Test Steps**:
+  1. Kirim late webhook `'delivered'` untuk `MSG-001`.
+  2. Amati respon webhook handler.
+  3. Verifikasi pencatatan transaksi di DB.
+- **Expected Results (Triple-Layer Assertions)**:
+  1. [API] Sistem mendeteksi pesan telah di-rollback sebelumnya.
+  2. [DB] Sistem memicu transaksi tipe `'RE_DEDUCTION'` sebesar `Rp 450`.
+  3. [DB] Saldo utama terpotong Rp 450 dan status final pesan menjadi `'DELIVERED'`.
+  4. [UI] Log riwayat kredit mencatat entri re-deduction.
 
 ---
 
-### CRC-BRD-EXEC-014: Verifikasi pengiriman pesan setelah FEP window kedaluwarsa (Expired) kembali dikenakan pemotongan kredit normal `[Auto-Critical]` `[Medium-Complexity]`
-- **User Story**: [Priority: Critical] User Story 2: Execution, Free Entry Point & Credit Lifecycle
-- **Tipe**: Functional
-- **Deskripsi**: Memastikan setelah durasi window FEP berakhir, pengiriman pesan berikutnya otomatis kembali ke alur penagihan normal.
-- **Preconditions**:
-  1. Window FEP pada kontak customer telah kedaluwarsa.
-- **Test Steps & Assertions**:
-  1. Kirim pesan ke customer tersebut setelah masa FEP habis.
-  2. Periksa mutasi saldo WhatsApp Credit.
-  **Expected Results**:
-  - 1. Sistem mengeksekusi validasi dan isolasi saldo kredit normal (Base Price + Margin).
-  - 2. Saldo kredit terpotong sesuai tarif kategori pesan.
+### WEB-CUST-NETT-POS-011: Verifikasi Nett Credit Logging dan ekspor data Credit History `[Auto-High]` `[Low-Complexity]`
+- **User Story**: [Priority: High] US-02: Nett Credit Logging (Covers: AC-3)
+- **Tipe**: Functional / Positive
+- **Precondition**:
+  1. Terdapat 10 pesan: 8 delivered (Rp 3.600) dan 2 failed/rolled back (Rp 900).
+- **Test Steps**:
+  1. Buka halaman WhatsApp Credit > Credit History.
+  2. Periksa ringkasan total deducted.
+  3. Klik tombol `[Export History]`.
+  4. Unduh dan periksa isi file CSV/Excel.
+- **Expected Results (Triple-Layer Assertions)**:
+  1. [UI] Tampilan total nett credit deduction = `Rp 3.600`.
+  2. [API] Request export mengembalikan file spreadsheet valid.
+  3. [File] Data export memuat baris transaksi lengkap dengan status final (`DELIVERED` / `ROLLED_BACK`).
+  4. [File] Total nett deduction di file sama persis dengan mutasi database.
 
 ---
 
-### CRC-BRD-EXEC-015: Verifikasi isolasi kredit instan saat CS mengklik tombol balas di Chatroom atau pemicuan Open API (Non-FEP) `[Auto-Critical]` `[Medium-Complexity]`
-- **User Story**: [Priority: Critical] User Story 2: Execution, Free Entry Point & Credit Lifecycle
-- **Tipe**: Functional
-- **Deskripsi**: Memastikan saldo kredit diisolasi seketika saat tombol kirim ditekan sebelum status pesan dikonfirmasi oleh Meta.
-- **Preconditions**:
-  1. Di luar window FEP, saldo kredit mencukupi.
-- **Test Steps & Assertions**:
-  1. Buka Chatroom dan kirim pesan berbayar.
-  2. Amati saldo available dan saldo isolated seketika.
-  **Expected Results**:
-  - 1. Saldo kredit sebesar (Base Price + Margin) langsung masuk ke status terisolasi/hold.
-  - 2. Saldo available berkurang seketika.
+## Modul 3: Tampilan & Batas Kredit Bulanan (Credit Usage & Limits)
 
----
-
-### CRC-BRD-EXEC-016: Verifikasi Credit Rollback otomatis saat pesan menerima sinyal eksplisit status "failed" dari Meta `[Auto-Critical]` `[High-Complexity]`
-- **User Story**: [Priority: Critical] User Story 2: Execution, Free Entry Point & Credit Lifecycle
-- **Tipe**: Functional
-- **Deskripsi**: Memastikan saldo terisolasi dikembalikan 100% secara utuh ke saldo aktif seketika Meta mengembalikan status failed.
-- **Preconditions**:
-  1. Pesan telah di-trigger dan kredit sebesar Rp500 telah diisolasi.
-- **Test Steps & Assertions**:
-  1. Provider Meta mengembalikan webhook status "failed" (misal: nomor tidak terdaftar / banned).
-  2. Amati mutasi saldo kredit organisasi.
-  **Expected Results**:
-  - 1. Sistem membatalkan isolasi dan mengembalikan kredit Rp500 ke saldo aktif (Rollback 100%).
-  - 2. Status pesan di UI menampilkan "Gagal Terkirim".
-
----
-
-### CRC-BRD-EXEC-017: Verifikasi perhitungan Nett Credit Log pada status akhir pesan DELIVERED `[Auto-Critical]` `[Medium-Complexity]`
-- **User Story**: [Priority: Critical] User Story 2: Execution, Free Entry Point & Credit Lifecycle
-- **Tipe**: Functional
-- **Deskripsi**: Memastikan saldo terisolasi didebit permanen dan log mutasi nett tercatat rapi saat pesan berstatus DELIVERED.
-- **Preconditions**:
-  1. Pesan terisolasi berhasil dikirim ke Meta.
-- **Test Steps & Assertions**:
-  1. Meta mengirimkan webhook status "delivered".
-  2. Periksa mutasi saldo kredit.
-  **Expected Results**:
-  - 1. Saldo terisolasi diubah menjadi pemotongan definitif (Nett Deduction).
-  - 2. Mutasi tercatat permanen di credit history log.
-
----
-
-### CRC-BRD-EXEC-018: Chatroom: Kirim Pesan di Luar Window Aktif Wajib Menggunakan Template Message `[Auto-Critical]` `[Medium-Complexity]`
-- **User Story**: [Priority: Critical] User Story 2: Execution, Free Entry Point & Credit Lifecycle
-- **Tipe**: Functional
-- **Deskripsi**: Memastikan CS tidak dapat mengirim free text jika customer belum membalas pesan > 24 jam / sesi baru, dan wajib menggunakan template.
-- **Preconditions**:
-  1. Percakapan chatroom baru atau di luar 24 jam interaksi customer.
-- **Test Steps & Assertions**:
-  1. Buka chatroom.
-  2. Coba kirim pesan teks bebas (free text).
-  3. Pilih template message lalu kirim.
-  4. Tunggu customer membalas, lalu kirim teks bebas.
-  **Expected Results**:
-  - 1. Teks bebas sebelum ada respons customer ditolak/dinonaktifkan.
-  - 2. Pesan template berhasil dikirim dengan tarif template.
-  - 3. Setelah customer membalas, CS dapat mengirim teks bebas dengan tarif Service Message.
-
----
-
-## Suite: WA_CREDIT
-
-### CRC-DSH-CRD-019: Verifikasi "Pengeluaran bulan ini" pada WhatsApp Credit Page mengikutsertakan biaya Service Message `[Auto-High]` `[Low-Complexity]`
-- **User Story**: [Priority: High] User Story 3: Credit Management & Monthly Limit
-- **Tipe**: Functional
-- **Deskripsi**: Memastikan total pengeluaran bulanan mencakup biaya Service Message bersama Marketing, Utility, dan Authentication.
-- **Preconditions**:
-  1. Login sebagai Owner/Supervisor.
-  2. Telah terjadi pengiriman Marketing, Utility, Auth, dan Service Message dalam bulan berjalan.
-- **Test Steps & Assertions**:
-  1. Buka halaman WhatsApp Credit.
-  2. Amati kartu informasi "Pengeluaran Bulan Ini".
-  3. Bandingkan dengan total kalkulasi individual tiap kategori.
-  **Expected Results**:
-  - 1. Nominal pengeluaran bulan ini merefleksikan total penjumlahan seluruh kategori termasuk Service Message secara akurat.
-
----
-
-### CRC-DSH-CRD-020: Owner / Supervisor mengatur Monthly Credit Limit pada nomor WABA `[Auto-High]` `[Low-Complexity]`
-- **User Story**: [Priority: High] User Story 3: Credit Management & Monthly Limit
-- **Tipe**: Functional
-- **Deskripsi**: Memastikan Owner/Supervisor dapat menentukan batas maksimal pemakaian kredit bulanan.
-- **Preconditions**:
-  1. Login sebagai Owner/Supervisor.
-- **Test Steps & Assertions**:
-  1. Buka pengaturan WhatsApp Credit.
-  2. Masukkan limit bulanan (misal: Rp2.000.000).
-  3. Klik Simpan.
-  **Expected Results**:
-  - 1. Batas limit bulanan berhasil disimpan dan progress penggunaan kredit ter-update.
-
----
-
-### CRC-DSH-CRD-021: Verifikasi pemblokiran pengiriman pesan saat akumulasi biaya mencapai Monthly Credit Limit `[Auto-Critical]` `[Low-Complexity]`
-- **User Story**: [Priority: Critical] User Story 3: Credit Management & Monthly Limit
-- **Tipe**: Functional
-- **Deskripsi**: Memastikan sistem memblokir pengiriman pesan berbayar berikutnya ketika total pengeluaran bulanan telah mencapai limit.
-- **Preconditions**:
-  1. Total pengeluaran bulan berjalan = Monthly Credit Limit (misal: Rp2.000.000 / Rp2.000.000).
-- **Test Steps & Assertions**:
-  1. Coba lakukan pengiriman pesan via Chatroom, Broadcast, atau Open API.
-  **Expected Results**:
-  - 1. Sistem memblokir pengiriman pesan.
-  - 2. Menampilkan pesan error: "monthly credit limit has exhausted. Silakan naikkan limit bulanan Anda".
-
----
-
-### CRC-DSH-CRD-022: Verifikasi ekspor file Riwayat Kredit (Credit History Download) memuat baris Service Message `[Auto-High]` `[Medium-Complexity]`
-- **User Story**: [Priority: High] User Story 3: Credit Management & Monthly Limit
-- **Tipe**: Functional
-- **Deskripsi**: Memastikan file hasil unduhan riwayat penggunaan kredit memuat transaksi Service Message dengan kolom TEMPLATE TYPE = "Service".
-- **Preconditions**:
-  1. Terdapat riwayat transaksi Service Message pada nomor WABA.
-- **Test Steps & Assertions**:
-  1. Masuk menu WhatsApp Credit > Riwayat Penggunaan.
-  2. Klik tombol Download / Ekspor.
-  3. Buka file CSV / Excel yang terunduh.
-  **Expected Results**:
-  - 1. File unduhan memuat transaksi Service Message.
-  - 2. Kolom TEMPLATE TYPE terisi "Service" dan nominal potongan sesuai tarif.
-
----
-
-## Suite: CHATROOM_COST
-
-### CRW-CHT-ROOM-023: Verifikasi running cost sesi aktif di Chatroom ter-update secara real-time saat pesan berbayar terkirim `[Auto-High]` `[Medium-Complexity]`
-- **User Story**: [Priority: High] User Story 4: Chatroom Cost Visibility, Session Limit & Top-Up
-- **Tipe**: Functional
-- **Deskripsi**: Memastikan indikator running cost di header chatroom bertambah secara dinamis setiap ada pesan berbayar yang sukses dikirim.
-- **Preconditions**:
-  1. CS membuka percakapan aktif dengan customer.
-- **Test Steps & Assertions**:
-  1. Cek running cost awal (Rp0).
-  2. Kirim 1 Service Message (tarif Rp350).
-  3. Kirim 1 Service Message berikutnya.
-  **Expected Results**:
-  - 1. Setelah pesan pertama, running cost menjadi Rp350.
-  - 2. Setelah pesan kedua, running cost berubah real-time menjadi Rp700.
-
----
-
-### CRW-CHT-ROOM-024: Verifikasi reset running cost saat chatroom di-closing dan customer memulai sesi baru `[Auto-Critical]` `[Medium-Complexity]`
-- **User Story**: [Priority: Critical] User Story 4: Chatroom Cost Visibility, Session Limit & Top-Up
-- **Tipe**: Functional
-- **Deskripsi**: Memastikan running cost kembali ke Rp0 setelah percakapan diselesaikan (closed) dan dimulai kembali oleh pelanggan.
-- **Preconditions**:
-  1. Percakapan chatroom memiliki running cost Rp1.400.
-- **Test Steps & Assertions**:
-  1. CS mengklik tombol Selesaikan Chat / Close Chat.
-  2. Customer mengirim pesan chat baru dari WhatsApp.
-  3. CS membuka kembali percakapan tersebut.
-  **Expected Results**:
-  - 1. Sesi baru terinisiasi dan running cost otomatis ter-reset kembali ke nilai default (Rp0).
-
----
-
-### CRW-CHT-ROOM-025: Owner / Supervisor mengatur Flat Non-Segmented Session Limit melalui quick-access di Chatroom `[Auto-High]` `[Medium-Complexity]`
-- **User Story**: [Priority: High] User Story 4: Chatroom Cost Visibility, Session Limit & Top-Up
-- **Tipe**: Functional
-- **Deskripsi**: Memastikan Owner/Supervisor dapat mengatur batas biaya sesi per percakapan secara generic tanpa tergantung segmentasi pelanggan.
-- **Preconditions**:
+### WEB-CUST-MNTH-POS-012: Verifikasi 'Pengeluaran bulan ini' mencakup biaya Service Message per WABA `[Auto-High]` `[Low-Complexity]`
+- **User Story**: [Priority: High] US-03: Monthly Expense Service Message (Covers: AC-1)
+- **Tipe**: Functional / Positive
+- **Precondition**:
+  1. Pengeluaran Marketing = Rp 50.000, Utility = Rp 20.000, Service Message = Rp 30.000.
+- **Test Steps**:
   1. Login sebagai Owner / Supervisor.
-- **Test Steps & Assertions**:
-  1. Buka Chatroom.
-  2. Klik ikon/menu pengaturan limit sesi di header.
-  3. Masukkan batas limit flat (misal: Rp5.000).
-  4. Simpan.
-  **Expected Results**:
-  - 1. Flat Session Limit berhasil disimpan dan diterapkan sebagai batas default untuk seluruh percakapan.
+  2. Buka menu WhatsApp Credit.
+  3. Periksa nominal kartu 'Pengeluaran bulan ini' pada nomor WABA terkait.
+- **Expected Results (Triple-Layer Assertions)**:
+  1. [UI] Kartu 'Pengeluaran bulan ini' menampilkan total `Rp 100.000`.
+  2. [API] Endpoint `/api/v1/waba/monthly-expense` mengembalikan breakdown `service_cost = 30000`.
+  3. [UI] Breakdown per kategori (Marketing, Utility, Auth, Service) tertampil jelas.
 
 ---
 
-### CRW-CHT-ROOM-026: Verifikasi percakapan ditandai limit-reached dan pemblokiran balasan saat session cost mencapai limit `[Auto-Critical]` `[Medium-Complexity]`
-- **User Story**: [Priority: Critical] User Story 4: Chatroom Cost Visibility, Session Limit & Top-Up
-- **Tipe**: Functional
-- **Deskripsi**: Memastikan ketika running cost mencapai Flat Session Limit, chatroom diberi flag limit-reached dan CS diblokir membalas pesan.
-- **Preconditions**:
-  1. Flat Session Limit = Rp5.000.
-  2. Running cost percakapan telah mencapai Rp5.000.
-- **Test Steps & Assertions**:
-  1. CS membuka percakapan yang telah mencapai limit.
-  2. Periksa tampilan UI dan coba ketik/kirim pesan balasan.
-  **Expected Results**:
-  - 1. Chatroom menampilkan banner status "Limit Sesi Tercapai (Limit-Reached)".
-  - 2. Kotak input balasan chat dinonaktifkan (disabled).
+### WEB-CUST-LMEX-NEG-013: Verifikasi pemblokiran pengiriman pesan saat Monthly Credit Limit tercapai `[Auto-Critical]` `[Medium-Complexity]`
+- **User Story**: [Priority: Critical] US-03: Monthly Credit Limit Exhausted (Covers: AC-2)
+- **Tipe**: Negative / Critical
+- **Precondition**:
+  1. Monthly Credit Limit diset = Rp 100.000.
+  2. Akumulasi pengeluaran bulan ini sudah mencapai Rp 100.000.
+- **Test Steps**:
+  1. Buat broadcast baru atau kirim pesan template di chatroom.
+  2. Klik tombol kirim.
+  3. Amati respon sistem.
+- **Expected Results (Triple-Layer Assertions)**:
+  1. [UI] Muncul alert banner / toast error: `'monthly credit limit has exhausted'`.
+  2. [API] Request kirim pesan dibatalkan dengan status `422 Unprocessable Entity`.
+  3. [DB] Tidak ada isolasi kredit yang dieksekusi dan pesan tidak terkirim.
 
 ---
 
-### CRW-CHT-ROOM-027: Verifikasi pesan masuk dari customer tetap tersimpan dan dapat dibaca saat status limit-reached `[Auto-Critical]` `[Medium-Complexity]`
-- **User Story**: [Priority: Critical] User Story 4: Chatroom Cost Visibility, Session Limit & Top-Up
-- **Tipe**: Functional
-- **Deskripsi**: Memastikan pesan inbound pelanggan tidak hilang atau ditolak ketika percakapan mencapai limit sesi.
-- **Preconditions**:
-  1. Percakapan chatroom dalam status limit-reached.
-- **Test Steps & Assertions**:
-  1. Customer mengirim pesan teks/gambar dari WhatsApp.
-  2. CS mengamati chatroom di dashboard Everpro.
-  **Expected Results**:
-  - 1. Pesan customer sukses masuk, bubble chat tampil di timeline, dan badge unread bertambah.
-  - 2. CS tetap tidak dapat membalas sebelum limit dinaikkan.
+### WEB-CUST-EXPT-POS-014: Verifikasi ekspor Credit History memuat baris Service Message dengan TEMPLATE TYPE='Service' `[Auto-High]` `[Low-Complexity]`
+- **User Story**: [Priority: High] US-03: Credit History Download Service Type (Covers: AC-3)
+- **Tipe**: Functional / Positive
+- **Precondition**:
+  1. Akun telah mengirimkan pesan Service, Marketing, dan Utility.
+- **Test Steps**:
+  1. Buka menu WhatsApp Credit > Download Usage History.
+  2. Pilih periode bulan aktif dan download file.
+  3. Buka file hasil ekspor dan filter kolom 'TEMPLATE TYPE'.
+- **Expected Results (Triple-Layer Assertions)**:
+  1. [File] Terdapat baris data dengan kolom `TEMPLATE TYPE = 'Service'`.
+  2. [File] Kolom biaya per pesan tertera akurat sesuai tarif service message.
+  3. [File] Baris service message terbedakan secara jelas dari template Marketing, Utility, dan Authentication.
 
 ---
 
-### CRW-CHT-ROOM-028: Agent/CS melakukan manual top-up limit sesi via preset dropdown (Rp2.000 / Rp5.000 / Rp10.000) dengan saldo cukup `[Auto-Critical]` `[Medium-Complexity]`
-- **User Story**: [Priority: Critical] User Story 4: Chatroom Cost Visibility, Session Limit & Top-Up
-- **Tipe**: Functional
-- **Deskripsi**: Memastikan CS dapat menaikkan limit sesi pada percakapan yang terblokir menggunakan pilihan preset nominal jika saldo organisasi cukup.
-- **Preconditions**:
-  1. Chatroom berstatus limit-reached.
-  2. Saldo WhatsApp Credit organisasi mencukupi.
-- **Test Steps & Assertions**:
-  1. CS mengklik tombol "Tambah Limit Sesi".
-  2. Pilih preset "+Rp5.000" dari dropdown.
-  3. Klik Konfirmasi.
-  **Expected Results**:
-  - 1. Limit sesi bertambah Rp5.000.
-  - 2. Banner limit-reached hilang dan input chat kembali aktif sehingga CS dapat membalas pesan.
+## Modul 4: Ongoing Session Cost & Kontrol Limit Chatroom (Chatroom Limits)
+
+### WEB-CHAT-COST-POS-015: Verifikasi tampilan Ongoing Session Cost real-time pada Chatroom Web `[Auto-High]` `[Medium-Complexity]`
+- **User Story**: [Priority: High] US-04: Ongoing Session Cost Visibility (Covers: AC-1)
+- **Tipe**: Functional / Positive
+- **Precondition**:
+  1. Agent membuka room percakapan aktif.
+  2. Sesi chatroom baru dimulai (Ongoing Cost = Rp 0).
+- **Test Steps**:
+  1. Kirim 1 pesan Service Message (tarif Rp 450).
+  2. Amati label 'Biaya Sesi Ini' di header chatroom.
+  3. Kirim 1 pesan template Marketing (tarif Rp 600).
+  4. Amati perubahan label biaya.
+- **Expected Results (Triple-Layer Assertions)**:
+  1. [UI] Label biaya sesi langsung berubah menjadi `'Rp 450'`.
+  2. [UI] Setelah pesan kedua, label biaya ter-update menjadi `'Rp 1.050'`.
+  3. [API] WebSocket / polling mengembalikan total running cost terkini.
+  4. [DB] Record sesi percakapan mencatat `running_cost = 1050`.
 
 ---
 
-### CRW-CHT-ROOM-029: Verifikasi kegagalan manual top-up limit sesi saat saldo WhatsApp Credit organisasi tidak mencukupi `[Auto-Critical]` `[Medium-Complexity]`
-- **User Story**: [Priority: Critical] User Story 4: Chatroom Cost Visibility, Session Limit & Top-Up
-- **Tipe**: Functional
-- **Deskripsi**: Memastikan penambahan limit sesi ditolak jika saldo kredit utama organisasi lebih kecil dari nominal preset yang dipilih.
-- **Preconditions**:
-  1. Chatroom berstatus limit-reached.
-  2. Saldo organisasi = Rp1.000, CS memilih top-up +Rp5.000.
-- **Test Steps & Assertions**:
-  1. CS memilih preset top-up +Rp5.000.
-  2. Klik Konfirmasi.
-  **Expected Results**:
-  - 1. Sistem menolak top-up limit.
-  - 2. Menampilkan error "Saldo WhatsApp Credit organisasi tidak mencukupi".
-  - 3. Chatroom tetap berstatus limit-reached.
+### WEB-CHAT-FLAT-POS-016: Verifikasi Owner/Supervisor dapat mengatur Flat Session Limit di Chatroom `[Auto-High]` `[Low-Complexity]`
+- **User Story**: [Priority: High] US-04: Flat Session Limit Setting (Covers: AC-2)
+- **Tipe**: Functional / Positive
+- **Precondition**:
+  1. Login sebagai Owner / Supervisor.
+  2. Buka pengaturan limit chatroom.
+- **Test Steps**:
+  1. Akses setting Flat Session Limit dari quick-access chatroom.
+  2. Masukkan limit baru: `Rp 10.000`.
+  3. Klik `[Simpan Pengaturan]`.
+- **Expected Results (Triple-Layer Assertions)**:
+  1. [UI] Muncul toast sukses: `'Pengaturan limit sesi berhasil disimpan'`.
+  2. [API] Request PUT `/api/v1/chatroom/flat-limit` mengembalikan `200 OK` dengan value `10000`.
+  3. [DB] Seluruh room aktif menerapkan default limit Rp 10.000.
 
 ---
 
-### CRW-CHT-ROOM-030: Verifikasi sifat kumulatif pada multiple manual top-up oleh Agent/CS dalam satu sesi `[Auto-High]` `[Medium-Complexity]`
-- **User Story**: [Priority: High] User Story 4: Chatroom Cost Visibility, Session Limit & Top-Up
-- **Tipe**: Functional
-- **Deskripsi**: Memastikan penambahan limit berkali-kali dalam satu sesi percakapan terakumulasi secara benar.
-- **Preconditions**:
-  1. Limit awal = Rp5.000.
-- **Test Steps & Assertions**:
-  1. Lakukan top-up pertama +Rp2.000.
-  2. Lakukan top-up kedua +Rp5.000 dalam sesi yang sama.
-  3. Periksa total batas limit sesi.
-  **Expected Results**:
-  - 1. Total batas limit sesi terakumulasi menjadi Rp12.000 (Rp5.000 + Rp2.000 + Rp5.000).
+### WEB-CHAT-RBAC-SEC-017: Security Test: Agent tidak memiliki akses untuk mengubah Flat Session Limit utama `[Auto-Critical]` `[Low-Complexity]`
+- **User Story**: [Priority: Critical] US-04: RBAC Flat Limit Protection (Covers: AC-2)
+- **Tipe**: Security / RBAC
+- **Precondition**:
+  1. Login sebagai Agent (CS).
+  2. Buka dashboard Chatroom Web.
+- **Test Steps**:
+  1. Periksa header dan sidebar chatroom untuk menu pengaturan limit.
+  2. Coba kirim request PUT `/api/v1/chatroom/flat-limit` via Postman/Direct API.
+  3. Amati respon sistem.
+- **Expected Results (Triple-Layer Assertions)**:
+  1. [UI] Tombol/menu pengaturan Flat Session Limit utama tersembunyi (Hidden).
+  2. [API] Direct API call menghasilkan response HTTP `403 Forbidden`.
+  3. [DB] Nilai flat session limit di database tidak berubah.
 
 ---
 
-### CRW-CHT-ROOM-031: Verifikasi pencatatan Audit Log Top-up Sesi (Agent Identity, Timestamp, Amount) `[Auto-Normal]` `[Medium-Complexity]`
-- **User Story**: [Priority: Normal] User Story 4: Chatroom Cost Visibility, Session Limit & Top-Up
-- **Tipe**: Functional
-- **Deskripsi**: Memastikan setiap aksi penambahan limit sesi dicatat secara detail pada log audit percakapan.
-- **Preconditions**:
-  1. Telah dilakukan top-up limit sesi oleh CS.
-- **Test Steps & Assertions**:
-  1. Buka riwayat log audit percakapan / aktivitas sesi.
-  **Expected Results**:
-  - 1. Log mencatat: Identitas/ID CS yang melakukan top-up, Waktu/Timestamp persis, dan Nominal limit yang ditambahkan.
+### WEB-CHAT-BLCK-NEG-018: Verifikasi pemblokiran pengiriman pesan saat Session Cost mencapai limit `[Auto-Critical]` `[Medium-Complexity]`
+- **User Story**: [Priority: Critical] US-04: Block Message on Limit Reached (Covers: AC-3)
+- **Tipe**: Negative / Critical
+- **Precondition**:
+  1. Flat Session Limit = Rp 5.000.
+  2. Running cost sesi percakapan sudah mencapai Rp 5.000.
+- **Test Steps**:
+  1. Buka room yang telah mencapai limit Rp 5.000.
+  2. Periksa status badge di header chatroom.
+  3. Coba ketik dan kirim pesan berbayar baru.
+- **Expected Results (Triple-Layer Assertions)**:
+  1. [UI] Muncul banner peringatan: `'Batas limit sesi percakapan telah tercapai'`.
+  2. [UI] Tombol kirim pesan berbayar berubah menjadi disabled.
+  3. [UI] Muncul tombol opsi `[+ Tambah Limit Sesi]`.
+  4. [API] Request kirim pesan diblokir dengan status `403 / 422`.
 
 ---
 
+### WEB-CHAT-TPUP-POS-019: Verifikasi manual Limit Top-up oleh Agent dengan preset nominal (Rp2k, Rp5k, Rp10k) `[Auto-Critical]` `[Medium-Complexity]`
+- **User Story**: [Priority: Critical] US-04: Manual Session Limit Top-Up (Covers: AC-4)
+- **Tipe**: Functional / Positive
+- **Precondition**:
+  1. Percakapan berstatus limit-reached (limit Rp 5.000, cost Rp 5.000).
+  2. Saldo utama akun mencukupi.
+- **Test Steps**:
+  1. Buka dropdown `[+ Tambah Limit Sesi]`.
+  2. Pilih preset `'Rp 5.000'`.
+  3. Klik tombol `[Konfirmasi Tambah Limit]`.
+  4. Coba kirim pesan berbayar baru.
+- **Expected Results (Triple-Layer Assertions)**:
+  1. [UI] Limit sesi baru ter-update menjadi `Rp 10.000`.
+  2. [UI] Status banner 'Limit Reached' hilang dan input chat unblocked (aktif kembali).
+  3. [API] Endpoint `/api/v1/chatroom/session/top-up` mengembalikan status `200 OK`.
+  4. [DB] Audit log mencatat: `agent_id`, `room_id`, `amount = 5000`, timestamp UTC.
+  5. [UI] Pesan baru berhasil terkirim.
+
+---
+
+### WEB-CHAT-TPFL-NEG-020: Verifikasi penolakan Top-up saat Saldo Utama WhatsApp Credit akun tidak mencukupi `[Auto-High]` `[Low-Complexity]`
+- **User Story**: [Priority: High] US-04: Top-Up Insufficient Main Balance (Covers: AC-4)
+- **Tipe**: Negative / Critical
+- **Precondition**:
+  1. Percakapan berstatus limit-reached.
+  2. Saldo utama WhatsApp Credit akun = Rp 1.000.
+- **Test Steps**:
+  1. Klik `[+ Tambah Limit Sesi]`.
+  2. Pilih preset `'Rp 5.000'`.
+  3. Klik `[Konfirmasi Tambah Limit]`.
+- **Expected Results (Triple-Layer Assertions)**:
+  1. [UI] Muncul toast error: `'Saldo utama akun tidak mencukupi untuk top-up limit'`.
+  2. [UI] Limit sesi tidak bertambah dan percakapan tetap diblokir.
+  3. [API] Request mengembalikan HTTP `422 Insufficient Balance`.
+  4. [DB] Tidak ada saldo yang terpotong.
+
+---
+
+### WEB-CHAT-CONC-CON-021: Concurrency Test: Top-up simultan oleh Agent dan Owner pada room yang sama `[Auto-High]` `[High-Complexity]`
+- **User Story**: [Priority: High] US-04: Simultaneous Top-Up Concurrency (Covers: AC-4)
+- **Tipe**: Concurrency / Con
+- **Precondition**:
+  1. Room limit awal = Rp 5.000.
+  2. Saldo utama akun mencukupi (Rp 500.000).
+- **Test Steps**:
+  1. Agent klik Top-up Rp 5.000 dan Owner klik Top-up Rp 5.000 secara bersamaan (<50ms).
+  2. Amati respon sistem pada kedua klien.
+  3. Periksa limit akhir pada database.
+- **Expected Results (Triple-Layer Assertions)**:
+  1. [API] Kedua request top-up diproses sukses (`200 OK`).
+  2. [DB] Total limit sesi bertambah Rp 10.000 (menjadi `Rp 15.000`).
+  3. [DB] Tercatat 2 baris log audit mutasi top-up (satu dari Agent, satu dari Owner).
+  4. [UI] Kedua antarmuka ter-sinkronisasi menampilkan limit baru Rp 15.000.
+
+---
+
+## Modul 5: Heuristic Exploratory Testing Charters
+
+### E2E-BILL-FDEX-EXP-022: Exploratory Charter: The FedEx Tour (End-to-End Data & Credit Journey) `[Auto-Critical]` `[Manual/Charter]`
+- **User Story**: [Priority: Critical] Exploratory: The FedEx Credit Tour
+- **Tipe**: Exploratory / E2E
+- **Charter Goal**: Melacak siklus penuh mutasi kredit dari broadcast dispatch, isolasi, webhook failure, rollback, hingga verifikasi data audit export.
+- **Exploration Steps**:
+  1. Trigger broadcast 10 nomor.
+  2. Verifikasi isolasi Rp 4.500 di DB.
+  3. Simulasikan 5 delivered dan 5 failed dari Meta.
+  4. Verifikasi refund Rp 2.250 ke saldo utama.
+  5. Download Credit History dan bandingkan baris mutasi.
+- **Observed Assertions (Triple-Layer)**:
+  1. [DB] Mutasi isolasi $\rightarrow$ deduct $\rightarrow$ rollback tercatat konsisten tanpa selisih 1 Rupiah pun.
+  2. [UI] Saldo akhir akun = `Rp 47.750`.
+  3. [File] File export memuat 5 status DELIVERED dan 5 status ROLLED_BACK.
+  4. [DB] Audit log mencatat seluruh event lifecycle dengan timestamp terurut.
+
+---
+
+### WEB-BRD-CHAO-EXP-023: Exploratory Charter: The Saboteur Tour (Simulasi Network Drop saat Broadcast Trigger) `[Auto-High]` `[Manual/Charter]`
+- **User Story**: [Priority: High] Exploratory: The Saboteur Network Chaos Tour
+- **Tipe**: Exploratory / Chaos
+- **Charter Goal**: Menyelidiki ketahanan sistem saat koneksi jaringan terputus tepat ketika tombol konfirmasi broadcast diklik.
+- **Exploration Steps**:
+  1. Klik tombol `[Kirim Broadcast Sekarang]`.
+  2. Putuskan koneksi jaringan (Airplane Mode) dalam 100ms.
+  3. Sambungkan kembali internet setelah 15 detik.
+  4. Refresh halaman broadcast dan periksa status campaign.
+- **Observed Assertions (Triple-Layer)**:
+  1. [UI] Sistem tidak hang / freeze.
+  2. [DB] Tidak terjadi duplikasi pengiriman pesan atau duplikasi isolasi kredit.
+  3. [UI] Status campaign menampilkan status yang deterministik (antara 'Processing' atau 'Draft').
+
+---
+
+### WEB-CHAT-RUSH-EXP-024: Exploratory Charter: The Impatient User Tour (Rapid Multiple Top-Up Clicks) `[Auto-Normal]` `[Manual/Charter]`
+- **User Story**: [Priority: Normal] Exploratory: The Impatient User Rapid Click Tour
+- **Tipe**: Exploratory / Stress
+- **Charter Goal**: Menguji perilaku sistem saat Agent melakukan spamming click tombol top-up dropdown preset secara cepat.
+- **Exploration Steps**:
+  1. Pilih preset Rp 10.000.
+  2. Klik tombol `[Konfirmasi Tambah Limit]` 5 kali berturut-turut dalam 500ms.
+  3. Amati limit akhir dan saldo utama.
+- **Observed Assertions (Triple-Layer)**:
+  1. [UI] Tombol langsung disabled setelah klik pertama (Loading state).
+  2. [API] Hanya request pertama yang diproses atau request berikutnya terblokir idempotency lock.
+  3. [DB] Limit sesi hanya bertambah Rp 10.000 (bukan Rp 50.000) dan saldo utama terpotong tepat Rp 10.000.
+
+---
+
+### API-CHAT-SECT-EXP-025: Exploratory Charter: The Rogue / Security Tour (Direct Parameter Tampering) `[Auto-Critical]` `[Manual/Charter]`
+- **User Story**: [Priority: Critical] Exploratory: The Rogue Security & BOLA Tour
+- **Tipe**: Exploratory / Security-BOLA
+- **Charter Goal**: Mencoba membypass limit chatroom dengan memodifikasi payload nominal top-up negatif atau manipulasi room_id milik user lain.
+- **Exploration Steps**:
+  1. Kirim request top-up dengan payload `amount: -5000`.
+  2. Kirim request top-up dengan `amount: 999999999` (melebihi saldo).
+  3. Kirim request top-up dengan `room_id` yang tidak di-assign ke Agent.
+- **Observed Assertions (Triple-Layer)**:
+  1. [API] Input amount negatif ditolak dengan HTTP `422 Invalid Amount`.
+  2. [API] Input melebihi saldo ditolak dengan HTTP `422 Insufficient Balance`.
+  3. [API] Akses ke unassigned room ditolak dengan HTTP `403 Forbidden` (BOLA/IDOR protection).

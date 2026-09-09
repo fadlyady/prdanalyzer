@@ -1,107 +1,133 @@
 ---
 name: prd-qa-analyzer
 description: >-
-  Standard operating procedure for analyzing Product Requirement Documents (PRD),
-  extracting requirements, applying RBAC matrices, checking UI structures,
-  determining testing methods, prioritizing test cases, and preparing analysis summary documents.
-  Activate when the user asks to analyze a PRD or review feature requirements before generating test cases.
+  Standard operating procedure for performing deep, domain-agnostic Product Requirement Document (PRD) analysis,
+  extracting functional & non-functional requirements, enforcing strict interactive validation gates (no wild assumptions),
+  applying SFDIPOT heuristic test strategy, modeling state invariants, RBAC/security matrices, decision tables,
+  and preparing evidence-grade analysis summary documents ready for test case generation.
+  Activate when the user asks to analyze a PRD, review requirements, or model test strategies for any application.
 ---
 
-# PRD & Requirement Analysis Skill (`prd-qa-analyzer`)
+# Universal PRD & Requirement Analysis Skill (`prd-qa-analyzer`)
 
-Skill ini digunakan untuk melakukan **Analisis PRD Mendalam, Ekstraksi Requirement, Pemetaan Hak Akses (RBAC), Integrasi Pengetahuan UI (`strukturmenu/`), Integrasi Dokumen Ad-hoc (`adhoc-document/`), dan Penyusunan Test Matrix Terstruktur** sebelum test case dibuat.
+Skill ini dirancang sebagai standar baku **Senior QA & Quality Architect** untuk melakukan **Analisis PRD Mendalam, Ekstraksi Requirement Multi-Dimensi (Functional & NFR), Pemodelan State & Decision Matrix, Pemetaan Hak Akses (RBAC/ABAC), dan Penegakan Gerbang Klarifikasi Terstruktur** sebelum test case dibuat.
 
-Tujuan utama: Menghasilkan dokumen analisis yang **tajam, akurat, ringkas (tidak bertele-tele), mudah dipahami tim (Product, Dev, QA), menjadi dokumen evidence analysis yang layak bagi tim development, dan strictly in-scope (tanpa asumsi liar atau skenario redundan)**.
-
----
-
-## 1. Direktori & Lokasi Berkas (*File Architecture*)
-
-- **Dokumen PRD Input**: Terletak di root workspace (misal: `/Users/eldofadlyady/Documents/eldoTest/[PB & PRD] Feature_Name.docx` atau `.md`). User/Agent wajib menyertakan path spesifik file PRD saat menjalankan skill.
-- **Support & Knowledge Base**: `/Users/eldofadlyady/Documents/eldoTest/Testcase-support/`
-  - Berisi `[SSOT] Requirement for RBAC Customer Dashboard.xlsx`, template acuan, dan knowledge tambahan lainnya.
-- **UI Structure Knowledge**: `/Users/eldofadlyady/Documents/eldoTest/strukturmenu/<app-name>/`
-  - Terbagi dalam sub-folder per domain aplikasi (misal: `customer-dashboard/`, `dashboard-crm/`, `chatroom-web/`, dll.) yang menjadi acuan nyata tata letak menu, field, dan CTA navigasi.
-- **Ad-hoc & Technical Documents (Tentative)**: `/Users/eldofadlyady/Documents/eldoTest/adhoc-document/`
-  - Berisi dokumen teknis pendukung tentatif jika tersedia (misal: Swagger/Postman JSON, API contract doc, diagram arsitektur DB/state, catatan meeting rilis, dll.).
-- **Target Output Analisis**: `/Users/eldofadlyady/Documents/eldoTest/result-testcase/PRD_Analysis_<Feature_Name>.md`
+Tujuan utama: Menghasilkan dokumen analisis yang **tajam, zero-assumption, akurat, evidence-grade (layak audit & development), memiliki traceability jelas, dan bersifat Universal/Domain-Agnostic (dapat diterapkan pada Web, Mobile App Android/iOS, Backend API/Microservices, Event-Driven/Webhooks, Data Pipelines, hingga IoT)**.
 
 ---
 
-## 2. Prinsip Utama Analisis QA
+## 1. Direktori & Lokasi Berkas Dinamis (*Dynamic File Architecture*)
 
-1. **Interactive Clarification & Strict No-Assumption Policy**:
-   - **Tanya Sebelum Menulis**: Jika ada aturan bisnis, rumus kalkulasi/pricing, batasan kuota, status lifecycle yang ambigu, response error code yang belum terdefinisi, atau domain app yang belum pasti di PRD, **Agent WAJIB mengajukan pertanyaan klarifikasi terstruktur kepada User terlebih dahulu**.
-   - **Dilarang keras berasumsi liar** (*No wild guesses*). Pembuatan dokumen analisis final hanya dilakukan setelah ambiguitas terjawab atau disepakati mekanismenya.
-2. **Explicit Domain & UI Structure Resolution (`strukturmenu/<app-name>/`)**:
-   - Identifikasi domain aplikasi target dari PRD (misal: *Customer Dashboard*, *Dashboard CRM*, atau *Chatroom Web*).
-   - Periksa ketersediaan folder & screenshot di `strukturmenu/<app-name>/`.
-   - Jika domain belum jelas atau folder UI belum ada/belum lengkap, **tanyakan langsung ke user** untuk memastikan letak menu & penamaan CTA.
-   - Pemanfaatan knowledge UI difokuskan sebagai acuan pembentukan **Action Steps, Preconditions, dan Assertions** yang detail dan akurat pada tahap pembuatan test case berikutnya.
-3. **Ad-hoc Document Inspection (`adhoc-document/`)**:
-   - Cek apakah folder `/Users/eldofadlyady/Documents/eldoTest/adhoc-document/` memiliki file pendukung untuk fitur yang sedang dianalisis.
-   - Jika ada, manfaatkan untuk memperdalam analisis teknis (API error handling, payload boundaries, flow sequence). Jika kosong, lanjutkan berbasis PRD dan konfirmasi user.
-4. **SSOT RBAC & Access Matrix Mapping (`Testcase-support/`)**:
-   - Periksa dokumen RBAC pada `Testcase-support/` (misal: `[SSOT] Requirement for RBAC Customer Dashboard.xlsx`).
-   - Petakan matriks akses per role vs modul/aksi secara tegas. Role yang tidak memiliki izin dianggap **Forbidden / Hidden / Disabled CTA**.
-5. **Zero-Redundancy & Anti Over-Context Principle**:
-   - **Fokus Ketat pada Scope**: Bedakan secara tegas antara **In-Scope** vs **Out-of-Scope**.
-   - **Pemisahan Pengujian RBAC vs Fungsional**: Pengujian otorisasi dipetakan via tabel matriks ringkas, bukan mengulang seluruh skenario fungsional untuk setiap role.
-   - **Boundary & Decision Matrix yang Padat**: Gunakan Decision Table dan Boundary Value Analysis (BVA) untuk logika kompleks.
+Skill ini menggunakan path relatif workspace yang dinamis dan modular:
+
+- **Dokumen PRD Input**: Terletak di root atau sub-folder workspace (misal: `./[PRD] Feature_Name.docx`, `.pdf`, atau `.md`).
+- **Support & Knowledge Base**: `./Testcase-support/`
+  - Berisi dokumen acuan RBAC/Permissions SSOT, template standar, catatan arsitektur, dan `qa-learnings.md` (knowledge dari review sebelumnya).
+- **UI & Interface Knowledge (Modular Adapter)**: `./strukturmenu/` atau `./ui-references/<app-name>/`
+  - Berisi tangkapan layar, hierarki navigasi, nama menu, CTA, atau link desain (Figma/Wireframes) jika aplikasi memiliki antarmuka pengguna.
+- **Technical & API Specifications (Ad-hoc)**: `./adhoc-document/`
+  - Berisi OpenAPI/Swagger JSON, Postman Collection, GraphQL Schema, DB DDL/ERD, sequence diagram, atau catatan rilis teknis.
+- **Target Output Analisis**: `./result-testcase/PRD_Analysis_<Feature_Name>.md`
 
 ---
 
-## 3. Metodologi Pengujian & Skala Prioritas
+## 2. Prinsip Utama Analisis QA (Senior QA Heuristics)
+
+### 1. 🛑 STRICT NO-ASSUMPTION & INTERACTIVE CLARIFICATION GATE (Wajib Berhenti & Bertanya)
+- **Zero-Wild-Guess Policy**: Agent **DILARANG KERAS** mengasumsikan sendiri aturan bisnis yang belum lengkap, rumus kalkulasi/pricing yang ambigu, batas limit kuota/timeout yang tidak tertulis, penanganan error code yang kosong, atau perilaku sistem saat kondisi offline/kegagalan.
+- **Interactive Clarification Gate**: Sebelum menulis dokumen analisis final, Agent **WAJIB berhenti dan mengajukan daftar pertanyaan klarifikasi terstruktur kepada User**.
+- **7 Dimensi Checklist Klarifikasi Wajib**:
+  1. *Business Logic & Formula Invariants*: Rumus eksak kalkulasi, pembulatan desimal, currency conversion, kondisi diskon/tiering.
+  2. *Scope Guardrails*: Batasan tegas apa yang **In-Scope** vs **Out-of-Scope** pada iterasi ini.
+  3. *Role & Authorization Boundaries*: Izin aksi per role (View, Create, Edit, Delete, Export, Approve, Direct API/URL access).
+  4. *Error Response & Failure Fallbacks*: Apa yang terjadi saat provider pihak ketiga down, network timeout 504, saldo habis, atau request gagal?
+  5. *Data Lifecycle & Invariants*: Siklus hidup entitas (Draft $\rightarrow$ Active $\rightarrow$ Inactive $\rightarrow$ Soft-deleted), kebijakan retensi data, dan PII masking.
+  6. *Concurrency & Idempotency*: Pencegahan transaksi ganda akibat double-click CTA atau retry network.
+  7. *Platform & Environment Constraints*: Versi OS/browser minimum, device compatibility, throttling network, token expiry duration.
+
+### 2. 🌐 UNIVERSAL MULTI-PLATFORM ADAPTER
+Analisis harus secara otomatis menyesuaikan karakteristik arsitektur sistem target:
+- **Web Applications (SPA / SSR)**: Evaluasi browser history, multiple tabs sync, cookie/session management, responsive layout, reload page state, keyboard navigation.
+- **Mobile Applications (iOS / Android / Flutter / React Native)**: Evaluasi app lifecycle (background/kill/resume), permission requests (Camera, GPS, Storage), push notification payload, biometrics (FaceID/Fingerprint), offline local storage (SQLite/Hive) sync.
+- **Backend APIs & Microservices (REST / GraphQL / gRPC)**: Evaluasi HTTP Status Code (2xx, 4xx, 5xx), request-response JSON contract schema, headers (Authorization, X-Request-ID, Idempotency-Key), rate limiting (429), payload validation, BOLA/IDOR vulnerability.
+- **Event-Driven & Asynchronous Systems (Webhooks / Message Broker / Kafka / RabbitMQ)**: Evaluasi message delivery guarantee (at-least-once), retry policy & exponential backoff, dead-letter queue (DLQ), payload deduplication, out-of-order event handling.
+
+### 3. 🧠 SFDIPOT HEURISTIC REQUIREMENT MODELING
+Gunakan kerangka berpikir SFDIPOT (James Bach HTSM) untuk membedah setiap requirement secara holistik:
+- **Structure**: Struktur kode, dependensi library, konfigurasi environment flag.
+- **Function**: Seluruh fungsionalitas input-proses-output yang dilakukan oleh sistem.
+- **Data**: Karakteristik data input/output, boundary values, tipe data, enkripsi, dan mutasi DB.
+- **Interfaces**: UI components, REST endpoints, webhooks, file import/export (CSV, Excel, PDF).
+- **Platform**: Platform eksekusi, OS, web browser, hardware limit, network bandwidth.
+- **Operations**: Pola penggunaan user nyata, variasi persona, volume beban harian.
+- **Time**: Asinkronus, delay timeout, masa kedaluwarsa token/OTP, timezone UTC vs Local time.
+
+### 4. 🔒 NON-FUNCTIONAL REQUIREMENTS (NFR) & SECURITY GUARDRAILS
+Dokumen analisis wajib mencakup analisa ketat terhadap:
+- **Idempotency**: Memastikan request mutasi kritis (pembayaran, pengurangan kuota, pembuatan data) aman dari duplikasi.
+- **State Invariants**: Entitas tidak boleh melompati status yang dilarang (misal: dari `Rejected` tidak boleh langsung menjadi `Completed`).
+- **Security & OWASP Guardrails**: Pengecekan otorisasi di level API/Object (mencegah manipulasi `user_id` pada URL/payload), sanitasi input (XSS/SQLi), dan perlindungan data pribadi (PII).
+- **Graceful Degradation**: Sistem tetap menampilkan feedback informatif (fallback message) saat dependensi eksternal gagal merespons.
+
+---
+
+## 3. Metodologi Pengujian & Skala Prioritas Industri
 
 ### A. Testing Methods
-- **Decision Table Testing (DT)**: Kombinasi kondisi aturan bisnis multi-variabel.
-- **State Transition Testing (ST)**: Siklus perubahan status entitas/data (misal: `Draft` ➔ `Active` ➔ `Completed` / `Failed`).
-- **Boundary Value Analysis (BVA)**: Pengujian batas minimum, maksimum, batas kuota, dan nilai ekstrem.
-- **Equivalence Partitioning (EP)**: Pengelompokan input kelas valid vs invalid.
-- **Access Control & RBAC Testing (AC)**: Pengujian otorisasi menu, direct URL, dan tindakan mutasi data per role.
-- **Negative & Failure Recovery Testing (NEG)**: Penanganan error validasi, respons gagal dari API/provider eksternal, rollback data, dan timeout.
+- **Decision Table Testing (DT)**: Pemetaan seluruh kombinasi logika multi-variabel.
+- **State Transition Testing (ST)**: Pemodelan siklus hidup status data beserta transisi valid vs invalid.
+- **Boundary Value Analysis (BVA)**: Pengujian nilai batas (Min-1, Min, Normal, Max, Max+1, Extreme Values).
+- **Equivalence Partitioning (EP)**: Pembagian kelas input valid vs invalid.
+- **Access Control & RBAC/BOLA Testing (AC)**: Pengujian hak akses per role, direct URL access, dan otorisasi API backend.
+- **Negative & Resiliency Testing (RES)**: Penanganan invalid payload, network drop, timeout, dan rollback integritas data.
+- **Concurrency & Race Condition Testing (CONC)**: Pengujian klik simultan, multi-user update pada baris data yang sama.
 
-### B. Priority Matrix
-- **P1 (Critical / Blocker)**: Alur transaksi keuangan/kredit/mutasi data penting, integrasi inti, penegakan limit/kuota, integritas rollback data, dan pencegahan bypass keamanan.
-- **P2 (High)**: Validasi RBAC per role, kalkulasi data/biaya real-time, filter, pagination, validasi input wajib, dan ekspor data.
-- **P3 (Medium / Low)**: Format estetika UI/UX, urutan tampilan (sorting), audit trail/log sekunder, dan tooltip.
+### B. Priority Matrix Standar Industri
+- **P1 (Critical / Blocker)**: Alur transaksi keuangan/kredit, mutasi data inti, penegakan isolasi tenant/data security, rollback integrity, pencegahan bypass auth, dan core happy path.
+- **P2 (High)**: Validasi otorisasi RBAC, kalkulasi real-time, filter/sorting/pagination kompleks, boundary data, format input wajib, dan ekspor data.
+- **P3 (Medium / Low)**: Format visual UI/UX, tooltip, micro-animation, log sekunder, dan pesan error minor.
 
 ---
 
-## 4. Struktur Standar Dokumen Hasil Analisis (Evidence-Grade Document)
+## 4. Struktur Standar Dokumen Hasil Analisis (`result-testcase/PRD_Analysis_<Feature_Name>.md`)
 
-Dokumen analisis wajib disimpan di path `result-testcase/PRD_Analysis_<Feature_Name>.md` dengan struktur standar berikut:
+Dokumen analisis wajib memiliki hierarki standar berikut:
 
 ```markdown
 # Analisis PRD & Perancangan Test Matrix: [Nama Fitur]
 
 ## 1. Ringkasan Fitur & Scope Guardrails
-- **Tujuan Fitur**: Penjelasan 1-2 paragraf mengenai value bisnis & fungsionalitas utama.
-- **Domain Aplikasi Target**: [Nama App, misal: Customer Dashboard / Dashboard CRM / Chatroom Web].
-- **Referensi Struktur UI**: [Sebutkan subfolder/file di `strukturmenu/<app-name>/` yang relevan].
-- **In-Scope**: Modul/fitur/flow spesifik yang diuji pada iterasi ini.
-- **Out-of-Scope**: Fitur di luar cakupan yang tidak terdampak/tidak diuji pada iterasi ini.
+- **Tujuan Fitur**: Penjelasan nilai bisnis dan fungsionalitas inti (1-2 paragraf).
+- **Arsitektur & Domain Platform**: [Web SPA / Mobile App iOS-Android / Backend API / Event-Driven Microservice].
+- **Referensi Interface & Pengetahuan Pendukung**: [Path UI di strukturmenu/, OpenAPI Spec, atau Figma Link].
+- **In-Scope**: Modul, alur, dan batasan fungsional yang secara tegas diuji pada iterasi ini.
+- **Out-of-Scope**: Fitur/modul di luar cakupan yang tidak terdampak atau ditunda pada rilis ini.
 
 ## 2. Prasyarat Sistem & Konfigurasi Lingkungan (Pre-requisites)
-- Prasyarat akun, subscription tier, environment flag, data master awal, atau hak akses wajib.
+- Konfigurasi environment flag, akun uji, role permissions, master data awal, dependency service, atau token autentikasi.
 
-## 3. Matriks Hak Akses (RBAC Matrix)
-- Tabel ringkas pemetaan Role Pengguna vs Modul/Sub-menu/Aksi (View, Create, Edit, Delete, Export, Toggle).
+## 3. Matriks Hak Akses & Otorisasi Keamanan (RBAC & Authorization Matrix)
+- Tabel pemetaan Role Pengguna vs Modul/Endpoint/Aksi (View, Create, Edit, Delete, Export, Approve, Direct API).
+- Penegakan proteksi BOLA/IDOR di layer API backend.
 
-## 4. Logika Bisnis, Aturan Validasi & Decision Matrix
-- **Decision Table / BVA Matrix**: Tabel kondisi logika bisnis, rumus, dan validasi limit.
-- **State Transition Flow**: Siklus lifecycle perubahan status (jika fitur berbasis status flow).
+## 4. Pemodelan Logika Bisnis, State Transition & Decision Matrix
+- **Decision Table / BVA Matrix**: Tabel kombinasi logika bisnis multi-kondisi beserta expected action.
+- **State Transition Flow & Invariants**: Diagram/tabel siklus hidup status entitas (termasuk transisi yang dilarang).
 
-## 5. Integrasi Teknis, Penanganan Kegagalan & Edge Cases (Technical & Error Handling)
-- **Error Handling & Validations**: Validasi field, batas format, pesan toast error.
-- **API & Third-Party Integration**: Penanganan kegagalan provider eksternal, network timeout, rate limit, dan mekanisme rollback.
-- **Database & Data Integrity Impact**: Integritas data saat operasi gagal/batal.
+## 5. Non-Functional Requirements, Integrasi Teknis & Error Handling
+- **Idempotency & Concurrency Guardrails**: Mekanisme penanganan double-submit dan simultaneous update.
+- **API & Third-Party Integration Resiliency**: Timeout threshold, fallback responses, circuit breaker, retry policy.
+- **Validation & Sanitization**: Validasi format field, batas ukuran file, sanitasi XSS/SQLi.
+- **Data Persistence & Rollback Impact**: Integritas data DB saat transaksi dibatalkan atau gagal di tengah jalan.
 
-## 6. Dampak Regresi (Impact & Regression Scope)
-- Fitur atau modul existing lain yang berpotensi terdampak oleh perubahan ini dan perlu uji regresi.
+## 6. Requirements Traceability Matrix (RTM)
+- Tabel pemetaan dua arah: `User Story / PRD Section` ↔ `Acceptance Criteria (AC)` ↔ `Target Test Area` ↔ `Planned Priority`.
 
-## 7. Catatan Klarifikasi & Keputusan Produk (Clarification & Alignment Log)
-- Rangkuman tanya-jawab dan keputusan final dari poin-poin ambigu yang telah dikonfirmasi ke User/PO/Dev sebelum dokumen ini difinalisasi.
+## 7. Dampak Regresi (Impact & Regression Scope)
+- Fitur existing, modul upstream/downstream, dan database schema yang berpotensi terdampak oleh perubahan ini.
+
+## 8. Catatan Klarifikasi & Keputusan Produk (Clarification & Alignment Log)
+- Rangkuman pertanyaan terstruktur yang telah diajukan ke User/PO/Dev beserta keputusan final yang telah disepakati sebelum dokumen ini difinalisasi.
 ```
 
 ---
@@ -110,29 +136,29 @@ Dokumen analisis wajib disimpan di path `result-testcase/PRD_Analysis_<Feature_N
 
 ```mermaid
 graph TD
-    A["1. Terima PRD & Cek adhoc-document/"] --> B["2. Deteksi Domain App & Cek strukturmenu/<app-name>/"]
-    B --> C{"3. Ada Ambiguitas / Pertanyaan?"}
-    C -- "Ya" --> D["4. TANYA USER (Interactive Clarification) & Tunggu Jawaban"]
-    D --> E["5. Susun Analisis & Matriks Lengkap"]
-    C -- "Tidak" --> E
-    E --> F["6. Simpan PRD_Analysis_<Feature_Name>.md di result-testcase/"]
-    F --> G["7. Laporkan Dokumen Siap & Siap Lanjut ke Generate Testcase"]
+    A["1. Terima PRD & Eksplorasi Support Files (adhoc-document/, Testcase-support/, strukturmenu/)"] --> B["2. Analisa SFDIPOT, NFR, State & Logic Flow"]
+    B --> C["3. Evaluasi Gap & Ambiguitas (Interactive Clarification Gate)"]
+    C --> D{"Ada Poin Ambigu / Belum Lengkap?"}
+    D -- "Ya (Wajib)" --> E["4. AJUKAN PERTANYAAN TERSTRUKTUR KE USER & TUNGGU JAWABAN"]
+    E --> F["5. Susun Analisis Lengkap Sesuai Template Standar"]
+    D -- "Tidak" --> F
+    F --> G["6. Simpan PRD_Analysis_<Feature_Name>.md di result-testcase/"]
+    G --> H["7. Laporkan ke User & Siap Lanjut ke generate-testcase"]
 ```
 
-1. **Terima Input PRD & Eksplorasi Pengetahuan Pendukung**:
-   - Baca file PRD yang diberikan oleh user.
-   - Cek `Testcase-support/` untuk aturan RBAC dan template.
-   - Cek folder `adhoc-document/` jika terdapat dokumen teknis tambahan yang relevan.
-2. **Identifikasi Domain Aplikasi & Resolusi UI**:
-   - Tentukan domain app target (`customer-dashboard`, `dashboard-crm`, `chatroom-web`, dll.).
-   - Pelajari layout & komponen di `strukturmenu/<app-name>/`.
-3. **Analisa Kebutuhan & Gate Klarifikasi (Interactive Gate)**:
-   - Identifikasi logic gap, aturan bisnis, batas limit, respon error, atau ketidakjelasan UI.
-   - **WAJIB BERTANYA KE USER**: Sajikan daftar pertanyaan terstruktur dan tunggu respon user sebelum melanjutkan penulisan dokumen.
-4. **Penyusunan Analisis Lengkap**:
-   - Setelah jawaban diterima, susun analisis menyeluruh sesuai template standar pada Bagian 4.
-5. **Simpan Dokumen Hasil Analisis**:
-   - Simpan dokumen ke: `/Users/eldofadlyady/Documents/eldoTest/result-testcase/PRD_Analysis_<Feature_Name>.md`.
-6. **Lapor & Handover**:
-   - Informasikan ke user bahwa dokumen analisis sudah siap dan terverifikasi untuk menjadi acuan pembuatan Test Case (`generate-testcase`).
-
+1. **Eksplorasi Input & Konteks Pendukung**:
+   - Baca PRD yang diberikan oleh user.
+   - Periksa `./Testcase-support/` untuk aturan RBAC, template, dan file `qa-learnings.md` (pelajaran dari sprint sebelumnya).
+   - Periksa `./adhoc-document/` jika terdapat OpenAPI/Swagger, DB Schema, atau dokumentasi teknis lainnya.
+   - Periksa `./strukturmenu/` atau link Figma jika fitur memiliki antarmuka pengguna.
+2. **Bedah Kebutuhan secara Mendalam (SFDIPOT & NFR Analysis)**:
+   - Identifikasi alur logika bisnis, state lifecycle, rumus, batasan limit, integrasi pihak ketiga, dan potensi celah keamanan.
+3. **Gerbang Klarifikasi Interaktif (Interactive Clarification Gate)**:
+   - Susun daftar pertanyaan yang mencakup 7 Dimensi Checklist Klarifikasi.
+   - **TANYA KE USER dan TUNGGU JAWABAN**. Jangan pernah membuat dokumen final dengan asumsi tanpa konfirmasi.
+4. **Penyusunan Dokumen Analisis Final**:
+   - Setelah seluruh klarifikasi disepakati, susun dokumen analisis komprehensif mengikuti Bagian 4.
+5. **Penyimpanan Dokumen**:
+   - Simpan dokumen ke: `./result-testcase/PRD_Analysis_<Feature_Name>.md`.
+6. **Laporan & Handover**:
+   - Laporkan ringkasan temuan kritis, scope boundary yang telah terkunci, dan informasikan bahwa dokumen siap diturunkan ke skill `generate-testcase`.

@@ -2,6 +2,7 @@ import os
 import sys
 import re
 import argparse
+from datetime import datetime
 import docx
 from docx.shared import Pt, Inches, RGBColor
 from docx.oxml import parse_xml
@@ -99,7 +100,6 @@ def create_table_from_parsed(doc, headers, rows_data):
         return
     all_rows = [headers] + rows_data if headers else rows_data
     num_cols = max(len(r) for r in all_rows)
-    # pad rows if necessary
     for r in all_rows:
         while len(r) < num_cols:
             r.append("")
@@ -108,9 +108,8 @@ def create_table_from_parsed(doc, headers, rows_data):
     table.alignment = WD_TABLE_ALIGNMENT.CENTER
     set_table_borders(table, color="000000", sz="6")
 
-    # Pick header color: Cyan if looks like test scenario/decision, else Gray
     header_str = " ".join(all_rows[0]).lower()
-    is_cyan = any(w in header_str for w in ["scenario", "test case", "rule", "fep", "decision", "kondisi", "skenario"])
+    is_cyan = any(w in header_str for w in ["scenario", "test case", "rule", "fep", "decision", "kondisi", "skenario", "assertion"])
     header_bg = "00FFFF" if is_cyan else "CCCCCC"
 
     for r_idx, row_data in enumerate(all_rows):
@@ -121,18 +120,17 @@ def create_table_from_parsed(doc, headers, rows_data):
         for c_idx, val in enumerate(row_data):
             cell = row.cells[c_idx]
             cell.text = str(val).strip()
-            # alignment
             txt = str(val).strip()
-            if txt in ["✅", "❌", "Pending", "Success", "Delivered", "-", "TRUE", "FALSE"]:
+            if txt in ["✅", "❌", "Pending", "Success", "Delivered", "-", "TRUE", "FALSE", "P1", "P2", "P3"]:
                 cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
             else:
                 cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.LEFT
         
         format_row(row, bg_colors=bg, is_header=is_hdr, font_size=9)
 
-    doc.add_paragraph() # spacing
+    doc.add_paragraph()
 
-def convert_md_to_docx(md_path, docx_path):
+def convert_md_to_docx(md_path, docx_path, contributor=None, approver=None, informed=None):
     with open(md_path, "r", encoding="utf-8") as f:
         lines = f.readlines()
 
@@ -147,7 +145,6 @@ def convert_md_to_docx(md_path, docx_path):
     table_headers = []
     table_rows = []
 
-    # Title extraction
     title_text = ""
     for line in lines:
         if line.strip().startswith("# "):
@@ -164,14 +161,19 @@ def convert_md_to_docx(md_path, docx_path):
     r_title.font.size = Pt(14)
     r_title.font.bold = True
 
-    # Header metadata box (Standard Everpro TIW)
+    # Dynamic metadata
     feature_name = title_text.replace("Analisis PRD & Perancangan Test Matrix:", "").strip()
+    author = contributor or "QA Lead / QA Engineer"
+    reviewers = approver or "Product Manager, Engineering Lead, QA Lead"
+    stakeholders = informed or "Product Management, Engineering Core Team, Operations"
+    current_date = datetime.now().strftime("%B %d, %Y")
+
     meta_data = [
         ["Product/Feature Name", feature_name],
-        ["Supporting Docs", "PRD, Figma, RBAC SSOT, Adhoc Docs"],
-        ["Contributor", "Eldo Fadlyady (QA Engineer)"],
-        ["Approver", "Rizky Nuredja, Elsa Vinietta"],
-        ["Informed", "Everpro Core Team, Product Management, Engineering"]
+        ["Supporting Docs", "PRD, Figma / UI References, OpenAPI / Technical Specs, RBAC SSOT"],
+        ["Contributor", author],
+        ["Approver", reviewers],
+        ["Informed", stakeholders]
     ]
     meta_tbl = doc.add_table(rows=len(meta_data), cols=2)
     meta_tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
@@ -193,18 +195,17 @@ def convert_md_to_docx(md_path, docx_path):
     add_heading_styled(doc, "Changelog", level=2)
     changelog_data = [
         ["Version", "Date", "Description", "Update By", "Color Mark"],
-        ["1.0.0", "May 18, 2026", "Initial Document Analysis & Test Matrix", "Eldo Fadlyady", ""]
+        ["1.0.0", current_date, "Initial Document Analysis, Test Matrix & Guardrails", author, ""]
     ]
     create_table_from_parsed(doc, changelog_data[0], changelog_data[1:])
 
     # Approval
     add_heading_styled(doc, "Approval", level=2)
     approval_data = [
-        ["Name", "Status", "Date", "Notes"],
-        ["Rizky Nuredja", "Pending", "", ""],
-        ["Elsa Vinietta", "Pending", "", ""],
-        ["QA Lead / PM", "Pending", "", ""],
-        ["Engineering Lead", "Pending", "", ""]
+        ["Name / Role", "Status", "Date", "Notes"],
+        ["Product Manager", "Pending", "", ""],
+        ["Engineering Lead", "Pending", "", ""],
+        ["QA Lead", "Pending", "", ""]
     ]
     create_table_from_parsed(doc, approval_data[0], approval_data[1:])
 
@@ -216,7 +217,6 @@ def convert_md_to_docx(md_path, docx_path):
         # Check table
         if s.startswith("|") and s.endswith("|"):
             cells = [c.strip() for c in s[1:-1].split("|")]
-            # ignore divider row |:---|:---:|
             if all(re.match(r'^:?-+:?$', c) for c in cells if c):
                 continue
             if not in_table:
@@ -237,7 +237,7 @@ def convert_md_to_docx(md_path, docx_path):
             continue
 
         if s.startswith("# "):
-            continue # Already handled as document title
+            continue
         elif s.startswith("## "):
             add_heading_styled(doc, s[3:].strip(), level=2)
         elif s.startswith("### "):
@@ -246,7 +246,6 @@ def convert_md_to_docx(md_path, docx_path):
             continue
         elif s.startswith("- ") or s.startswith("* "):
             content = s[2:].strip()
-            # check bold prefix like **Tujuan Fitur**: ...
             m = re.match(r'^\*\*(.*?)\*\*:(.*)$', content)
             if m:
                 add_body_p(doc, m.group(2), bold_prefix=m.group(1) + ":", is_bullet=True)
@@ -266,11 +265,10 @@ def convert_md_to_docx(md_path, docx_path):
     if in_table:
         create_table_from_parsed(doc, table_headers, table_rows)
 
-    # Add Feedbacks & Review Log section at the end
+    # Feedbacks & Review Log section
     add_heading_styled(doc, "Feedbacks & Review Log", level=2)
     feedback_headers = ["Reviewer and Description", "Type", "Action"]
     feedback_rows = [
-        ["", "", ""],
         ["", "", ""],
         ["", "", ""]
     ]
@@ -284,5 +282,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Convert Markdown QA Analysis to Standard DOCX")
     parser.add_argument("input_md", help="Path to input markdown file")
     parser.add_argument("output_docx", help="Path to output docx file")
+    parser.add_argument("--contributor", default=None, help="Contributor name")
+    parser.add_argument("--approver", default=None, help="Approver names")
+    parser.add_argument("--informed", default=None, help="Informed stakeholders")
     args = parser.parse_args()
-    convert_md_to_docx(args.input_md, args.output_docx)
+    convert_md_to_docx(args.input_md, args.output_docx, args.contributor, args.approver, args.informed)

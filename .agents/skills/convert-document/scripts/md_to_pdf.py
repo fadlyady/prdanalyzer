@@ -2,6 +2,7 @@ import os
 import sys
 import re
 import argparse
+from datetime import datetime
 from reportlab.lib.pagesizes import letter, A4
 from reportlab.lib import colors
 from reportlab.lib.units import inch
@@ -10,7 +11,7 @@ from reportlab.platypus import (
     SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak, KeepTogether
 )
 
-def convert_md_to_pdf(md_path, pdf_path):
+def convert_md_to_pdf(md_path, pdf_path, contributor=None, approver=None, informed=None):
     with open(md_path, "r", encoding="utf-8") as f:
         lines = f.readlines()
 
@@ -25,7 +26,6 @@ def convert_md_to_pdf(md_path, pdf_path):
 
     styles = getSampleStyleSheet()
 
-    # Custom styles
     title_style = ParagraphStyle(
         'DocTitle',
         parent=styles['Heading1'],
@@ -92,7 +92,6 @@ def convert_md_to_pdf(md_path, pdf_path):
 
     story = []
 
-    # Title extraction
     title_text = ""
     for line in lines:
         if line.strip().startswith("# "):
@@ -103,14 +102,19 @@ def convert_md_to_pdf(md_path, pdf_path):
 
     story.append(Paragraph(f"<b>[TIW] {title_text}</b>", title_style))
 
-    # Metadata Box
+    # Dynamic Metadata Box
     feature_name = title_text.replace("Analisis PRD & Perancangan Test Matrix:", "").strip()
+    author = contributor or "QA Lead / QA Engineer"
+    reviewers = approver or "Product Manager, Engineering Lead, QA Lead"
+    stakeholders = informed or "Product Management, Engineering Core Team, Operations"
+    current_date = datetime.now().strftime("%B %d, %Y")
+
     meta_data = [
         [Paragraph("<b>Product/Feature Name</b>", table_cell_style), Paragraph(feature_name, table_cell_style)],
-        [Paragraph("<b>Supporting Docs</b>", table_cell_style), Paragraph("PRD, Figma, RBAC SSOT, Adhoc Docs", table_cell_style)],
-        [Paragraph("<b>Contributor</b>", table_cell_style), Paragraph("Eldo Fadlyady (QA Engineer)", table_cell_style)],
-        [Paragraph("<b>Approver</b>", table_cell_style), Paragraph("Rizky Nuredja, Elsa Vinietta", table_cell_style)],
-        [Paragraph("<b>Informed</b>", table_cell_style), Paragraph("Everpro Core Team, Product Management, Engineering", table_cell_style)]
+        [Paragraph("<b>Supporting Docs</b>", table_cell_style), Paragraph("PRD, Figma / UI References, OpenAPI / Technical Specs, RBAC SSOT", table_cell_style)],
+        [Paragraph("<b>Contributor</b>", table_cell_style), Paragraph(author, table_cell_style)],
+        [Paragraph("<b>Approver</b>", table_cell_style), Paragraph(reviewers, table_cell_style)],
+        [Paragraph("<b>Informed</b>", table_cell_style), Paragraph(stakeholders, table_cell_style)]
     ]
     meta_tbl = Table(meta_data, colWidths=[150, 365])
     meta_tbl.setStyle(TableStyle([
@@ -130,7 +134,7 @@ def convert_md_to_pdf(md_path, pdf_path):
     story.append(Paragraph("Changelog", h2_style))
     changelog_data = [
         [Paragraph("<b>Version</b>", table_header_style), Paragraph("<b>Date</b>", table_header_style), Paragraph("<b>Description</b>", table_header_style), Paragraph("<b>Update By</b>", table_header_style), Paragraph("<b>Color Mark</b>", table_header_style)],
-        [Paragraph("1.0.0", table_cell_style), Paragraph("May 18, 2026", table_cell_style), Paragraph("Initial Document Analysis & Test Matrix", table_cell_style), Paragraph("Eldo Fadlyady", table_cell_style), Paragraph("", table_cell_style)]
+        [Paragraph("1.0.0", table_cell_style), Paragraph(current_date, table_cell_style), Paragraph("Initial Document Analysis, Test Matrix & Guardrails", table_cell_style), Paragraph(author, table_cell_style), Paragraph("", table_cell_style)]
     ]
     cl_tbl = Table(changelog_data, colWidths=[60, 90, 205, 110, 50])
     cl_tbl.setStyle(TableStyle([
@@ -146,11 +150,10 @@ def convert_md_to_pdf(md_path, pdf_path):
     # Approval
     story.append(Paragraph("Approval", h2_style))
     approval_data = [
-        [Paragraph("<b>Name</b>", table_header_style), Paragraph("<b>Status</b>", table_header_style), Paragraph("<b>Date</b>", table_header_style), Paragraph("<b>Notes</b>", table_header_style)],
-        [Paragraph("Rizky Nuredja", table_cell_style), Paragraph("Pending", table_cell_style), Paragraph("", table_cell_style), Paragraph("", table_cell_style)],
-        [Paragraph("Elsa Vinietta", table_cell_style), Paragraph("Pending", table_cell_style), Paragraph("", table_cell_style), Paragraph("", table_cell_style)],
-        [Paragraph("QA Lead / PM", table_cell_style), Paragraph("Pending", table_cell_style), Paragraph("", table_cell_style), Paragraph("", table_cell_style)],
-        [Paragraph("Engineering Lead", table_cell_style), Paragraph("Pending", table_cell_style), Paragraph("", table_cell_style), Paragraph("", table_cell_style)]
+        [Paragraph("<b>Name / Role</b>", table_header_style), Paragraph("<b>Status</b>", table_header_style), Paragraph("<b>Date</b>", table_header_style), Paragraph("<b>Notes</b>", table_header_style)],
+        [Paragraph("Product Manager", table_cell_style), Paragraph("Pending", table_cell_style), Paragraph("", table_cell_style), Paragraph("", table_cell_style)],
+        [Paragraph("Engineering Lead", table_cell_style), Paragraph("Pending", table_cell_style), Paragraph("", table_cell_style), Paragraph("", table_cell_style)],
+        [Paragraph("QA Lead", table_cell_style), Paragraph("Pending", table_cell_style), Paragraph("", table_cell_style), Paragraph("", table_cell_style)]
     ]
     app_tbl = Table(approval_data, colWidths=[140, 90, 100, 185])
     app_tbl.setStyle(TableStyle([
@@ -163,18 +166,15 @@ def convert_md_to_pdf(md_path, pdf_path):
     story.append(app_tbl)
     story.append(Spacer(1, 10))
 
-    # Helper function for rendering markdown tables in PDF
     def render_pdf_table(headers, rows):
         if not headers and not rows:
             return
         all_rows = [headers] + rows if headers else rows
         num_cols = max(len(r) for r in all_rows)
         
-        # Calculate available width (515 pt)
         col_w = 515.0 / num_cols
         widths = [col_w] * num_cols
 
-        # Specific adjustments for 5/6 cols
         if num_cols == 5:
             widths = [135, 75, 95, 105, 105]
         elif num_cols == 6:
@@ -185,7 +185,7 @@ def convert_md_to_pdf(md_path, pdf_path):
             widths = [160, 355]
 
         table_data = []
-        is_cyan = any(w in " ".join(headers).lower() for w in ["scenario", "test case", "rule", "fep", "decision", "kondisi", "skenario"])
+        is_cyan = any(w in " ".join(headers).lower() for w in ["scenario", "test case", "rule", "fep", "decision", "kondisi", "skenario", "assertion"])
         header_color = colors.HexColor('#00FFFF') if is_cyan else colors.HexColor('#CCCCCC')
 
         for r_idx, row in enumerate(all_rows):
@@ -194,7 +194,6 @@ def convert_md_to_pdf(md_path, pdf_path):
             st = table_header_style if is_hdr else table_cell_style
             for c_idx, val in enumerate(row):
                 val_str = str(val).strip()
-                # Markdown bold convert
                 val_html = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', val_str)
                 r_data.append(Paragraph(val_html, st))
             while len(r_data) < num_cols:
@@ -224,7 +223,6 @@ def convert_md_to_pdf(md_path, pdf_path):
         raw = line.rstrip("\n\r")
         s = raw.strip()
 
-        # Check table
         if s.startswith("|") and s.endswith("|"):
             cells = [c.strip() for c in s[1:-1].split("|")]
             if all(re.match(r'^:?-+:?$', c) for c in cells if c):
@@ -282,5 +280,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Convert Markdown QA Analysis to Standard PDF")
     parser.add_argument("input_md", help="Path to input markdown file")
     parser.add_argument("output_pdf", help="Path to output pdf file")
+    parser.add_argument("--contributor", default=None, help="Contributor name")
+    parser.add_argument("--approver", default=None, help="Approver names")
+    parser.add_argument("--informed", default=None, help="Informed stakeholders")
     args = parser.parse_args()
-    convert_md_to_pdf(args.input_md, args.output_pdf)
+    convert_md_to_pdf(args.input_md, args.output_pdf, args.contributor, args.approver, args.informed)
