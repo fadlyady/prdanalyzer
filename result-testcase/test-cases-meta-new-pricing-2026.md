@@ -1,6 +1,6 @@
 # Automation & QA Master Test Case Suite: Meta New Pricing 2026
 
-Dokumen ini berisi seluruh skenario pengujian komprehensif (*Master Test Case Suite*) yang diturunkan langsung dari [PRD_Analysis_Meta_New_Pricing_2026.md](file:///Users/fadlyady/Documents/Eldo%20Work/prdAnalyzer/result-testcase/PRD_Analysis_Meta_New_Pricing_2026.md). Format disusun secara deklaratif bernomor (*Action $\rightarrow$ Triple-Layer Assertion*) lengkap dengan **Tagging Prioritas & Kompleksitas Otomasi** untuk framework otomasi (Playwright, Cypress, Pytest, Appium).
+Dokumen ini berisi seluruh skenario pengujian komprehensif (*Master Test Case Suite*) yang diturunkan langsung dari [PRD_Analysis_Meta_New_Pricing_2026.md](file:///Users/fadlyady/Documents/Eldo%20Work/prdAnalyzer/result-testcase/PRD_Analysis_Meta_New_Pricing_2026.md). Format disusun dengan standar **Layered Pragmatic BDD (Gherkin untuk UI/E2E & Structured AAA untuk Backend/API)**, **Injeksi Payload Webhook Eksplisit**, **Relative Timestamp Seeding**, dan **Triple-Layer Assertions**.
 
 ---
 
@@ -21,16 +21,15 @@ Dokumen ini berisi seluruh skenario pengujian komprehensif (*Master Test Case Su
 - **User Story**: [Priority: Critical] US-01: Base Price Management (Covers: AC-1)
 - **Tipe**: Functional / Positive
 - **Precondition**:
-  1. Akses database / internal API pricing aktif.
-  2. Kategori pesan dan kode negara recipient valid.
-- **Test Steps**:
-  1. Kirim request update base price untuk `category = 'SERVICE'`, `country = 'ID'`, `base_price = 300`, `effective_at = '2026-10-01 00:00:00 UTC'`.
-  2. Query tabel `meta_base_prices`.
-  3. Periksa nilai kolom `base_price` dan `effective_at`.
+  1. Akses internal API endpoint pricing aktif.
+  2. Parameter category ('SERVICE') dan country ('ID') valid.
+- **Test Steps (Structured AAA)**:
+  1. [Arrange] Siapkan payload JSON update base price: {"category": "SERVICE", "country": "ID", "base_price": 300, "effective_at": "2026-10-01T00:00:00Z"}.
+  2. [Act] Kirim request POST /api/v1/admin/pricing/base dengan header Authorization: Bearer <bizops_token>.
+  3. [Assert] Query tabel meta_base_prices untuk memvalidasi persistensi data.
 - **Expected Results (Triple-Layer Assertions)**:
-  1. [API] Response merespons HTTP `200 OK` dengan payload `{ "status": "SUCCESS", "updated_rows": 1 }`.
-  2. [DB] Record tersimpan dengan `base_price = 300` dan status `'ACTIVE'`.
-  3. [DB] Kolom `effective_at` tersimpan sesuai timestamp UTC yang ditentukan.
+  1. [API] Response merespons HTTP 200 OK dengan payload {"status": "SUCCESS", "updated_rows": 1, "data": {"category": "SERVICE", "country": "ID", "base_price": 300, "effective_at": "2026-10-01T00:00:00Z"}}.
+  2. [DB] Record tersimpan di tabel meta_base_prices dengan base_price = 300, status 'ACTIVE', dan effective_at tersimpan sesuai timestamp UTC.
 
 ---
 
@@ -38,16 +37,15 @@ Dokumen ini berisi seluruh skenario pengujian komprehensif (*Master Test Case Su
 - **User Story**: [Priority: High] US-01: General Markup Price (Covers: AC-2)
 - **Tipe**: Functional / Positive
 - **Precondition**:
-  1. Data Base Price Meta sudah ada di DB (`SERVICE` = Rp 300).
-  2. Akun merchant umum tidak memiliki custom markup.
-- **Test Steps**:
-  1. Update general markup: `category = 'SERVICE'`, `country = 'ID'`, `markup_price = 150`, `effective_at = '2026-10-01 00:00:00 UTC'`.
-  2. Hit API estimasi biaya pesan untuk user general.
-  3. Verifikasi total tarif pesan yang dihitung oleh sistem.
+  1. Base Price Meta SERVICE = Rp 300 sudah aktif di DB.
+  2. Akun merchant USR-STD-001 tidak memiliki custom markup.
+- **Test Steps (Structured AAA)**:
+  1. [Arrange] Siapkan payload general markup: {"category": "SERVICE", "country": "ID", "markup_price": 150, "effective_at": "2026-10-01T00:00:00Z"}.
+  2. [Act] Kirim request POST /api/v1/admin/pricing/general dan request POST /api/v1/messages/estimate-rate untuk user USR-STD-001.
+  3. [Assert] Verifikasi perhitungan tarif pesan dan persistensi record.
 - **Expected Results (Triple-Layer Assertions)**:
-  1. [API] General markup tersimpan di tabel `general_markups`.
-  2. [API] Estimasi tarif pesan = Base Price (300) + Markup (150) = `Rp 450` (bulat ke atas).
-  3. [DB] Audit log mencatat konfigurasi general markup baru oleh aktor terkait.
+  1. [API] Endpoint estimate-rate merespons HTTP 200 OK dengan {"category": "SERVICE", "base_price": 300, "markup_price": 150, "final_rate": 450, "pricing_source": "GENERAL"}.
+  2. [DB] Record tersimpan di tabel general_markups dan audit_logs mencatat event SET_GENERAL_MARKUP.
 
 ---
 
@@ -55,403 +53,394 @@ Dokumen ini berisi seluruh skenario pengujian komprehensif (*Master Test Case Su
 - **User Story**: [Priority: Critical] US-01: Customizable Pricing (Covers: AC-3)
 - **Tipe**: Functional / Positive
 - **Precondition**:
-  1. General markup = Rp 150.
-  2. Custom markup untuk `user_id = 'USR-VIP-001'` diset = Rp 100.
-- **Test Steps**:
-  1. Kirim pesan dari akun `'USR-VIP-001'`.
-  2. Cek nilai pemotongan saldo / isolasi kredit.
-  3. Bandingkan dengan pengiriman dari akun reguler `'USR-REG-002'`.
+  1. General markup MARKETING = Rp 250, Base Price = Rp 650.
+  2. User USR-VIP-001 memiliki custom markup MARKETING = Rp 100.
+- **Test Steps (Structured AAA)**:
+  1. [Arrange] Pastikan user USR-VIP-001 memiliki custom markup Rp 100 dan user umum USR-STD-001 menggunakan general markup Rp 250.
+  2. [Act] Kirim request POST /api/v1/messages/estimate-rate dengan payload {"user_id": "USR-VIP-001", "category": "MARKETING", "country": "ID"}.
+  3. [Assert] Verifikasi response kalkulasi tarif dan sumber harga yang diterapkan.
 - **Expected Results (Triple-Layer Assertions)**:
-  1. [API] Tarif pesan untuk USR-VIP-001 = Rp 300 + Rp 100 = `Rp 400`.
-  2. [API] Tarif pesan untuk USR-REG-002 = Rp 300 + Rp 150 = `Rp 450`.
-  3. [DB] Custom markup memprioritaskan override general markup 100%.
+  1. [API] Response merespons HTTP 200 OK dengan {"base_price": 650, "markup_price": 100, "final_rate": 750, "pricing_source": "CUSTOM", "applied_user_id": "USR-VIP-001"}.
+  2. [DB] Query pricing engine mengembalikan custom record dari user_custom_markups dan tidak melakukan fallback ke general_markups.
 
 ---
 
-### API-PRIC-DATE-BVA-004: Boundary Test: Penegakan tanggal efektif (`effective_at`) pada pricing `[Auto-High]` `[Medium-Complexity]`
-- **User Story**: [Priority: High] US-01: Pricing Effective Date (Covers: AC-1, AC-2, AC-3)
-- **Tipe**: Boundary / BVA
+### API-PRIC-TIME-BVA-004: Verifikasi Boundary Timestamp Pergantian Harga (Relative Timestamp Seeding) `[Auto-Critical]` `[High-Complexity]`
+- **User Story**: [Priority: Critical] US-01: Pricing Configuration & Activation (Covers: AC-4)
+- **Tipe**: Boundary / Boundary
 - **Precondition**:
-  1. Tarif lama = Rp 400.
-  2. Tarif baru = Rp 500 dengan `effective_at = '2026-10-01 00:00:00 UTC'`.
-- **Test Steps**:
-  1. Kirim pesan pada waktu T-1 detik (`2026-09-30 23:59:59 UTC`).
-  2. Kirim pesan pada waktu T (`2026-10-01 00:00:00 UTC`).
-  3. Verifikasi pemotongan saldo pada kedua transaksi.
+  1. Akses DB untuk seeding fixture pricing.
+  2. Record A (Old Rate = 300) dan Record B (New Rate = 400).
+- **Test Steps (Structured AAA)**:
+  1. [Arrange] Seed Record A (base_price = 300, effective_at = now() - 10 days) dan Record B (base_price = 400, effective_at = now() + 1 hour).
+  2. [Act - Step 1] Request POST /api/v1/messages/estimate-rate sebelum boundary transition.
+  3. [Act - Step 2] Update relative timestamp Record B menjadi effective_at = now() - 1 minute (simulasi pasca boundary transition) dan request estimate-rate ulang.
+  4. [Assert] Evaluasi tarif pada kedua pemanggilan.
 - **Expected Results (Triple-Layer Assertions)**:
-  1. [DB] Transaksi T-1 dipotong tarif lama (`Rp 400`).
-  2. [DB] Transaksi T dipotong tarif baru (`Rp 500`).
-  3. [UI] Log mutasi saldo mencatat tarif yang tepat per masing-masing timestamp.
+  1. [API - Step 1] HTTP 200 OK dengan final_rate = 300 (pricing_version: 'OLD_RATE').
+  2. [API - Step 2] HTTP 200 OK dengan final_rate = 400 (pricing_version: 'NEW_RATE').
+  3. [DB] Query SELECT * FROM meta_base_prices WHERE effective_at <= NOW() ORDER BY effective_at DESC LIMIT 1 mengambil Record B secara deterministik.
 
 ---
 
-### API-PRIC-AUDT-POS-005: Verifikasi pencatatan Audit Log saat terjadi perubahan harga `[Auto-High]` `[Low-Complexity]`
-- **User Story**: [Priority: High] US-01: Price Change Audit Logging (Covers: AC-4)
-- **Tipe**: Security / Audit
-- **Precondition**:
-  1. Biz Ops Admin melakukan update data harga via backend API.
-- **Test Steps**:
-  1. Eksekusi update harga custom untuk `user_id = 'USR-123'`.
-  2. Query tabel `pricing_change_logs`.
-- **Expected Results (Triple-Layer Assertions)**:
-  1. [DB] Record log terbentuk dengan kolom lengkap: `actor_id`, `new_price`, `category`, `country`, `user_id`, `valid_from`.
-  2. [DB] Timestamp log akurat sesuai waktu modifikasi UTC.
-
----
-
-## Modul 2: Eksekusi Pengiriman Pesan & Siklus Kredit (Delivery & Credit Lifecycle)
-
-### WEB-BRD-FEP-POS-006: Verifikasi pengiriman pesan dalam Free Entry Point (FEP) Window tidak memotong kredit `[Auto-Critical]` `[Medium-Complexity]`
-- **User Story**: [Priority: Critical] US-02: Free Entry Point Window (Covers: AC-1)
+### API-PRIC-RND-POS-005: Verifikasi pembulatan harga ke atas (Ceil Rounding) mata uang IDR `[Auto-High]` `[Low-Complexity]`
+- **User Story**: [Priority: High] US-01: Pricing Currency & Rounding (Covers: AC-5)
 - **Tipe**: Functional / Positive
 - **Precondition**:
-  1. Customer melakukan inbound chat via CTWA ad.
-  2. Sesi FEP Window aktif pada room percakapan.
-- **Test Steps**:
-  1. Buka Chatroom pelanggan dengan flag FEP aktif.
-  2. Kirim pesan template Marketing.
-  3. Kirim pesan Service.
-  4. Cek saldo utama WhatsApp Credit.
+  1. Base price desimal = Rp 320,50 dan markup = Rp 79,25 (Total raw = Rp 399,75).
+- **Test Steps (Structured AAA)**:
+  1. [Arrange] Set konfigurasi pricing dengan komponen desimal: Base Price = 320.50, Markup = 79.25.
+  2. [Act] Kirim request POST /api/v1/messages/estimate-rate untuk kalkulasi tarif per broadcast IDR.
+  3. [Assert] Verifikasi nilai output kalkulasi dan tipe data amount.
 - **Expected Results (Triple-Layer Assertions)**:
-  1. [UI] Pesan terkirim sukses tanpa loading isolasi kredit.
-  2. [API] Request kirim pesan menyertakan flag `is_fep = true`.
-  3. [DB] Tidak ada record pemotongan saldo / mutasi kredit (Biaya `Rp 0`).
-  4. [UI] Saldo kredit akun tetap tidak berkurang.
+  1. [API] Response HTTP 200 OK menghasilkan {"raw_rate": 399.75, "final_rate": 400, "currency": "IDR", "rounding_mode": "CEIL"}.
+  2. [DB] Nilai yang dipotong pada payment ledger adalah integer 400 tanpa angka pecahan desimal.
 
 ---
 
-### JOB-BRD-ISOL-POS-007: Verifikasi Credit Isolation saat broadcast dijadwalkan dan dieksekusi `[Auto-Critical]` `[High-Complexity]`
-- **User Story**: [Priority: Critical] US-02: Credit Isolation (Covers: AC-2)
+### JOB-PRIC-AUDT-POS-006: Verifikasi sinkronisasi perubahan harga dan pencatatan audit log `[Auto-Normal]` `[Low-Complexity]`
+- **User Story**: [Priority: Normal] US-01: Audit Log Configuration (Covers: AC-6)
 - **Tipe**: Functional / Positive
 - **Precondition**:
-  1. Saldo utama = Rp 100.000.
-  2. Target broadcast = 100 nomor (tarif Rp 450/pesan, total Rp 45.000).
-- **Test Steps**:
-  1. Buat jadwal broadcast untuk 100 nomor pada jam T.
-  2. Saat jam T tiba, amati status pemotongan saldo.
-  3. Periksa tabel `credit_isolations`.
-  4. Tunggu delivery receipt dari Meta.
+  1. Sesi Biz Ops Admin ADMIN-OPS-007 aktif.
+- **Test Steps (Structured AAA)**:
+  1. [Arrange] Siapkan batch payload pembaruan 4 kategori tarif pesan oleh ADMIN-OPS-007.
+  2. [Act] Eksekusi endpoint batch POST /api/v1/admin/pricing/batch-update.
+  3. [Assert] Query tabel pricing_audit_logs.
 - **Expected Results (Triple-Layer Assertions)**:
-  1. [UI] Status campaign berubah menjadi `'Processing'`.
-  2. [DB] Saldo terisolasi sebesar `Rp 45.000` (sisa saldo aktif Rp 55.000).
-  3. [DB] 100 record isolasi terbentuk dengan status `'ISOLATED'`.
-  4. [API] Request outbound dikirim ke Meta API.
+  1. [API] Endpoint merespons HTTP 200 OK dengan {"status": "SUCCESS", "processed_items": 4}.
+  2. [DB] Tabel pricing_audit_logs mencatat 4 baris baru dengan detail actor_id = 'ADMIN-OPS-007', previous_price, new_price, action = 'UPDATE_BASE_PRICE', dan timestamp UTC.
 
 ---
 
-### WEB-BRD-PART-NEG-008: Verifikasi penanganan broadcast saat saldo parsial (hanya cukup sebagian target) `[Auto-High]` `[Medium-Complexity]`
-- **User Story**: [Priority: High] US-02: Partial Balance Broadcast Handling (Covers: AC-2)
-- **Tipe**: Negative / Resiliency
-- **Precondition**:
-  1. Sisa saldo utama = Rp 27.000.
-  2. Target broadcast = 100 nomor @ Rp 450 (kebutuhan Rp 45.000).
-- **Test Steps**:
-  1. Eksekusi pengiriman broadcast 100 nomor.
-  2. Amati proses isolasi dan pengiriman.
-  3. Periksa detail log pengiriman per nomor penerima.
-  4. Cek sisa saldo akhir.
-- **Expected Results (Triple-Layer Assertions)**:
-  1. [DB] Sistem mengisolasi dan mengirim 60 pesan (60 x Rp 450 = `Rp 27.000`).
-  2. [DB] 40 nomor sisanya berstatus `'FAILED_INSUFFICIENT_BALANCE'`.
-  3. [UI] Dashboard Broadcast menampilkan status: `'Completed (60 Sent, 40 Failed - Saldo Kurang)'`.
-  4. [DB] Saldo utama menjadi `Rp 0` dan tidak bernilai minus.
+## Modul 2: Eksekusi Broadcast & Saldo Terkunci (Broadcast Execution & Deduction)
 
----
-
-### API-ROLL-FAIL-POS-009: Verifikasi otomatis Credit Rollback saat menerima status Failed dari Meta `[Auto-Critical]` `[Medium-Complexity]`
-- **User Story**: [Priority: Critical] US-02: Credit Rollback (Covers: AC-2)
+### WEB-BRD-ISOL-POS-007: Verifikasi pembuatan broadcast dengan deduksi saldo nominal dan isolasi pesan `[Auto-Critical]` `[Medium-Complexity]`
+- **User Story**: [Priority: Critical] US-02: Broadcast Execution & Credit Isolation (Covers: AC-1, AC-2)
 - **Tipe**: Functional / Positive
 - **Precondition**:
-  1. Pesan telah terisolasi Rp 450.
-  2. Webhook Meta mengembalikan status failed (error code 131026 / receiver unreachable).
-- **Test Steps**:
-  1. Kirim webhook status `'failed'` dari Meta untuk `message_id = 'MSG-999'`.
-  2. Cek mutasi saldo pada tabel `credit_transactions`.
-  3. Periksa saldo utama akun.
+  1. User login sebagai Merchant Admin dengan saldo awal Rp 1.000.000.
+  2. Berada di dashboard broadcast /broadcast/list.
+  3. File CSV contacts_100.csv (100 nomor valid) tersedia.
+- **Test Steps (Gherkin BDD)**:
+  1. [Given] User berada di /broadcast/list dengan saldo Rp 1.000.000.
+  2. [When - Step 1] Klik [+ Buat Broadcast Baru] (#btn-create-broadcast).
+  3. [When - Step 2] Pada Wizard Step 1, pilih template 'Promo Diskon Gajian' (Kategori: MARKETING, Rp 750/pesan).
+  4. [When - Step 3] Pada Wizard Step 2, upload CSV contacts_100.csv (100 penerima).
+  5. [When - Step 4] Pada Wizard Step 3, pilih opsi radio 'Kirim Sekarang'.
+  6. [When - Step 5] Pada Wizard Step 4 (Review), periksa ringkasan 'Total Estimasi: Rp 75.000' lalu klik [Kirim Broadcast] (#btn-submit-broadcast) dan konfirmasi modal [Ya, Eksekusi].
 - **Expected Results (Triple-Layer Assertions)**:
-  1. [API] Webhook handler memproses event failed dan merespons `200 OK`.
-  2. [DB] Status isolasi berubah menjadi `'ROLLED_BACK'`.
-  3. [DB] Saldo akun bertambah kembali sebesar `Rp 450`.
-  4. [UI] Riwayat mutasi mencatat tipe `'ROLLBACK_REFUND'`.
+  1. [Then - UI] Modal tertutup, muncul toast alert hijau: 'Broadcast berhasil dibuat dan sedang diproses', dan tabel menampilkan baris baru dengan badge [Processing].
+  2. [Then - UI] Widget saldo di header terpotong real-time dari Rp 1.000.000 menjadi Rp 925.000.
+  3. [And - API] POST /api/v1/broadcasts merespons HTTP 201 Created dengan {"broadcast_id": "BRD-9001", "total_contacts": 100, "locked_credits": 75000, "status": "PROCESSING"}.
+  4. [And - DB] Saldo di tabel wallets berkurang Rp 75.000 dan tercatat 100 record di broadcast_recipients dengan status 'LOCKED'.
 
 ---
 
-### JOB-ROLL-RDED-POS-010: Resiliency Test: Re-deduct saldo saat webhook Delivered tiba terlambat setelah Rollback `[Auto-High]` `[High-Complexity]`
-- **User Story**: [Priority: High] US-02: Late Webhook Re-Deduct (Covers: AC-2)
-- **Tipe**: Functional / Resiliency
+### WEB-BRD-PART-NEG-008: Verifikasi penanganan broadcast saat saldo tidak mencukupi untuk seluruh penerima `[Auto-High]` `[Medium-Complexity]`
+- **User Story**: [Priority: High] US-02: Insufficient Balance Handling (Covers: AC-3)
+- **Tipe**: Negative / Negative
 - **Precondition**:
-  1. Pesan `MSG-001` sempat di-rollback karena timeout / initial failure.
-  2. Saldo akun mencukupi.
-- **Test Steps**:
-  1. Kirim late webhook `'delivered'` untuk `MSG-001`.
-  2. Amati respon webhook handler.
-  3. Verifikasi pencatatan transaksi di DB.
+  1. User login dengan saldo Rp 30.000 (hanya cukup untuk 40 pesan @ Rp 750).
+  2. Berada di form wizard /broadcast/create.
+- **Test Steps (Gherkin BDD)**:
+  1. [Given] User berada di wizard /broadcast/create dengan saldo Rp 30.000.
+  2. [When - Step 1] Pilih template MARKETING (@ Rp 750).
+  3. [When - Step 2] Upload CSV contacts_100.csv (100 penerima, kebutuhan biaya = Rp 75.000).
+  4. [When - Step 3] Klik [Lanjut ke Review].
 - **Expected Results (Triple-Layer Assertions)**:
-  1. [API] Sistem mendeteksi pesan telah di-rollback sebelumnya.
-  2. [DB] Sistem memicu transaksi tipe `'RE_DEDUCTION'` sebesar `Rp 450`.
-  3. [DB] Saldo utama terpotong Rp 450 dan status final pesan menjadi `'DELIVERED'`.
-  4. [UI] Log riwayat kredit mencatat entri re-deduction.
+  1. [Then - UI] Wizard terkunci di Step Review dengan error banner merah: 'Saldo kredit tidak mencukupi. Dibutuhkan Rp 75.000, saldo Anda Rp 30.000'.
+  2. [Then - UI] Tombol CTA [Kirim Broadcast] berstatus disabled dan muncul CTA sekunder [Top Up Saldo].
+  3. [And - API] POST /api/v1/broadcasts/validate merespons HTTP 422 Unprocessable Entity dengan error code 'INSUFFICIENT_CREDITS'.
+  4. [And - DB] Saldo di tabel wallets tetap utuh Rp 30.000 tanpa mutasi.
 
 ---
 
-### WEB-CUST-NETT-POS-011: Verifikasi Nett Credit Logging dan ekspor data Credit History `[Auto-High]` `[Low-Complexity]`
-- **User Story**: [Priority: High] US-02: Nett Credit Logging (Covers: AC-3)
+## Modul 3: Mekanisme Rollback & Failure Handling (Rollback & Failure Recovery)
+
+### API-ROLL-FAIL-POS-009: Verifikasi refund saldo saat menerima webhook status Failed dari Meta `[Auto-Critical]` `[High-Complexity]`
+- **User Story**: [Priority: Critical] US-03: Failed Message Credit Rollback (Covers: AC-1)
 - **Tipe**: Functional / Positive
 - **Precondition**:
-  1. Terdapat 10 pesan: 8 delivered (Rp 3.600) dan 2 failed/rolled back (Rp 900).
-- **Test Steps**:
-  1. Buka halaman WhatsApp Credit > Credit History.
-  2. Periksa ringkasan total deducted.
-  3. Klik tombol `[Export History]`.
-  4. Unduh dan periksa isi file CSV/Excel.
+  1. Pesan broadcast MSG-BC-8801 berstatus 'SENT', saldo terpotong Rp 750, wamid = 'wamid.HBgL12345'.
+- **Test Steps (Structured AAA)**:
+  1. [Arrange] Siapkan payload webhook WhatsApp failed: {"object": "whatsapp_business_account", "entry": [{"changes": [{"value": {"statuses": [{"id": "wamid.HBgL12345", "status": "failed", "timestamp": "1726050000", "recipient_id": "6281299990001", "errors": [{"code": 131026, "title": "Message undeliverable"}]}]}}]}]}.
+  2. [Act] Kirim request internal webhook POST /api/v1/webhooks/whatsapp dengan payload tersebut.
+  3. [Assert] Query API mutasi saldo dan status pesan.
 - **Expected Results (Triple-Layer Assertions)**:
-  1. [UI] Tampilan total nett credit deduction = `Rp 3.600`.
-  2. [API] Request export mengembalikan file spreadsheet valid.
-  3. [File] Data export memuat baris transaksi lengkap dengan status final (`DELIVERED` / `ROLLED_BACK`).
-  4. [File] Total nett deduction di file sama persis dengan mutasi database.
+  1. [API] Webhook endpoint merespons HTTP 200 OK ({"status": "EVENT_RECEIVED"}).
+  2. [DB] Status record di broadcast_recipients terupdate menjadi 'FAILED' dengan error code 131026.
+  3. [DB] Saldo merchant di wallets bertambah kembali + Rp 750 dengan transaction_type = 'CREDIT_REFUND' dan reference_id = 'wamid.HBgL12345'.
 
 ---
 
-## Modul 3: Tampilan & Batas Kredit Bulanan (Credit Usage & Limits)
-
-### WEB-CUST-MNTH-POS-012: Verifikasi 'Pengeluaran bulan ini' mencakup biaya Service Message per WABA `[Auto-High]` `[Low-Complexity]`
-- **User Story**: [Priority: High] US-03: Monthly Expense Service Message (Covers: AC-1)
+### JOB-ROLL-RD-POS-010: Verifikasi status Delivered dari Meta mengunci kredit secara permanen (No Rollback) `[Auto-High]` `[Low-Complexity]`
+- **User Story**: [Priority: High] US-03: Delivered Message Credit Settlement (Covers: AC-2)
 - **Tipe**: Functional / Positive
 - **Precondition**:
-  1. Pengeluaran Marketing = Rp 50.000, Utility = Rp 20.000, Service Message = Rp 30.000.
-- **Test Steps**:
-  1. Login sebagai Owner / Supervisor.
-  2. Buka menu WhatsApp Credit.
-  3. Periksa nominal kartu 'Pengeluaran bulan ini' pada nomor WABA terkait.
+  1. Pesan MSG-BC-8802 berstatus 'SENT', saldo terpotong Rp 750, wamid = 'wamid.HBgL12346'.
+- **Test Steps (Structured AAA)**:
+  1. [Arrange] Siapkan payload webhook WhatsApp delivered: {"statuses": [{"id": "wamid.HBgL12346", "status": "delivered", "timestamp": "1726050005"}]}.
+  2. [Act] Inject payload webhook ke POST /api/v1/webhooks/whatsapp.
+  3. [Assert] Query record broadcast_recipients dan wallet ledger.
 - **Expected Results (Triple-Layer Assertions)**:
-  1. [UI] Kartu 'Pengeluaran bulan ini' menampilkan total `Rp 100.000`.
-  2. [API] Endpoint `/api/v1/waba/monthly-expense` mengembalikan breakdown `service_cost = 30000`.
-  3. [UI] Breakdown per kategori (Marketing, Utility, Auth, Service) tertampil jelas.
+  1. [API] Webhook merespons HTTP 200 OK.
+  2. [DB] Status pesan berubah menjadi 'DELIVERED'.
+  3. [DB] Saldo wallet tidak mengalami penambahan refund (refund_amount = 0), dan transaksi terkunci dengan status 'SETTLED'.
 
 ---
 
-### WEB-CUST-LMEX-NEG-013: Verifikasi pemblokiran pengiriman pesan saat Monthly Credit Limit tercapai `[Auto-Critical]` `[Medium-Complexity]`
-- **User Story**: [Priority: Critical] US-03: Monthly Credit Limit Exhausted (Covers: AC-2)
-- **Tipe**: Negative / Critical
+### API-ROLL-LATE-NEG-011: Verifikasi webhook status Delivered yang datang setelah refund (Late Webhook Idempotency) `[Auto-Normal]` `[High-Complexity]`
+- **User Story**: [Priority: Normal] US-03: Late Delivery Handling (Covers: AC-3)
+- **Tipe**: Negative / Negative
 - **Precondition**:
-  1. Monthly Credit Limit diset = Rp 100.000.
-  2. Akumulasi pengeluaran bulan ini sudah mencapai Rp 100.000.
-- **Test Steps**:
-  1. Buat broadcast baru atau kirim pesan template di chatroom.
-  2. Klik tombol kirim.
-  3. Amati respon sistem.
+  1. Pesan MSG-BC-8803 sudah berstatus 'FAILED' dan kredit Rp 750 telah di-refund ke merchant 2 jam lalu.
+- **Test Steps (Structured AAA)**:
+  1. [Arrange] Siapkan payload webhook late delivered untuk wamid.HBgL12347 (pesan sudah pernah di-refund).
+  2. [Act] Kirim request POST /api/v1/webhooks/whatsapp dengan payload delivered tersebut.
+  3. [Assert] Verifikasi idempotency handler pada server log dan DB.
 - **Expected Results (Triple-Layer Assertions)**:
-  1. [UI] Muncul alert banner / toast error: `'monthly credit limit has exhausted'`.
-  2. [API] Request kirim pesan dibatalkan dengan status `422 Unprocessable Entity`.
-  3. [DB] Tidak ada isolasi kredit yang dieksekusi dan pesan tidak terkirim.
+  1. [API] Webhook handler memproses idempotently dan mengembalikan HTTP 200 OK dengan warning log: 'Late delivered event received for already refunded message'.
+  2. [DB] Sistem TIDAK melakukan pemotongan saldo ulang (mencegah silent double deduction).
+  3. [DB] Saldo merchant tetap utuh dan audit log mencatat anomali late status update.
 
 ---
 
-### WEB-CUST-EXPT-POS-014: Verifikasi ekspor Credit History memuat baris Service Message dengan TEMPLATE TYPE='Service' `[Auto-High]` `[Low-Complexity]`
-- **User Story**: [Priority: High] US-03: Credit History Download Service Type (Covers: AC-3)
+### JOB-ROLL-RECON-POS-012: Verifikasi job rekonsiliasi berkala untuk pesan berstatus menggantung (Stuck in Sent) `[Auto-High]` `[Medium-Complexity]`
+- **User Story**: [Priority: High] US-03: Reconciliation Cron Job (Covers: AC-4)
 - **Tipe**: Functional / Positive
 - **Precondition**:
-  1. Akun telah mengirimkan pesan Service, Marketing, dan Utility.
-- **Test Steps**:
-  1. Buka menu WhatsApp Credit > Download Usage History.
-  2. Pilih periode bulan aktif dan download file.
-  3. Buka file hasil ekspor dan filter kolom 'TEMPLATE TYPE'.
+  1. Seed 5 record pesan berstatus 'SENT' dengan sent_at = now() - 25 hours di database.
+- **Test Steps (Structured AAA)**:
+  1. [Arrange] Pastikan 5 record pesan menggantung > 24 jam tersedia di tabel broadcast_recipients.
+  2. [Act] Trigger cron reconciliation command via CLI: python -m jobs.reconcile_broadcast_status --timeout-hours=24.
+  3. [Assert] Evaluasi return code CLI dan state tabel database.
 - **Expected Results (Triple-Layer Assertions)**:
-  1. [File] Terdapat baris data dengan kolom `TEMPLATE TYPE = 'Service'`.
-  2. [File] Kolom biaya per pesan tertera akurat sesuai tarif service message.
-  3. [File] Baris service message terbedakan secara jelas dari template Marketing, Utility, dan Authentication.
+  1. [CLI/JOB] Worker selesai dengan exit code 0 dan output: 'Reconciled 5 stuck messages -> Status updated to TIMEOUT_FAILED, 5 refunds executed'.
+  2. [DB] 5 record pesan terupdate statusnya menjadi 'TIMEOUT_FAILED'.
+  3. [DB] Saldo merchant ter-refund otomatis sebesar total nilai 5 pesan tersebut di tabel wallet_transactions.
 
 ---
 
-## Modul 4: Ongoing Session Cost & Kontrol Limit Chatroom (Chatroom Limits)
+## Modul 4: Free Entry Point (FEP) & Sesi Bebas Biaya (FEP & Zero-Cost Messaging)
 
-### WEB-CHAT-COST-POS-015: Verifikasi tampilan Ongoing Session Cost real-time pada Chatroom Web `[Auto-High]` `[Medium-Complexity]`
-- **User Story**: [Priority: High] US-04: Ongoing Session Cost Visibility (Covers: AC-1)
+### WEB-FEP-WIN-POS-013: Verifikasi identifikasi jendela 72 jam FEP aktif dan penandaan biaya Rp 0 pada UI Chatroom `[Auto-Critical]` `[Medium-Complexity]`
+- **User Story**: [Priority: Critical] US-04: FEP 72-Hour Window & UI Tagging (Covers: AC-1, AC-2)
 - **Tipe**: Functional / Positive
 - **Precondition**:
-  1. Agent membuka room percakapan aktif.
-  2. Sesi chatroom baru dimulai (Ongoing Cost = Rp 0).
-- **Test Steps**:
-  1. Kirim 1 pesan Service Message (tarif Rp 450).
-  2. Amati label 'Biaya Sesi Ini' di header chatroom.
-  3. Kirim 1 pesan template Marketing (tarif Rp 600).
-  4. Amati perubahan label biaya.
+  1. Sesi customer dari WhatsApp Ad (CTWA) aktif dengan fep_expires_at = now() + 71 hours.
+  2. User login sebagai Agent/Admin.
+- **Test Steps (Gherkin BDD)**:
+  1. [Given] Sesi FEP aktif untuk chatroom CR-FEP-001 dengan sisa waktu 71 jam.
+  2. [When] User membuka direct URL /chatrooms/CR-FEP-001 atau memfilter chat list dengan label 'Free Entry Point'.
+  3. [Then] Periksa tampilan visual header chatroom dan input bubble area.
 - **Expected Results (Triple-Layer Assertions)**:
-  1. [UI] Label biaya sesi langsung berubah menjadi `'Rp 450'`.
-  2. [UI] Setelah pesan kedua, label biaya ter-update menjadi `'Rp 1.050'`.
-  3. [API] WebSocket / polling mengembalikan total running cost terkini.
-  4. [DB] Record sesi percakapan mencatat `running_cost = 1050`.
+  1. [Then - UI] Header chatroom menampilkan visual badge toska: [Free Entry Point Active] dengan countdown '71h 58m tersisa'.
+  2. [Then - UI] Di atas input box chat tampil label info: 'Tarif Pesan: Rp 0 (Bebas Biaya Meta)'.
+  3. [And - API] GET /api/v1/chatrooms/CR-FEP-001 mengembalikan {"fep_active": true, "fep_expires_at": "...", "rate_per_message": 0}.
+  4. [And - DB] Kolom fep_session_status pada chat_sessions bernilai 'ACTIVE'.
 
 ---
 
-### WEB-CHAT-FLAT-POS-016: Verifikasi Owner/Supervisor dapat mengatur Flat Session Limit di Chatroom `[Auto-High]` `[Low-Complexity]`
-- **User Story**: [Priority: High] US-04: Flat Session Limit Setting (Covers: AC-2)
+### WEB-FEP-SEND-POS-014: Verifikasi pengiriman pesan dalam jendela FEP tidak memotong saldo kredit merchant `[Auto-Critical]` `[Medium-Complexity]`
+- **User Story**: [Priority: Critical] US-04: Zero Deduction in FEP Window (Covers: AC-2)
 - **Tipe**: Functional / Positive
 - **Precondition**:
-  1. Login sebagai Owner / Supervisor.
-  2. Buka pengaturan limit chatroom.
-- **Test Steps**:
-  1. Akses setting Flat Session Limit dari quick-access chatroom.
-  2. Masukkan limit baru: `Rp 10.000`.
-  3. Klik `[Simpan Pengaturan]`.
+  1. Berada di dalam chatroom aktif /chatrooms/CR-FEP-001 dengan saldo wallet Rp 500.000.
+- **Test Steps (Gherkin BDD)**:
+  1. [Given] User berada di chatroom FEP aktif /chatrooms/CR-FEP-001 dengan saldo Rp 500.000.
+  2. [When - Step 1] Ketik pesan: 'Halo, terima kasih telah menghubungi kami dari iklan promo!'.
+  3. [When - Step 2] Klik tombol kirim [Send] (#btn-send-message).
+  4. [Then] Periksa saldo di navbar dan status pesan di bubble chat.
 - **Expected Results (Triple-Layer Assertions)**:
-  1. [UI] Muncul toast sukses: `'Pengaturan limit sesi berhasil disimpan'`.
-  2. [API] Request PUT `/api/v1/chatroom/flat-limit` mengembalikan `200 OK` dengan value `10000`.
-  3. [DB] Seluruh room aktif menerapkan default limit Rp 10.000.
+  1. [Then - UI] Pesan muncul di bubble chat dengan status checklist delivered.
+  2. [Then - UI] Indikator saldo di header navbar TETAP Rp 500.000 (tidak berkurang).
+  3. [And - API] POST /api/v1/chatrooms/CR-FEP-001/messages merespons HTTP 200 OK dengan payload {"message_id": "MSG-FEP-101", "deducted_credits": 0, "is_fep": true}.
+  4. [And - DB] Record chat_messages tersimpan dengan cost = 0, is_fep = TRUE, dan tidak ada mutasi debit di wallet_transactions.
 
 ---
 
-### WEB-CHAT-RBAC-SEC-017: Security Test: Agent tidak memiliki akses untuk mengubah Flat Session Limit utama `[Auto-Critical]` `[Low-Complexity]`
-- **User Story**: [Priority: Critical] US-04: RBAC Flat Limit Protection (Covers: AC-2)
-- **Tipe**: Security / RBAC
+### API-FEP-EXP-BVA-015: Verifikasi Boundary Transisi Kadaluarsa Jendela FEP (Relative Timestamp Seeding) `[Auto-High]` `[High-Complexity]`
+- **User Story**: [Priority: High] US-04: FEP Expiry Boundary (Covers: AC-3)
+- **Tipe**: Boundary / Boundary
 - **Precondition**:
-  1. Login sebagai Agent (CS).
-  2. Buka dashboard Chatroom Web.
-- **Test Steps**:
-  1. Periksa header dan sidebar chatroom untuk menu pengaturan limit.
-  2. Coba kirim request PUT `/api/v1/chatroom/flat-limit` via Postman/Direct API.
-  3. Amati respon sistem.
+  1. Sesi A: FEP aktif dengan fep_expires_at = now() + 1 minute.
+  2. Sesi B: FEP expired dengan fep_expires_at = now() - 1 minute.
+- **Test Steps (Structured AAA)**:
+  1. [Arrange] Setup Sesi A (fep_expires_at = now() + 1m) dan Sesi B (fep_expires_at = now() - 1m) di tabel chat_sessions.
+  2. [Act] Kirim pesan ke Sesi A via POST /api/v1/chatrooms/CR-FEP-A/messages dan ke Sesi B via POST /api/v1/chatrooms/CR-FEP-B/messages.
+  3. [Assert] Bandingkan deducted_credits pada kedua response API.
 - **Expected Results (Triple-Layer Assertions)**:
-  1. [UI] Tombol/menu pengaturan Flat Session Limit utama tersembunyi (Hidden).
-  2. [API] Direct API call menghasilkan response HTTP `403 Forbidden`.
-  3. [DB] Nilai flat session limit di database tidak berubah.
+  1. [API - Sesi A] HTTP 200 OK, deducted_credits = 0, is_fep = true.
+  2. [API - Sesi B] HTTP 200 OK, deducted_credits = 300 (tarif normal Service message), is_fep = false.
+  3. [DB] Sesi B mencatat mutasi debit Rp 300 di wallet_transactions dan status sesi terupdate menjadi 'EXPIRED'.
 
 ---
 
-### WEB-CHAT-BLCK-NEG-018: Verifikasi pemblokiran pengiriman pesan saat Session Cost mencapai limit `[Auto-Critical]` `[Medium-Complexity]`
-- **User Story**: [Priority: Critical] US-04: Block Message on Limit Reached (Covers: AC-3)
-- **Tipe**: Negative / Critical
-- **Precondition**:
-  1. Flat Session Limit = Rp 5.000.
-  2. Running cost sesi percakapan sudah mencapai Rp 5.000.
-- **Test Steps**:
-  1. Buka room yang telah mencapai limit Rp 5.000.
-  2. Periksa status badge di header chatroom.
-  3. Coba ketik dan kirim pesan berbayar baru.
-- **Expected Results (Triple-Layer Assertions)**:
-  1. [UI] Muncul banner peringatan: `'Batas limit sesi percakapan telah tercapai'`.
-  2. [UI] Tombol kirim pesan berbayar berubah menjadi disabled.
-  3. [UI] Muncul tombol opsi `[+ Tambah Limit Sesi]`.
-  4. [API] Request kirim pesan diblokir dengan status `403 / 422`.
-
----
-
-### WEB-CHAT-TPUP-POS-019: Verifikasi manual Limit Top-up oleh Agent dengan preset nominal (Rp2k, Rp5k, Rp10k) `[Auto-Critical]` `[Medium-Complexity]`
-- **User Story**: [Priority: Critical] US-04: Manual Session Limit Top-Up (Covers: AC-4)
+### API-FEP-TEMP-POS-016: Verifikasi pengiriman Template Marketing di dalam sesi FEP tetap gratis `[Auto-High]` `[Medium-Complexity]`
+- **User Story**: [Priority: High] US-04: Marketing Template within FEP (Covers: AC-4)
 - **Tipe**: Functional / Positive
 - **Precondition**:
-  1. Percakapan berstatus limit-reached (limit Rp 5.000, cost Rp 5.000).
-  2. Saldo utama akun mencukupi.
-- **Test Steps**:
-  1. Buka dropdown `[+ Tambah Limit Sesi]`.
-  2. Pilih preset `'Rp 5.000'`.
-  3. Klik tombol `[Konfirmasi Tambah Limit]`.
-  4. Coba kirim pesan berbayar baru.
+  1. Sesi FEP aktif untuk customer 6281234567890.
+- **Test Steps (Structured AAA)**:
+  1. [Arrange] Pastikan customer 6281234567890 terasosiasi dengan sesi FEP aktif.
+  2. [Act] Kirim template pesan kategori MARKETING melalui POST /api/v1/messages/send-template.
+  3. [Assert] Verifikasi response payload dan persistensi audit billing.
 - **Expected Results (Triple-Layer Assertions)**:
-  1. [UI] Limit sesi baru ter-update menjadi `Rp 10.000`.
-  2. [UI] Status banner 'Limit Reached' hilang dan input chat unblocked (aktif kembali).
-  3. [API] Endpoint `/api/v1/chatroom/session/top-up` mengembalikan status `200 OK`.
-  4. [DB] Audit log mencatat: `agent_id`, `room_id`, `amount = 5000`, timestamp UTC.
-  5. [UI] Pesan baru berhasil terkirim.
+  1. [API] HTTP 200 OK dengan payload {"status": "SENT", "category": "MARKETING", "billed_cost": 0, "fep_override": true}.
+  2. [DB] Record chat_messages mencatat template terkirim dengan cost = 0 dan flag fep_override = TRUE.
 
 ---
 
-### WEB-CHAT-TPFL-NEG-020: Verifikasi penolakan Top-up saat Saldo Utama WhatsApp Credit akun tidak mencukupi `[Auto-High]` `[Low-Complexity]`
-- **User Story**: [Priority: High] US-04: Top-Up Insufficient Main Balance (Covers: AC-4)
-- **Tipe**: Negative / Critical
+## Modul 5: Monitoring Pengeluaran & Peringatan Saldo (Credit Threshold & Alerts)
+
+### API-ALRT-DEF-POS-017: Verifikasi default threshold batas pengeluaran berlaku untuk seluruh user `[Auto-High]` `[Low-Complexity]`
+- **User Story**: [Priority: High] US-05: Global Default Credit Threshold (Covers: AC-1)
+- **Tipe**: Functional / Positive
 - **Precondition**:
-  1. Percakapan berstatus limit-reached.
-  2. Saldo utama WhatsApp Credit akun = Rp 1.000.
-- **Test Steps**:
-  1. Klik `[+ Tambah Limit Sesi]`.
-  2. Pilih preset `'Rp 5.000'`.
-  3. Klik `[Konfirmasi Tambah Limit]`.
+  1. Konfigurasi DEFAULT_LOW_CREDIT_THRESHOLD = 50000 aktif di DB.
+  2. Akun merchant USR-NEW-001 baru terdaftar.
+- **Test Steps (Structured AAA)**:
+  1. [Arrange] Kurangi saldo USR-NEW-001 hingga bernilai Rp 49.000 (< Rp 50.000).
+  2. [Act] Panggil endpoint evaluator threshold POST /api/v1/wallets/check-threshold.
+  3. [Assert] Query notifikasi in-app untuk USR-NEW-001.
 - **Expected Results (Triple-Layer Assertions)**:
-  1. [UI] Muncul toast error: `'Saldo utama akun tidak mencukupi untuk top-up limit'`.
-  2. [UI] Limit sesi tidak bertambah dan percakapan tetap diblokir.
-  3. [API] Request mengembalikan HTTP `422 Insufficient Balance`.
-  4. [DB] Tidak ada saldo yang terpotong.
+  1. [API] Evaluator merespons {"is_low_balance": true, "threshold_applied": 50000, "current_balance": 49000}.
+  2. [DB] Record notifikasi low balance terbentuk di in_app_notifications dengan pesan 'Saldo Anda berada di bawah batas minimum Rp 50.000'.
 
 ---
 
-### WEB-CHAT-CONC-CON-021: Concurrency Test: Top-up simultan oleh Agent dan Owner pada room yang sama `[Auto-High]` `[High-Complexity]`
-- **User Story**: [Priority: High] US-04: Simultaneous Top-Up Concurrency (Covers: AC-4)
-- **Tipe**: Concurrency / Con
+### WEB-ALRT-POP-POS-018: Verifikasi in-app pop-up / modal warning saat saldo mendekati batas minimum `[Auto-High]` `[Medium-Complexity]`
+- **User Story**: [Priority: High] US-05: Low Balance Modal Trigger (Covers: AC-2)
+- **Tipe**: Functional / Positive
 - **Precondition**:
-  1. Room limit awal = Rp 5.000.
-  2. Saldo utama akun mencukupi (Rp 500.000).
-- **Test Steps**:
-  1. Agent klik Top-up Rp 5.000 dan Owner klik Top-up Rp 5.000 secara bersamaan (<50ms).
-  2. Amati respon sistem pada kedua klien.
-  3. Periksa limit akhir pada database.
+  1. User login dengan saldo Rp 45.000 (threshold default = Rp 50.000).
+- **Test Steps (Gherkin BDD)**:
+  1. [Given] User memiliki saldo Rp 45.000.
+  2. [When] User mengakses halaman /broadcast/list atau /chatrooms.
+  3. [Then] Periksa modal pop-up dialog dan navbar badge.
 - **Expected Results (Triple-Layer Assertions)**:
-  1. [API] Kedua request top-up diproses sukses (`200 OK`).
-  2. [DB] Total limit sesi bertambah Rp 10.000 (menjadi `Rp 15.000`).
-  3. [DB] Tercatat 2 baris log audit mutasi top-up (satu dari Agent, satu dari Owner).
-  4. [UI] Kedua antarmuka ter-sinkronisasi menampilkan limit baru Rp 15.000.
+  1. [Then - UI] Muncul modal dialog kuning: 'Peringatan: Saldo Kredit Menipis!' berisi rincian 'Sisa Saldo: Rp 45.000. Segera lakukan top-up agar broadcast tidak terhenti'.
+  2. [Then - UI] Terdapat tombol CTA [Top Up Sekarang] dan tombol [Nanti Saja], serta icon saldo di navbar berkedip oranye [Low Balance Warning].
+  3. [And - API] GET /api/v1/user/notifications/unread mengembalikan item tipe LOW_BALANCE_ALERT.
+  4. [And - DB] Kolom alert_shown_at di user_notification_states terupdate timestamp sekarang.
 
 ---
 
-## Modul 5: Heuristic Exploratory Testing Charters
-
-### E2E-BILL-FDEX-EXP-022: Exploratory Charter: The FedEx Tour (End-to-End Data & Credit Journey) `[Auto-Critical]` `[Manual/Charter]`
-- **User Story**: [Priority: Critical] Exploratory: The FedEx Credit Tour
-- **Tipe**: Exploratory / E2E
-- **Charter Goal**: Melacak siklus penuh mutasi kredit dari broadcast dispatch, isolasi, webhook failure, rollback, hingga verifikasi data audit export.
-- **Exploration Steps**:
-  1. Trigger broadcast 10 nomor.
-  2. Verifikasi isolasi Rp 4.500 di DB.
-  3. Simulasikan 5 delivered dan 5 failed dari Meta.
-  4. Verifikasi refund Rp 2.250 ke saldo utama.
-  5. Download Credit History dan bandingkan baris mutasi.
-- **Observed Assertions (Triple-Layer)**:
-  1. [DB] Mutasi isolasi $\rightarrow$ deduct $\rightarrow$ rollback tercatat konsisten tanpa selisih 1 Rupiah pun.
-  2. [UI] Saldo akhir akun = `Rp 47.750`.
-  3. [File] File export memuat 5 status DELIVERED dan 5 status ROLLED_BACK.
-  4. [DB] Audit log mencatat seluruh event lifecycle dengan timestamp terurut.
+### JOB-ALRT-MAIL-POS-019: Verifikasi pengiriman email alert otomatis saat saldo mencapai threshold `[Auto-Normal]` `[Medium-Complexity]`
+- **User Story**: [Priority: Normal] US-05: Automated Email Notification (Covers: AC-3)
+- **Tipe**: Functional / Positive
+- **Precondition**:
+  1. Saldo merchant USR-STD-002 (email: merchant@store.com) bernilai Rp 20.000 (< Rp 50.000).
+- **Test Steps (Structured AAA)**:
+  1. [Arrange] Pastikan merchant USR-STD-002 berstatus low balance dan belum menerima email dalam 24 jam terakhir.
+  2. [Act] Eksekusi worker CLI: python -m jobs.send_low_balance_emails.
+  3. [Assert] Periksa email queue dan tabel email_logs.
+- **Expected Results (Triple-Layer Assertions)**:
+  1. [JOB] Worker selesai dengan 1 email dispatched ke provider SMTP/SendGrid.
+  2. [DB] Record tersimpan di tabel email_logs dengan recipient = 'merchant@store.com', subject = 'Peringatan Saldo Everpro Chat Menipis', status = 'SENT'.
 
 ---
 
-### WEB-BRD-CHAO-EXP-023: Exploratory Charter: The Saboteur Tour (Simulasi Network Drop saat Broadcast Trigger) `[Auto-High]` `[Manual/Charter]`
-- **User Story**: [Priority: High] Exploratory: The Saboteur Network Chaos Tour
-- **Tipe**: Exploratory / Chaos
-- **Charter Goal**: Menyelidiki ketahanan sistem saat koneksi jaringan terputus tepat ketika tombol konfirmasi broadcast diklik.
-- **Exploration Steps**:
-  1. Klik tombol `[Kirim Broadcast Sekarang]`.
-  2. Putuskan koneksi jaringan (Airplane Mode) dalam 100ms.
-  3. Sambungkan kembali internet setelah 15 detik.
-  4. Refresh halaman broadcast dan periksa status campaign.
-- **Observed Assertions (Triple-Layer)**:
-  1. [UI] Sistem tidak hang / freeze.
-  2. [DB] Tidak terjadi duplikasi pengiriman pesan atau duplikasi isolasi kredit.
-  3. [UI] Status campaign menampilkan status yang deterministik (antara 'Processing' atau 'Draft').
+### WEB-ALRT-DISM-POS-020: Verifikasi fungsionalitas dismiss alert dan banner reminder persistent `[Auto-Low]` `[Low-Complexity]`
+- **User Story**: [Priority: Low] US-05: Alert Dismissal & Persistent Banner (Covers: AC-4)
+- **Tipe**: Functional / Positive
+- **Precondition**:
+  1. Modal dialog low balance sedang terbuka di layar.
+- **Test Steps (Gherkin BDD)**:
+  1. [Given] Modal low balance aktif di layar.
+  2. [When] User mengklik tombol [Nanti Saja] (#btn-dismiss-alert) atau ikon close (X).
+  3. [Then] Navigasi ke halaman lain dan amati UI.
+- **Expected Results (Triple-Layer Assertions)**:
+  1. [Then - UI] Modal dialog tertutup seketika dan tidak muncul kembali saat berpindah rute halaman selama sesi aktif.
+  2. [Then - UI] Banner info kuning persistent berukuran ramping tetap menempel di header: '⚠️ Saldo Anda Rp 45.000. Klik di sini untuk Top Up'.
+  3. [And - Client] State lowBalanceModalDismissed = true tersimpan di sessionStorage.
 
 ---
 
-### WEB-CHAT-RUSH-EXP-024: Exploratory Charter: The Impatient User Tour (Rapid Multiple Top-Up Clicks) `[Auto-Normal]` `[Manual/Charter]`
-- **User Story**: [Priority: Normal] Exploratory: The Impatient User Rapid Click Tour
-- **Tipe**: Exploratory / Stress
-- **Charter Goal**: Menguji perilaku sistem saat Agent melakukan spamming click tombol top-up dropdown preset secara cepat.
-- **Exploration Steps**:
-  1. Pilih preset Rp 10.000.
-  2. Klik tombol `[Konfirmasi Tambah Limit]` 5 kali berturut-turut dalam 500ms.
-  3. Amati limit akhir dan saldo utama.
-- **Observed Assertions (Triple-Layer)**:
-  1. [UI] Tombol langsung disabled setelah klik pertama (Loading state).
-  2. [API] Hanya request pertama yang diproses atau request berikutnya terblokir idempotency lock.
-  3. [DB] Limit sesi hanya bertambah Rp 10.000 (bukan Rp 50.000) dan saldo utama terpotong tepat Rp 10.000.
+### API-ALRT-EDGE-BVA-021: Verifikasi Boundary Nilai Saldo Tepat pada Threshold (Saldo == 50.000 vs 49.999) `[Auto-High]` `[Low-Complexity]`
+- **User Story**: [Priority: High] US-05: Exact Threshold Boundary (Covers: AC-5)
+- **Tipe**: Boundary / Boundary
+- **Precondition**:
+  1. Threshold default = Rp 50.000.
+  2. User X saldo = Rp 50.000. User Y saldo = Rp 49.999.
+- **Test Steps (Structured AAA)**:
+  1. [Arrange] Setup User X (saldo 50.000) dan User Y (saldo 49.999).
+  2. [Act] Panggil POST /api/v1/wallets/evaluate-threshold untuk kedua user.
+  3. [Assert] Bandingkan response payload evaluasi.
+- **Expected Results (Triple-Layer Assertions)**:
+  1. [API] Response User X: {"alert_triggered": false, "status": "NORMAL"}.
+  2. [API] Response User Y: {"alert_triggered": true, "status": "LOW_BALANCE"}.
+  3. [DB] Record notifikasi hanya terbentuk untuk User Y di in_app_notifications.
 
 ---
 
-### API-CHAT-SECT-EXP-025: Exploratory Charter: The Rogue / Security Tour (Direct Parameter Tampering) `[Auto-Critical]` `[Manual/Charter]`
-- **User Story**: [Priority: Critical] Exploratory: The Rogue Security & BOLA Tour
-- **Tipe**: Exploratory / Security-BOLA
-- **Charter Goal**: Mencoba membypass limit chatroom dengan memodifikasi payload nominal top-up negatif atau manipulasi room_id milik user lain.
-- **Exploration Steps**:
-  1. Kirim request top-up dengan payload `amount: -5000`.
-  2. Kirim request top-up dengan `amount: 999999999` (melebihi saldo).
-  3. Kirim request top-up dengan `room_id` yang tidak di-assign ke Agent.
-- **Observed Assertions (Triple-Layer)**:
-  1. [API] Input amount negatif ditolak dengan HTTP `422 Invalid Amount`.
-  2. [API] Input melebihi saldo ditolak dengan HTTP `422 Insufficient Balance`.
-  3. [API] Akses ke unassigned room ditolak dengan HTTP `403 Forbidden` (BOLA/IDOR protection).
+## Modul 6: Concurrency, Security & Exploratory Charters (Security & Exploratory)
+
+### API-CONC-RACE-CON-022: Verifikasi Concurrency & Race Condition saat Eksekusi Simultan Menguras Saldo Terakhir `[Auto-Critical]` `[High-Complexity]`
+- **User Story**: [Priority: Critical] US-02: Balance Locking & Concurrency (Covers: AC-2, NFR-Integrity)
+- **Tipe**: Concurrency / Concurrency
+- **Precondition**:
+  1. User USR-RACE-001 memiliki sisa saldo tepat Rp 750 (hanya cukup 1 pesan).
+- **Test Steps (Structured AAA)**:
+  1. [Arrange] Set saldo USR-RACE-001 = Rp 750.
+  2. [Act] Tembak 2 request paralel POST /api/v1/broadcasts pada timestamp milidetik yang sama untuk pesan @ Rp 750.
+  3. [Assert] Periksa HTTP response dari kedua request dan saldo akhir database.
+- **Expected Results (Triple-Layer Assertions)**:
+  1. [API] Request 1 sukses dengan HTTP 201 Created ({"status": "SUCCESS"}).
+  2. [API] Request 2 gagal dengan HTTP 422 Unprocessable Entity ({"error": "INSUFFICIENT_CREDITS"}) atau HTTP 409 Conflict.
+  3. [DB] Saldo akhir wallet tepat Rp 0 (TIDAK PERNAH bernilai negatif - Rp 750), dan mutasi tercatat tepat 1 baris.
+
+---
+
+### API-SEC-TAMPR-SEC-023: Verifikasi Security & Authorization: Upaya Manipulasi Harga atau IDOR pada Endpoint Broadcast `[Auto-Critical]` `[Medium-Complexity]`
+- **User Story**: [Priority: Critical] US-01 & US-02: Pricing Integrity & RBAC (Covers: NFR-Security)
+- **Tipe**: Security / Security
+- **Precondition**:
+  1. User role Merchant Admin (bukan Biz Ops).
+- **Test Steps (Structured AAA)**:
+  1. [Arrange] Siapkan payload broadcast dengan manipulasi tarif buatan: {"template_id": "TMP-01", "custom_rate": 0, "category": "MARKETING"}.
+  2. [Act] Kirim request POST /api/v1/broadcasts dengan payload tersebut.
+  3. [Assert] Evaluasi kalkulasi pemotongan saldo pada database.
+- **Expected Results (Triple-Layer Assertions)**:
+  1. [API] Backend mengabaikan field custom_rate client-side atau merespons HTTP 400 Bad Request / 403 Forbidden.
+  2. [DB] Sistem tetap menghitung biaya dari master database pricing (Rp 750), saldo terpotong sesuai tarif resmi, dan audit log security mencatat upaya tampering.
+
+---
+
+### E2E-EXP-FEDEX-EXP-024: Exploratory Charter: The FedEx Tour (Melacak Lifecycle Saldo & Mutasi dari Broadcast hingga Webhook) `[Auto-Normal]` `[High-Complexity]`
+- **User Story**: [Priority: High] US-02 & US-03: End-to-End Data Lifecycle (Covers: NFR-Reliability)
+- **Tipe**: Exploratory / Positive
+- **Precondition**:
+  1. Saldo awal merchant Rp 500.000.
+  2. Berada di /broadcast/create.
+- **Test Steps (Gherkin BDD)**:
+  1. [Given] User membuat broadcast 10 nomor (@ Rp 750, total Rp 7.500) dari /broadcast/create.
+  2. [When - Step 1] Saldo terpotong Rp 7.500 saat inisiasi.
+  3. [When - Step 2] Sistem mengirim pesan ke Meta API.
+  4. [When - Step 3] Inject webhook Meta: 8 pesan status 'delivered' dan 2 pesan status 'failed'.
+  5. [When - Step 4] User membuka halaman /billing/history dan /broadcast/detail/BRD-FEDEX-01.
+- **Expected Results (Triple-Layer Assertions)**:
+  1. [Then - UI] Halaman detail broadcast menampilkan statistik: Terkirim: 8, Gagal: 2.
+  2. [Then - UI] Mutasi saldo di /billing/history menampilkan kredit refund: + Rp 1.500 dengan keterangan 'Refund Broadcast BRD-FEDEX-01'.
+  3. [And - DB] Saldo akhir terpotong bersih Rp 6.000 (8 x Rp 750), tabel wallet_transactions memiliki 1 baris debit Rp 7.500 dan 1 baris refund kredit Rp 1.500.
+
+---
+
+### E2E-EXP-CHAOS-EXP-025: Exploratory Charter: The Chaos / Network Drop Tour saat Eksekusi Broadcast Berjalan `[Auto-Normal]` `[High-Complexity]`
+- **User Story**: [Priority: Normal] US-02: Network Resilience (Covers: NFR-Resilience)
+- **Tipe**: Exploratory / Positive
+- **Precondition**:
+  1. Form wizard broadcast 50 kontak siap di-submit.
+- **Test Steps (Gherkin BDD)**:
+  1. [Given] User berada pada modal konfirmasi broadcast di /broadcast/create (50 penerima).
+  2. [When - Step 1] Klik [Konfirmasi Kirim].
+  3. [When - Step 2] Tepat saat spinner berputar (< 100ms), simulasikan pemutusan koneksi internet (Network Offline).
+  4. [When - Step 3] Sambungkan kembali internet setelah 15 detik dan refresh halaman (F5).
+- **Expected Results (Triple-Layer Assertions)**:
+  1. [Then - UI] Saat offline, muncul toast peringatan: 'Koneksi terputus. Memeriksa status transaksi...'.
+  2. [Then - UI] Setelah online dan refresh, halaman /broadcast/list menampilkan status broadcast yang valid ([Processing] / [Completed]), bukan duplicate atau error blank.
+  3. [And - API] Idempotency Key pada header X-Idempotency-Key mencegah server memproses request broadcast dua kali.
+  4. [And - DB] Saldo wallet hanya dipotong tepat 1 kali untuk 50 pesan.
+
+---
