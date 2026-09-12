@@ -1,6 +1,6 @@
 # Automation & QA Master Test Case Suite: Meta New Pricing 2026
 
-Dokumen ini berisi seluruh skenario pengujian komprehensif (*Master Test Case Suite*) yang diturunkan langsung dari [PRD_Analysis_Meta_New_Pricing_2026.md](file:///Users/fadlyady/Documents/Eldo%20Work/eldoTest/result-testcase/PRD_Analysis_Meta_New_Pricing_2026.md). Format disusun secara deklaratif bernomor (*Action $\rightarrow$ Triple-Layer Assertion*) lengkap dengan **Tagging Prioritas & Kompleksitas Otomasi** untuk framework otomasi (Playwright, Cypress, Pytest, Appium).
+Dokumen ini berisi seluruh skenario pengujian komprehensif (*Master Test Case Suite*) yang diturunkan langsung dari [PRD_Analysis_Meta_New_Pricing_2026.md](file:///Users/fadlyady/Documents/Eldo%20Work/prdAnalyzer/result-testcase/PRD_Analysis_Meta_New_Pricing_2026.md). Format disusun secara deklaratif bernomor (*Action $\rightarrow$ Triple-Layer Assertion*) lengkap dengan **Tagging Prioritas & Kompleksitas Otomasi** untuk framework otomasi (Playwright, Cypress, Pytest, Appium).
 
 ---
 

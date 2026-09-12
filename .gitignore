@@ -21,4 +21,6 @@ venv/
 *.tmp
 *.bak
 scratch/
-**/otherTasks
+
+# Untracked custom tasks
+otherTasks/
