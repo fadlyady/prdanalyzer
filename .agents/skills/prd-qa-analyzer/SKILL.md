@@ -1,33 +1,69 @@
 ---
 name: prd-qa-analyzer
 description: >-
-  Standard operating procedure for performing deep, domain-agnostic Product Requirement Document (PRD) analysis,
-  extracting functional & non-functional requirements, enforcing strict interactive validation gates (no wild assumptions),
-  applying SFDIPOT heuristic test strategy, modeling state invariants, RBAC/security matrices, decision tables,
-  and preparing evidence-grade analysis summary documents ready for test case generation.
+  Standard operating procedure for performing deep, domain-agnostic Product Requirement Document (PRD) and technical specification analysis.
+  Focuses exclusively on producing a high-precision, evidence-grade Markdown (.md) analysis document.
+  Applies strict interactive validation gates (no wild assumptions), SFDIPOT heuristic test strategy, state transition modeling,
+  decision tables, NFR/security guardrails, and Requirements Traceability Matrix (RTM).
+  Output is strictly a Markdown file (.md); leaving conversion to Word/PDF or test case generation to other dedicated skills at user discretion.
   Activate when the user asks to analyze a PRD, review requirements, or model test strategies for any application.
 ---
 
 # Universal PRD & Requirement Analysis Skill (`prd-qa-analyzer`)
 
-Skill ini dirancang sebagai standar baku **Senior QA & Quality Architect** untuk melakukan **Analisis PRD Mendalam, Ekstraksi Requirement Multi-Dimensi (Functional & NFR), Pemodelan State & Decision Matrix, Pemetaan Hak Akses (RBAC/ABAC), dan Penegakan Gerbang Klarifikasi Terstruktur** sebelum test case dibuat.
+Skill ini dirancang sebagai standar baku **Senior QA Lead & Quality Architect** yang berfokus **100% pada Analisis Mendalam, Ekstraksi Requirement Multi-Dimensi (Functional & Non-Functional), Pemodelan Logika Bisnis & State Invariants, Penegakan Gerbang Klarifikasi Interaktif, dan Penyusunan Test Strategy Blueprint**.
 
-Tujuan utama: Menghasilkan dokumen analisis yang **tajam, zero-assumption, akurat, evidence-grade (layak audit & development), memiliki traceability jelas, dan bersifat Universal/Domain-Agnostic (dapat diterapkan pada Web, Mobile App Android/iOS, Backend API/Microservices, Event-Driven/Webhooks, Data Pipelines, hingga IoT)**.
+> [!IMPORTANT]
+> **Output Tunggal (*Markdown Only*)**:
+> Output dari skill ini **hanya berupa berkas dokumen Markdown (`.md`)** di `./result-testcase/PRD_Analysis_<Feature_Name>.md`.
+> Skill ini **TIDAK** otomatis membuat file Word (`.docx`), PDF (`.pdf`), maupun spreadsheet Excel (`.xlsx`). Keputusan untuk mengonversi dokumen ke format Word/PDF (via skill `convert-document`) atau menurunkan menjadi Master Test Case Suite (via skill `generate-testcase`) diserahkan sepenuhnya kepada User.
 
 ---
 
-## 1. Direktori & Lokasi Berkas Dinamis (*Dynamic File Architecture*)
+## 🎯 6 Pilar Kualitas Analisis (Analysis Excellence Framework)
 
-Skill ini menggunakan path relatif workspace yang dinamis dan modular:
+Dokumen analisis yang dihasilkan oleh skill ini wajib memenuhi 6 pilar standar pengujian tingkat lanjut:
 
-- **Dokumen PRD Input**: Terletak di root atau sub-folder workspace (misal: `./[PRD] Feature_Name.docx`, `.pdf`, atau `.md`).
-- **Support & Knowledge Base**: `./Testcase-support/`
+```
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                        6 PILAR ANALISIS PRD (EXCELLENCE FRAMEWORK)                     │
+├────────────────────────────────────────────────────────────────────────────────────────┤
+│  1. LANDASAN KUAT & ZERO-ASSUMPTION                                                    │
+│     - Berpijak pada fakta dokumen, arsitektur teknis, dan gerbang klarifikasi 7-dimensi │
+│     - Dilarang keras berasumsi liar pada aturan bisnis, rumus, atau limit yang ambigu │
+├────────────────────────────────────────────────────────────────────────────────────────┤
+│  2. KETEPATAN PEMAHAMAN KEBUTUHAN (REQUIREMENT PRECISION)                              │
+│     - Mengurai alur logika kompleks dengan Decision Table, State Invariants, & BVA     │
+│     - Isolasi tegas antara batasan In-Scope vs Out-of-Scope                           │
+├────────────────────────────────────────────────────────────────────────────────────────┤
+│  3. EFEKTIF SAAT DIJADIKAN PROSES TESTING (TESTING EFFECTIVENESS)                      │
+│     - Memetakan skenario nominal (happy path), negative paths, dan failure modes       │
+│     - Menyediakan precondition dan data sets konkret yang siap dieksekusi              │
+├────────────────────────────────────────────────────────────────────────────────────────┤
+│  4. EFISIENSI MANUAL & AUTOMATION TESTING (DRY & TRIPLE-LAYER ASSERTIONS)              │
+│     - Triple-Layer Assertions (UI State + API Contract + DB State Persistence)         │
+│     - Prinsip DRY: Memisahkan matriks otorisasi RBAC dari alur fungsional inti        │
+│     - Requirements Traceability Matrix (RTM) dua arah (User Story <-> AC <-> Priority)│
+├────────────────────────────────────────────────────────────────────────────────────────┤
+│  5. INFORMATIF BAGI SEGALA MACAM PERSONA (CROSS-FUNCTIONAL CLARITY)                    │
+│     - Mudah dipahami oleh PM (value & scope), Dev (API/DB logic), QA, & Stakeholder   │
+├────────────────────────────────────────────────────────────────────────────────────────┤
+│  6. STRUKTUR DOKUMEN EVIDENCE-GRADE (AUDIT & REPRODUCIBILITY)                          │
+│     - Standar dokumen hierarkis, tabel matriks rapi, visual Mermaid, dan log keputusan │
+└────────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 1. Direktori & Lokasi Berkas Dinamis (*File Architecture*)
+
+- **Dokumen Input**: Terletak di root atau sub-folder workspace (misal: `./[PRD] Feature_Name.docx`, `.pdf`, atau `.md`, SRS, Tech Spec, API Contract).
+- **Knowledge Base & Support Files**: `./Testcase-support/`
   - Berisi dokumen acuan RBAC/Permissions SSOT, template standar, catatan arsitektur, dan `qa-learnings.md` (knowledge dari review sebelumnya).
-- **UI & Interface Knowledge (Modular Adapter)**: `./strukturmenu/` atau `./ui-references/<app-name>/`
-  - Berisi tangkapan layar, hierarki navigasi, nama menu, CTA, atau link desain (Figma/Wireframes) jika aplikasi memiliki antarmuka pengguna.
-- **Technical & API Specifications (Ad-hoc)**: `./adhoc-document/`
-  - Berisi OpenAPI/Swagger JSON, Postman Collection, GraphQL Schema, DB DDL/ERD, sequence diagram, atau catatan rilis teknis.
-- **Target Output Analisis**: `./result-testcase/PRD_Analysis_<Feature_Name>.md`
+- **UI & Interface Knowledge (Modular Adapter)**: `./strukturmenu/` atau `./ui-references/<app-name>/` (tangkapan layar UI, nama menu, CTA, atau link Figma jika ada antarmuka pengguna).
+- **Technical Specifications (Ad-hoc)**: `./adhoc-document/` (OpenAPI/Swagger JSON, Postman Collection, GraphQL Schema, DB DDL/ERD, sequence diagram).
+- **Target Output Analisis (Eksklusif Markdown)**:
+  📂 `./result-testcase/PRD_Analysis_<Feature_Name>.md`
 
 ---
 
@@ -41,12 +77,12 @@ Skill ini menggunakan path relatif workspace yang dinamis dan modular:
   2. *Scope Guardrails*: Batasan tegas apa yang **In-Scope** vs **Out-of-Scope** pada iterasi ini.
   3. *Role & Authorization Boundaries*: Izin aksi per role (View, Create, Edit, Delete, Export, Approve, Direct API/URL access).
   4. *Error Response & Failure Fallbacks*: Apa yang terjadi saat provider pihak ketiga down, network timeout 504, saldo habis, atau request gagal?
-  5. *Data Lifecycle & Invariants*: Siklus hidup entitas (Draft $\rightarrow$ Active $\rightarrow$ Inactive $\rightarrow$ Soft-deleted), kebijakan retensi data, dan PII masking.
+  5. *Data Lifecycle & Invariants*: Siklus hidup entitas (Draft -> Active -> Inactive -> Soft-deleted), kebijakan retensi data, dan PII masking.
   6. *Concurrency & Idempotency*: Pencegahan transaksi ganda akibat double-click CTA atau retry network.
   7. *Platform & Environment Constraints*: Versi OS/browser minimum, device compatibility, throttling network, token expiry duration.
 
 ### 2. 🌐 UNIVERSAL MULTI-PLATFORM ADAPTER
-Analisis harus secara otomatis menyesuaikan karakteristik arsitektur sistem target:
+Analisis secara otomatis menyesuaikan karakteristik arsitektur sistem target:
 - **Web Applications (SPA / SSR)**: Evaluasi browser history, multiple tabs sync, cookie/session management, responsive layout, reload page state, keyboard navigation.
 - **Mobile Applications (iOS / Android / Flutter / React Native)**: Evaluasi app lifecycle (background/kill/resume), permission requests (Camera, GPS, Storage), push notification payload, biometrics (FaceID/Fingerprint), offline local storage (SQLite/Hive) sync.
 - **Backend APIs & Microservices (REST / GraphQL / gRPC)**: Evaluasi HTTP Status Code (2xx, 4xx, 5xx), request-response JSON contract schema, headers (Authorization, X-Request-ID, Idempotency-Key), rate limiting (429), payload validation, BOLA/IDOR vulnerability.
@@ -91,7 +127,7 @@ Dokumen analisis wajib mencakup analisa ketat terhadap:
 
 ## 4. Struktur Standar Dokumen Hasil Analisis (`result-testcase/PRD_Analysis_<Feature_Name>.md`)
 
-Dokumen analisis wajib memiliki hierarki standar berikut:
+Dokumen analisis wajib memiliki hierarki standar 8 bagian berikut:
 
 ```markdown
 # Analisis PRD & Perancangan Test Matrix: [Nama Fitur]
@@ -121,7 +157,7 @@ Dokumen analisis wajib memiliki hierarki standar berikut:
 - **Data Persistence & Rollback Impact**: Integritas data DB saat transaksi dibatalkan atau gagal di tengah jalan.
 
 ## 6. Requirements Traceability Matrix (RTM)
-- Tabel pemetaan dua arah: `User Story / PRD Section` ↔ `Acceptance Criteria (AC)` ↔ `Target Test Area` ↔ `Planned Priority`.
+- Tabel pemetaan dua arah: `User Story / PRD Section` <-> `Acceptance Criteria (AC)` <-> `Target Test Area` <-> `Planned Priority`.
 
 ## 7. Dampak Regresi (Impact & Regression Scope)
 - Fitur existing, modul upstream/downstream, dan database schema yang berpotensi terdampak oleh perubahan ini.
@@ -143,7 +179,7 @@ graph TD
     E --> F["5. Susun Analisis Lengkap Sesuai Template Standar"]
     D -- "Tidak" --> F
     F --> G["6. Simpan PRD_Analysis_<Feature_Name>.md di result-testcase/"]
-    G --> H["7. Laporkan ke User & Siap Lanjut ke generate-testcase"]
+    G --> H["7. Laporkan Dokumen Markdown Siap ke User (Tunggu Keputusan User untuk Langkah Berikutnya)"]
 ```
 
 1. **Eksplorasi Input & Konteks Pendukung**:
@@ -158,7 +194,10 @@ graph TD
    - **TANYA KE USER dan TUNGGU JAWABAN**. Jangan pernah membuat dokumen final dengan asumsi tanpa konfirmasi.
 4. **Penyusunan Dokumen Analisis Final**:
    - Setelah seluruh klarifikasi disepakati, susun dokumen analisis komprehensif mengikuti Bagian 4.
-5. **Penyimpanan Dokumen**:
+5. **Penyimpanan Dokumen (Hanya Markdown)**:
    - Simpan dokumen ke: `./result-testcase/PRD_Analysis_<Feature_Name>.md`.
-6. **Laporan & Handover**:
-   - Laporkan ringkasan temuan kritis, scope boundary yang telah terkunci, dan informasikan bahwa dokumen siap diturunkan ke skill `generate-testcase`.
+6. **Laporan & Handover Eksklusif**:
+   - Laporkan ringkasan temuan kritis, scope boundary yang telah terkunci, dan informasikan bahwa **dokumen Markdown analisis telah siap**.
+   - **Biarkan User menentukan langkah selanjutnya**, apakah ingin:
+     - Mengonversi dokumen hasil analisa ke format Word (`.docx`) atau PDF (`.pdf`) menggunakan skill `convert-document`.
+     - Melanjutkan ke tahap pembuatan Master Test Case Suite (`.xlsx` dan `.md`) menggunakan skill `generate-testcase`.
