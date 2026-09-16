@@ -22,6 +22,8 @@ venv/
 *.bak
 scratch/
 
-# Untracked custom tasks
+# Untracked custom tasks & local knowledge
 otherTasks/
 result-testcase/
+strukturmenu/
+adhoc-document/

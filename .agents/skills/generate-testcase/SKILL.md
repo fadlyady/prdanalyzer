@@ -2,24 +2,24 @@
 name: generate-testcase
 description: >-
   Standard operating procedure for generating production-ready, comprehensive Master Test Case Suites
-  (both structured 15-column Excel spreadsheets and automation-ready Layered BDD/Markdown files) based on approved PRD analysis.
+  (both structured 15-column Excel spreadsheets and automation-ready Gherkin/Markdown files) based on approved PRD analysis.
   Applies 3-Tier Coverage Matrix (Happy Path, Boundary/Systemic Edge Cases, Heuristic Exploratory Charters),
-  Triple-Layer Assertions (UI, API Contract, DB Persistence), Layered Pragmatic BDD (Gherkin for UI/E2E & Structured AAA for Backend/API/Jobs),
-  Explicit Webhook Payload Injections, Relative Timestamp Seeding, and Universal Unique ID format for any platform.
+  Mandatory Adversarial Edge-Case Review (min 5 extreme candidates), Risk-Driven BVA Depth (3-value vs 2-value vs EP),
+  Redundancy Prevention Rules, Triple-Layer Assertions (UI, API Contract, DB Persistence), and Universal Unique ID format for any platform.
   Activate when the user asks to generate, produce, or export detailed test cases from an approved PRD analysis.
 ---
 
 # Universal Master Test Case Suite Skill (`generate-testcase`)
 
-Skill ini digunakan untuk mentransformasikan hasil analisis PRD (`PRD_Analysis_<Feature_Name>.md`) menjadi **Master Test Case Suite Berstandar Industri** yang komprehensif, terukur, siap eksekusi manual/evidence development, dan langsung siap diotomasi oleh automation framework (Playwright, Cypress, Appium, Pytest, Robot Framework).
+Skill ini digunakan untuk mentransformasikan hasil analisis PRD (`PRD_Analysis_<Feature_Name>.md`) menjadi **Master Test Case Suite Berstandar Industri** yang komprehensif, terukur, siap eksekusi manual/evidence development, dan siap diotomasi oleh automation framework (Playwright, Cypress, Appium, Pytest, Robot Framework).
 
-Tujuan utama: Menghasilkan test case dengan **Coverage 3-Dimensi (Happy Path, Boundary & Systemic Edge Cases, Exploratory Charters)**, **Triple-Layer Assertions (UI + API Contract + Data Persistence)**, **Layered Pragmatic BDD Format (Gherkin untuk UI/E2E & AAA untuk Backend/API)**, **Injeksi Webhook Asynchronous Eksplisit**, dan **Relative Timestamp Seeding** yang berlaku universal untuk Web, Mobile Native, Backend API, maupun Microservices.
+Tujuan utama: Menghasilkan test case dengan **Coverage 3-Dimensi**, **Mandatory Adversarial Edge-Case Review**, **Risk-Driven BVA Depth & Redundancy Prevention**, dan **Triple-Layer Assertions (UI + API Contract + Data Persistence)** yang bersifat universal untuk platform Web, Mobile Native, Backend API, maupun Microservices.
 
 ---
 
 ## 1. Direktori & Lokasi Berkas Dinamis (*File Architecture*)
 
-- **Input Analisis PRD (SSOT)**: `./result-testcase/PRD_Analysis_<Feature_Name>.md` (dihasilkan dari skill `prd-qa-analyzer`).
+- **Input Analisis PRD (SSOT)**: `./result-testcase/PRD_Analysis_<Feature_Name>.md` (dihasilkan dari skill `prd-qa-analyzer` atau `prd-analyzer-business`).
 - **Support & Knowledge Base**: `./Testcase-support/`
   - Template spreadsheet Excel acuan (15 kolom standar), template Markdown otomasi, dan `qa-learnings.md`.
 - **UI & Interface Knowledge**: `./strukturmenu/` atau `./ui-references/<app-name>/` (jika ada interface).
@@ -39,15 +39,13 @@ Setiap fitur yang diuji **WAJIB** mencakup 3 tingkatan coverage pengujian beriku
 │                        3-TIER TEST COVERAGE MATRIX                     │
 ├────────────────────────────────────────────────────────────────────────┤
 │  TIER 1: HAPPY PATH (Golden Business Journey)                          │
-│  - End-to-end nominal user journey dari inisiasi hingga selesai        │
+│  - End-to-end nominal user journey dari inisiasi hingga selesai       │
 │  - Valid inputs, standard payment, default configuration               │
 │  - Standard CRUD state lifecycles & authorized role access             │
 ├────────────────────────────────────────────────────────────────────────┤
 │  TIER 2: BOUNDARY, SYSTEMIC & SECURITY EDGE CASES                      │
 │  - Data Boundaries: Min-1, Min, Max, Max+1, UTF-8/Emoji, Precision    │
-│  - Time Boundaries: Relative timestamp transition (now - 1m vs now + 1m)│
 │  - Concurrency & Race: Double-click CTA, simultaneous multi-user edit  │
-│  - Async & Webhook Events: Failed webhook refund, delayed delivery     │
 │  - Network & Resiliency: 3G throttling, 504 Timeout, offline reconnect │
 │  - Security & RBAC: Direct URL access, IDOR/BOLA tampering, exp token │
 ├────────────────────────────────────────────────────────────────────────┤
@@ -61,92 +59,125 @@ Setiap fitur yang diuji **WAJIB** mencakup 3 tingkatan coverage pengujian beriku
 
 ---
 
-## 3. Standar Format Pragmatic Layered BDD & AAA Pattern
+## 3. Disiplin Desain Test ISTQB: BVA Depth & Redundancy Prevention
 
-Format penulisan langkah pengetesan disesuaikan dengan tipe layer pengujian:
+Untuk menjaga agar test suite tetap **tajam, berdaya uji tinggi, dan tidak membengkak secara sia-sia (lean & high ROI)**, terapkan disiplin berikut:
 
-### A. Untuk UI & End-to-End Test Cases (`WEB-*`, `MOB-*`, `E2E-*`): Gunakan Gherkin Syntax
-- **`Given`**: State awal data, autentikasi role pengguna, saldo/prasyarat, dan URL/layar aktif.
-- **`When`**: Langkah interaksi pengguna yang terinci dengan alur navigasi eksplisit (misal: Step-by-Step Wizard: *Step 1: Pilih Template $\rightarrow$ Step 2: Upload CSV / Pilih Kontak $\rightarrow$ Step 3: Date-Time Picker Jadwal $\rightarrow$ Step 4: Submit Modal Konfirmasi*).
-- **`Then`**: Ekspektasi visual UI (**Layer 1: Client/UI State**) seperti perubahan tombol, spinner loading, modal tertutup, toast alert, visual badges (misal: `[Free Entry Point Active]`, `[Processing]`), atau badge biaya `Rp 0 (Bebas Biaya)`.
-- **`And`**: Ekspektasi API Contract (**Layer 2: Network/API**) dan Database (**Layer 3: DB / State Persistence**).
+### 1. Risk-Driven BVA Depth (Kedalaman BVA Berbasis Level Risiko)
+Kedalaman pengujian nilai batas (BVA) ditentukan secara langsung oleh tingkat risiko dari AC/modul terkait:
 
-### B. Untuk Backend, API, dan Worker Jobs (`API-*`, `JOB-*`, `CLI-*`): Gunakan Structured AAA Pattern
-- **`[Arrange]`**: Setup fixture database, pembuatan access token, seed record data relasional, dan penyiapan payload request.
-- **`[Act]`**: Eksekusi HTTP Request (`GET`, `POST`, `PUT`, `DELETE`), injeksi webhook payload, pemanggilan cron command CLI, atau publish message ke event queue.
-- **`[Assert]`**: Verifikasi mendalam pada **Layer 2: API Contract / HTTP Response** (Status Code, JSON Schema, Error Code) dan **Layer 3: DB State & Audit Logs** (Row status, kolom timestamp UTC, balance mutasi, deduplication lock).
+| Level Risiko | Kedalaman BVA | Titik Nilai yang Wajib Diuji |
+| :--- | :--- | :--- |
+| **Critical Risk** | **3-Value BVA** | $\text{Min}-1, \text{Min}, \text{Min}+1, \text{Max}-1, \text{Max}, \text{Max}+1$ |
+| **High Risk** | **3-Value BVA** | $\text{Min}-1, \text{Min}, \text{Min}+1, \text{Max}-1, \text{Max}, \text{Max}+1$ |
+| **Medium Risk** | **2-Value BVA** | $\text{Min}-1, \text{Min}, \text{Max}, \text{Max}+1$ |
+| **Low Risk** | **EP Only** | 1 Valid Partition, 1 Invalid Partition (tanpa BVA kecuali diminta eksplisit) |
 
----
-
-## 4. Standar Eksekusi Asynchronous & Webhook Event Injection
-
-Untuk menguji alur asynchronous (misal: Callback Webhook dari 3rd Party seperti WhatsApp/Meta, Payment Gateway, dsb.):
-1. **Dilarang Menulis Langkah Abstrak** seperti *"Tunggu webhook masuk"*.
-2. **Wajib Menyertakan Payload Injeksi Nyata**: Tuliskan endpoint internal webhook (misal: `POST /api/v1/webhooks/whatsapp`) beserta contoh JSON payload konkret (status `failed`, error code, timestamp, message ID).
-3. **Uji Kasus Delayed / Late Webhook**: Buat skenario pengujian di mana webhook callback tiba setelah batas toleransi (out of buffer window) untuk memvalidasi bahwa sistem memproses secara **idempotent** dan **tidak memicu pemotongan saldo / refund ganda**.
+### 2. Aturan Pencegahan Redundansi (Redundancy Prevention Rules)
+1. **BVA adalah bagian dari Partisi EP**: Nilai valid pada BVA (misal: $\text{Min}$ dan $\text{Max}$) sudah mencakup valid equivalence partition. Jangan membuat test case "Happy Path" terpisah jika nilai BVA valid sudah mengujinya.
+2. **Kombinasi Validasi Multi-Field**: Gabungkan validasi form standar dalam 1 test case terstruktur jika logis, alih-alih membuat 10 test case terpisah untuk field kosong pada form yang sama.
+3. **Pemberian Skor Prioritas**:
+   - Critical Path / Critical Risk $\longrightarrow$ `Critical` (P1) / `High` (P2)
+   - Medium Risk Happy Path $\longrightarrow$ `Normal` (P2)
+   - Low Risk / Cosmetic / Rare Edge $\longrightarrow$ `Low` (P3)
 
 ---
 
-## 5. Standar Pengujian Boundary Berbasis Waktu (Relative Timestamp Seeding)
+## 4. 🛑 Gerbang Wajib: Adversarial Edge-Case Review (Min. 5 Kandidat)
 
-Untuk menguji perubahan status atau tarif berbasis tanggal/jam efektif (`effective_at`, `expires_at`):
-1. **Dilarang Menunggu Jam Nyata** di server/komputer.
-2. **Gunakan Relative Timestamp Seeding**:
-   - Skenario Sebelum Transisi: Seed data dengan `effective_at = now() + 1 hour` (memastikan tarif lama yang aktif).
-   - Skenario Setelah Transisi: Seed data dengan `effective_at = now() - 1 minute` (memastikan tarif baru yang aktif).
-   - Skenario Jendela Aktif (misal: FEP 72 jam): Seed data dengan `fep_expires_at = now() + 1 minute` (masih aktif) vs `fep_expires_at = now() - 1 minute` (sudah expired).
+Sebelum menghasilkan berkas Excel dan Markdown final, Agent **WAJIB berperan skeptis/adversarial** untuk mencari celah yang berpotensi merusak integritas sistem atau luput dari dokumen PRD.
+
+Agent **WAJIB merumuskan dan menyajikan minimal 5 kandidat Adversarial Edge Cases** kepada User dengan format:
+
+| # | AC / Modul Terkait | Skenario Adversarial Edge Case | Mengapa Ini Kritis (Potensi Dampak Kegagalan) |
+|---|---|---|---|
+| 1 | Billing / Checkout | User klik Bayar bersamaan pada 2 tab browser berbeda dengan sisa saldo hanya cukup untuk 1 transaksi | Mencegah negative balance (saldo minus) |
+| 2 | Pricing Engine | Injeksi angka desimal tak hingga / floating-point precision (contoh: Rp 99.99999) | Mencegah selisih pembulatan akuntansi pada mutasi DB |
+| 3 | Order Lifecycle | Network timeout tepat saat third-party gateway memproses webhook sukses | Mencegah order berstatus pending selamanya (zombie order) |
+| 4 | RBAC / Permission | User role Viewer melakukan direct POST request ke endpoint mutasi menggunakan session cookie yang valid | Mencegah privilege escalation / BOLA vulnerability |
+| 5 | Data Lifecycle | Transaksi di-cancel saat status sudah berpindah ke fase In-Progress | Mencegah state invariant violation di DB |
+
+> **Konfirmasi User**: User memilih nomor kandidat mana saja yang disetujui untuk dimasukkan ke dalam suite (`Semua`, `1, 2, 4`, atau `Lewati`). Kandidat yang disetujui akan diikutsertakan ke dalam Master Suite.
 
 ---
 
-## 6. Format Penomoran ID Universal (`unique_id`)
+## 5. Standar Triple-Layer Assertions (AAA Pattern) & Strict Zero-Wild-Guess
 
-Format penomoran `unique_id` disusun secara modular dan konsisten untuk semua platform:
+Langkah pengetesan (`step_desc`) dan ekspektasi hasil (`expected_desc`) **WAJIB** mencakup verifikasi pada **3 Layer**:
+
+| Layer Verifikasi | Target Verifikasi | Contoh Penulisan pada `expected_desc` |
+| :--- | :--- | :--- |
+| **Layer 1: Client / UI State** | Visual components, button states, toasts, modals, badges, responsive. | 1. Button CTA berubah menjadi `Disabled (Loading Spinner)`.<br>2. Modal form tertutup otomatis.<br>3. Muncul toast alert hijau: `"Data berhasil disimpan"`.<br>4. Status badge berubah menjadi `"Active"`. |
+| **Layer 2: Network / API Contract** | HTTP status codes, payload contract schema, response time SLA. | 5. API request / Contract Service merespons dengan HTTP `201 Created` (atau jika endpoint belum ada spesifikasi resmi di `./adhoc-document/`, gunakan **narasi pendekatan fungsional kontrak service**: `[Service/Contract] Pricing Engine memproses parameter user_id, category, country...`). |
+| **Layer 3: DB / State Persistence** | Database tables, timestamps, audit logs, event bus triggers. | 7. Data tersimpan di tabel persistensi data dengan kolom `status = 'ACTIVE'` dan `created_at` berformat UTC.<br>8. Record baru terbentuk di log audit transaksi. |
+
+> ⚠️ **STRICT ZERO-WILD-GUESS POLICY (API & UI/MENU)**:
+> 1. **Dilarang Mengarang Endpoint API**: Dilarang mengarang/mengasumsikan path URL endpoint API (misal mengarang `GET /api/v1/pricing/resolve` atau `/api/v1/sessions/...` jika tidak ada file OpenAPI/TRD resmi di `./adhoc-document/`). Gunakan **narasi pendekatan fungsional** yang netral dan deskriptif.
+> 2. **Dilarang Mengarang Hierarki Menu UI**: Dilarang mengarang pohon hierarki menu (misal mengarang `Admin > Pricing Management > Meta Base Price` jika tidak ada bukti visual di `./strukturmenu/` atau teks PRD).
+
+---
+
+## 6. Standar Navigasi Menu & Grounding UI (`./strukturmenu/` & Teks PRD)
+
+Untuk memastikan penulisan prasyarat (`precondition`) dan langkah pengetesan (`step_desc`) 100% akurat dan siap dieksekusi oleh tester manual maupun automation QA:
+
+1. **Pemeriksaan Bukti Menu (Menu Existence Verification)**:
+   - Periksa informasi tertulis pada PRD/TRD dan seluruh berkas tangkapan layar di `./strukturmenu/` (contoh: `./strukturmenu/dashboard-crm/`, `./strukturmenu/chatroom-web/`, `./strukturmenu/customer-dashboard/`).
+   - Tentukan apakah suatu menu, tombol CTA, tab, atau modal popup **benar-benar ada** atau **tidak ada**.
+2. **Penyusunan Alur Navigasi Eksak (Exact Navigation Flow)**:
+   - Susun urutan aksi klik yang presisi dan realistis berdasarkan tangkapan layar yang tersedia:
+     - *Format*: `1. Buka menu [Menu Utama] > [Submenu]. 2. Klik tombol CTA [Nama Tombol]. 3. Pada modal [Nama Modal], pilih/isi [Data] lalu klik [Submit].`
+     - *Contoh Nyata*: `1. User membuka menu Dashboard CRM > WhatsApp Credit.` atau `1. User membuka Chatroom > Klik ikon 'Setting Panel' di pojok kanan atas > Aktifkan toggle 'Service Message Cost Limit'.`
+3. **🛑 Preventative Clarification Gate: Penanganan Area Abu-Abu & Opsi User**:
+   - Jika terdapat informasi yang masih **abu-abu** (ambigu/kurang lengkap), baik mengenai **aturan requirement bisnis** maupun **keberadaan menu/UI**, Agent **WAJIB BERTANYA KE USER** terlebih dahulu sebagai tindakan preventif.
+   - **Pilihan Tindakan User**:
+     - **User Melengkapi Informasi**: Terapkan informasi valid yang diberikan user ke dalam langkah pengujian.
+     - **User Memilih Skip / Belum Menjawab**: Simpan seluruh pertanyaan yang di-skip ke berkas terpisah `./result-testcase/questions-for-pm-<feature_name>.md` agar dapat di-follow up kemudian.
+     - **User Meminta Default / Data Memang Belum Ada**: Terapkan **Standar Nilai Default**:
+       - *Default UI/Menu*: Gunakan modul fungsional netral `[Nama Modul - Role]` (contoh: `[Credit Management - Admin]`) tanpa mengarang hierarki menu fiktif.
+       - *Default API*: Gunakan narasi kontrak fungsional `[Service/Contract] <Service> mengeksekusi...` tanpa mengarang path URL fiktif.
+4. **Penanganan Modul Non-Terdokumentasi (Internal / Backend / Non-Mockup)**:
+   - Jika suatu modul (misal modul internal Biz Ops Admin) **tidak memiliki screen capture** di `./strukturmenu/` dan **tidak memiliki wireframe/mockup** di PRD, gunakan penamaan modul fungsional resmi PRD secara netral:
+     - *Contoh*: `1. Login sebagai user internal role 'Biz Ops Admin'. 2. Akses modul fungsional [Credit Management - Admin].`
+     - *Dilarang*: Mengarang struktur menu fiktif seperti `Admin > Pricing Management > Meta Base Price`.
+
+---
+
+## 7. Format Penomoran ID Universal (`unique_id`)
+
+Format penomoran `unique_id` disusun secara modular, konsisten, dan **immutable** (tidak boleh diubah nomornya saat iterasi revisi):
 
 $$\mathbf{\langle PLATFORM\rangle\text{-}\langle MODULE\rangle\text{-}\langle SUBMODULE\rangle\text{-}\langle TYPE\rangle\text{-}\langle SEQ\rangle}$$
 
-- **`<PLATFORM>` (3-4 Huruf)**: 
-  - `WEB` (Web Application / Dashboard)
-  - `MOB` (Mobile iOS / Android)
-  - `API` (Backend Service / Microservice)
-  - `JOB` (Cron Job / Worker / Event-Driven)
-  - `CLI` (Command Line Tool)
-  - `E2E` (End-to-End Cross Layer)
-- **`<MODULE>` (3-4 Huruf)**: Modul Utama (misal: `AUTH`, `BILL`, `CHAT`, `CUST`, `PROD`, `SETT`, `PRIC`, `BRD`, `ROLL`, `FEP`, `ALRT`).
-- **`<SUBMODULE>` (3-4 Huruf)**: Sub-modul Fitur (misal: `BASE`, `GEN`, `CUST`, `TIME`, `RND`, `ISOL`, `PART`, `FAIL`, `LATE`, `WIN`, `EXP`, `RACE`).
-- **`<TYPE>` (3-4 Huruf)**:
-  - `POS` : Positive / Happy Path
-  - `NEG` : Negative / Validation Failure
-  - `BVA` : Boundary Value Analysis
-  - `SEC` : Security / RBAC / Authorization / Tampering
-  - `CON` : Concurrency / Race Condition / Idempotency
-  - `EXP` : Heuristic Exploratory Charter
-- **`<SEQ>` (3 Digit Angka)**: Nomor urut sekuensial per suite (`001`, `002`, `003`, dst.).
-
-*Contoh*: `WEB-BRD-ISOL-POS-007`, `API-ROLL-FAIL-POS-009`, `JOB-ROLL-RD-POS-010`, `API-CONC-RACE-CON-022`, `E2E-EXP-FEDEX-EXP-024`.
+- **`<PLATFORM>`**: `WEB`, `MOB`, `API`, `JOB`, `CLI`.
+- **`<MODULE>`**: Kode Modul Utama (misal: `AUTH`, `BILL`, `CHAT`, `CUST`, `PROD`, `SETT`).
+- **`<SUBMODULE>`**: Kode Sub-modul (misal: `PRIC`, `FLOW`, `NOTF`, `USER`, `IMPT`).
+- **`<TYPE>`**: `POS` (Positive), `NEG` (Negative), `BVA` (Boundary), `SEC` (Security/RBAC), `CON` (Concurrency), `EXP` (Exploratory).
+- **`<SEQ>`**: Nomor urut sekuensial 3 digit (`001`, `002`, `003`, dst.).
 
 ---
 
-## 7. Spesifikasi Master Test Case Excel (`result-testcase/Test_Cases_<Feature_Name>.xlsx`)
+## 8. Spesifikasi Master Test Case Excel (`result-testcase/Test_Cases_<Feature_Name>.xlsx`)
 
 File Excel dibuat menggunakan script Python (`openpyxl`) dengan spesifikasi 15 kolom standar:
 
 - **Sheet Name**: `Test Cases`
 - **15 Kolom Standar & Lebar Kolom (Column Width)**:
-  1. `project_id` (width: 12) — Kode proyek sistem (misal: `EVERPRO_CHAT`, `FINTECH_CORE`).
-  2. `suite_id` (width: 15) — Kode modul/suite (misal: `PRICING_MGMT`, `BROADCAST_EXEC`, `ROLLBACK_MGMT`).
-  3. `unique_id` (width: 24) — Format: `<PLATFORM>-<MODULE>-<SUBMODULE>-<TYPE>-<SEQ>`.
-  4. `title` (width: 45) — Judul spesifik skenario pengujian.
-  5. `decription` (width: 45) — Deskripsi tujuan dan cakupan uji.
-  6. `precondition` (width: 45) — Prasyarat akun, token, environment flag, dan state awal data bernomor (1. ..., 2. ...).
-  7. `priority` (width: 15) — `Critical` (P1), `High` (P2), `Normal` (P2), `Low` (P3).
-  8. `type` (width: 15) — `Functional`, `Negative`, `Boundary`, `Security`, `Concurrency`, `Exploratory`, `Regression`.
-  9. `status` (width: 12) — `Draft` / `Ready`.
-  10. `tags` (width: 18) — `Smoke`, `Regression`, `RBAC`, `Integration`, `E2E`, `P1-Core`.
-  11. `steps` (width: 10) — Total langkah (integer).
-  12. `step_desc` (width: 55) — Langkah tindakan terinci bernomor (1. ..., 2. ...) dengan pola Gherkin (`Given-When`) untuk UI atau AAA (`Arrange-Act`) untuk Backend/API.
-  13. `expected_desc` (width: 55) — Ekspektasi hasil terukur bernomor mengacu pada *Triple-Layer Assertions* (`Then-And` untuk UI atau `Assert [API]/[DB]` untuk Backend).
-  14. `is_automated` (width: 14) — `TRUE` / `FALSE`.
-  15. `user_story` (width: 45) — Format: `[Priority: Critical/High/Normal/Low] US-xx: <Judul Story> (Covers: AC-1, AC-2)`.
+  1. `project_id` (12) — Kode proyek sistem (misal: `FINTECH_CORE`, `CHAT_PLATFORM`).
+  2. `suite_id` (12) — Kode modul/suite (misal: `BILLING`, `CHAT_FLOW`).
+  3. `unique_id` (22) — Format: `<PLATFORM>-<MODULE>-<SUBMODULE>-<TYPE>-<SEQ>`.
+  4. `title` (45) — Judul spesifik skenario pengujian.
+  5. `decription` (45) — Deskripsi tujuan dan cakupan uji.
+  6. `precondition` (45) — Prasyarat akun, token, environment flag, dan state awal data bernomor (1. ..., 2. ...).
+  7. `priority` (15) — `Critical` (P1), `High` (P2), `Normal` (P2), `Low` (P3).
+  8. `type` (15) — `Functional`, `Negative`, `Boundary`, `Security`, `Concurrency`, `Exploratory`, `Regression`.
+  9. `status` (12) — `Draft` / `Ready`.
+  10. `tags` (15) — `Smoke`, `Regression`, `RBAC`, `Integration`, `E2E`, `P1-Core`.
+  11. `steps` (10) — Total langkah (integer).
+  12. `step_desc` (50) — Langkah tindakan terinci bernomor (1. ..., 2. ...) dengan data uji konkret.
+  13. `expected_desc` (50) — Ekspektasi hasil terukur bernomor mengacu pada *Triple-Layer Assertions*.
+  14. `is_automated` (14) — `TRUE` / `FALSE`.
+  15. `user_story` (45) — Format: `[Priority: Critical/High/Normal/Low] US-xx: <Judul Story> (Covers: AC-1, AC-2)`.
 
 - **Styling Header (Row 1)**:
   - Background Fill: Navy Solid (`#1F4E78`)
@@ -159,85 +190,52 @@ File Excel dibuat menggunakan script Python (`openpyxl`) dengan spesifikasi 15 k
 
 ---
 
-## 8. Matriks & Tagging Automation Feasibility pada Markdown
-
-Setiap skenario pada file markdown **wajib diberi tagging prioritas dan tingkat kompleksitas automasi**:
-
-1. **Tagging Prioritas Automasi**:
-   - `[Auto-Critical]` : Core Business Flow & Blocker Path (Wajib Paling Awal diotomasi).
-   - `[Auto-High]` : Validasi mutasi kritis, BVA, dan kontrol otorisasi RBAC.
-   - `[Auto-Normal]` : Flow sekunder, filtering, sorting, pagination, dan ekspor report.
-   - `[Auto-Low]` : Validasi visual, tooltip, dan micro-animations.
-2. **Tagging Tingkat Kompleksitas (Automation Complexity)**:
-   - `[Low-Complexity]` : Alur navigasi lurus, form input standar, CRUD sederhana (*Quick Wins*).
-   - `[Medium-Complexity]` : Multi-step wizard modal, file upload CSV parsing, dynamic datepicker, dropdown berjenjang.
-   - `[High-Complexity]` : Async worker, real-time WebSocket, multi-browser concurrency race condition, mock 3rd-party webhook injection, OTP bypass.
-
----
-
 ## 9. Format Markdown Automation-Ready (`result-testcase/test-cases-<feature-name>.md`)
 
 ```markdown
-# Automation & QA Master Test Case Suite: [Nama Fitur]
+# Automation & QA Test Case Suite: [Nama Fitur]
 
 ## Modul: [Nama Modul / User Story]
 
-### WEB-BRD-ISOL-POS-007: [Judul Skenario UI/E2E] `[Auto-Critical]` `[Medium-Complexity]`
-- **User Story**: [Priority: Critical] US-02: Broadcast Execution & Credit Isolation (Covers: AC-1, AC-2)
+### WEB-BILL-PRIC-POS-001: [Judul Skenario Nominal] `[Auto-Critical]` `[Low-Complexity]`
+- **User Story**: [Priority: Critical] US-01: Pembelian Paket Berlangganan (Covers: AC-01, AC-02)
 - **Tipe**: Functional / Positive
 - **Precondition**:
-  1. User login sebagai Merchant Admin dengan saldo kredit awal Rp 1.000.000.
-  2. Berada pada halaman dashboard broadcast `/broadcast/list`.
-- **Test Steps (Gherkin BDD)**:
-  - **Given**: User berada di halaman `/broadcast/list` dengan saldo Rp 1.000.000.
-  - **When**: 
-    1. User klik tombol CTA `[+ Buat Broadcast Baru]` (`#btn-create-broadcast`).
-    2. Pada Step 1 Wizard (Pilih Template), user memilih template `"Promo Diskon Gajian"` (Kategori: `MARKETING`, Tarif: `Rp 750/pesan`).
-    3. Pada Step 2 Wizard (Kontak), user meng-upload file CSV `contacts_100.csv` berisi 100 nomor telepon valid.
-    4. Pada Step 3 Wizard (Jadwal), user memilih opsi radio `"Kirim Sekarang"`.
-    5. Pada Step 4 Wizard (Review & Konfirmasi), user melihat ringkasan `"Estimasi Total Biaya: Rp 75.000"` dan klik `[Kirim Broadcast]` (`#btn-submit-broadcast`).
-    6. User konfirmasi pada dialog modal `[Ya, Eksekusi]`.
+  1. User login dengan akun role `Merchant Admin`.
+  2. Saldo akun mencukupi (Rp 500.000).
+- **Test Steps**:
+  1. User membuka menu `/billing/packages`.
+  2. User memilih paket `"Pro Enterprise 1 Bulan"` seharga `Rp 350.000`.
+  3. User klik tombol CTA `[Beli Sekarang]`.
+  4. User memilih metode pembayaran `"Saldo Akun"`.
+  5. User klik `[Konfirmasi Pembayaran]`.
 - **Expected Results (Triple-Layer Assertions)**:
-  - **Then (UI)**: 
-    1. Modal tertutup, muncul toast alert hijau: `"Broadcast berhasil dibuat dan sedang diproses"`.
-    2. Tabel broadcast menampilkan baris baru dengan status badge `[Processing]`.
-    3. Widget saldo kredit di header terpotong dari `Rp 1.000.000` menjadi `Rp 925.000`.
-  - **And (API & DB)**: 
-    4. [API] Request `POST /api/v1/broadcasts` merespons HTTP `201 Created` dengan payload `{"broadcast_id": "BRD-9001", "total_contacts": 100, "locked_credits": 75000, "status": "PROCESSING"}`.
-    5. [DB] Saldo merchant di tabel `wallets` terpotong Rp 75.000, dan tercatat 100 record di tabel `broadcast_recipients` dengan status `'LOCKED'`.
-
----
-
-### API-ROLL-FAIL-POS-009: [Judul Skenario Backend/API Webhook] `[Auto-Critical]` `[High-Complexity]`
-- **User Story**: [Priority: Critical] US-03: Failed Message Credit Rollback (Covers: AC-1)
-- **Tipe**: Functional / Positive
-- **Precondition**:
-  1. Pesan broadcast `MSG-BC-8801` terkirim dengan status `'SENT'`, kredit terpotong `Rp 750`, `wamid = 'wamid.HBgL12345'`.
-- **Test Steps (Structured AAA)**:
-  - **Arrange**: Siapkan payload simulasi webhook WhatsApp: `{"object": "whatsapp_business_account", "entry": [{"changes": [{"value": {"statuses": [{"id": "wamid.HBgL12345", "status": "failed", "errors": [{"code": 131026, "title": "Message undeliverable"}]}]}}]}]}`.
-  - **Act**: Kirim internal webhook request `POST /api/v1/webhooks/whatsapp` dengan payload tersebut.
-  - **Assert**: Query API detail pesan dan mutasi saldo di database.
-- **Expected Results (Triple-Layer Assertions)**:
-  1. [API] Webhook endpoint merespons HTTP `200 OK` (`{"status": "EVENT_RECEIVED"}`).
-  2. [DB] Status pesan di tabel `broadcast_recipients` terupdate menjadi `'FAILED'` dengan error code `131026`.
-  3. [DB] Saldo merchant di tabel `wallets` bertambah kembali `+ Rp 750` dengan `transaction_type = 'CREDIT_REFUND'` dan `reference_id = 'wamid.HBgL12345'`.
+  1. [UI] Button CTA berubah menjadi `Loading Spinner` lalu modal tertutup.
+  2. [UI] Muncul toast alert hijau: `"Pembayaran Berhasil. Paket Pro Enterprise aktif"`.
+  3. [API] Request `POST /api/v1/billing/checkout` merespons HTTP `200 OK` dengan payload `{ "status": "SUCCESS", "package_id": "PRO-ENT" }`.
+  4. [DB] Saldo user berkurang menjadi `Rp 150.000` dan record baru tercatat di tabel `subscriptions` dengan `status = 'ACTIVE'`.
 ```
 
 ---
 
 ## 10. Urutan Proses Eksekusi Wajib (*Execution SOP*)
 
-1. **Baca dan Validasi Input**: Baca dokumen `./result-testcase/PRD_Analysis_<Feature_Name>.md`. Pastikan tidak ada data yang ambigu.
-2. **Review Knowledge UI & API Specs**: Cek `./strukturmenu/` (atau UI mockup) dan `./adhoc-document/` untuk penamaan field, tombol CTA, direct URL, visual badge, dan endpoint nyata.
-3. **Terapkan Pragmatic Layered BDD & AAA**:
-   - Gunakan Gherkin + Multi-step UI Wizard untuk skenario UI (`WEB-*`, `MOB-*`, `E2E-*`).
-   - Gunakan Structured AAA + Explicit Payload Injection untuk Backend/API (`API-*`, `JOB-*`, `CLI-*`).
-   - Terapkan Relative Timestamp Seeding untuk pengujian boundary waktu.
-4. **Eksekusi Tahap 1 (Master Excel Spreadsheet)**:
+1. **Baca dan Validasi Input**: Baca dokumen `./result-testcase/PRD_Analysis_<Feature_Name>.md`. Pastikan tidak ada data yang kurang.
+2. **Review Knowledge UI & Screen Captures (`./strukturmenu/`) & Technical Specs (`./adhoc-document/`)**:
+   - Periksa seluruh berkas tangkapan layar di `./strukturmenu/` (contoh: `chatroom-web/`, `dashboard-crm/`, `customer-dashboard/`) serta teks tertulis PRD untuk memverifikasi keberadaan menu, tombol CTA, modal dialog, dan alur antarmuka nyata.
+   - **Tentukan Alur Navigasi Nyata**: Susun alur klik Menu A $\rightarrow$ Submenu B $\rightarrow$ CTA C yang 100% grounded pada tangkapan layar.
+   - **Menu Non-Terdokumentasi**: Jika suatu modul tidak ada di `./strukturmenu/` dan tidak memiliki mockup di PRD, gunakan penamaan modul fungsional resmi PRD (misal `[Credit Management - Admin]`) tanpa mengarang hierarki menu fiktif.
+3. **Adversarial Edge-Case Review (Mandatory Gate)**:
+   - Rumuskan minimal **5 kandidat edge case ekstrim**.
+   - Ajukan ke User di chat dan tunggu pilihan skenario yang disetujui.
+4. **Terapkan Risk-Driven BVA & Redundancy Prevention**:
+   - Susun data uji BVA (3-value untuk Critical/High, 2-value untuk Medium, EP untuk Low).
+   - Pastikan partisi valid BVA melebur ke dalam Happy Path.
+5. **Eksekusi Tahap 1 (Master Excel Spreadsheet)**:
    - Buat script Python `openpyxl` untuk menghasilkan `./result-testcase/Test_Cases_<Feature_Name>.xlsx`.
-   - Jalankan script dan pastikan file Excel dibuat dengan styling 15 kolom rapi dan valid (100% parity dengan Markdown).
-5. **Eksekusi Tahap 2 (Automation-Ready Markdown)**:
+   - Jalankan script dan pastikan file Excel dibuat dengan styling 15 kolom rapi dan valid.
+6. **Eksekusi Tahap 2 (Automation-Ready Markdown)**:
    - Buat file `./result-testcase/test-cases-<feature-name>.md` dengan struktur 3-Tier Coverage, Triple-Layer Assertions, dan tagging prioritas + kompleksitas automasi.
-6. **Verifikasi & Pelaporan**:
+7. **Verifikasi Orphan & Pelaporan**:
+   - Pastikan tidak ada orphan test cases (semua test case memiliki referensi AC/Story yang sah).
    - Hitung distribusi prioritas (P1/P2/P3), breakdown tipe test, dan laporkan ringkasan ke user.
-
