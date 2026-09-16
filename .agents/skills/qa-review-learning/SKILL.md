@@ -18,9 +18,10 @@ Skill ini digunakan untuk menjalankan **Mekanisme Continuous Learning & Retrospe
 
 - **Persistent QA Knowledge Base**: `./Testcase-support/qa-learnings.md`
 - **Target Skills yang Dikalibrasi**:
-  - SOP Analisis PRD: `.agents/skills/prd-qa-analyzer/SKILL.md`
-  - SOP Test Case: `.agents/skills/generate-testcase/SKILL.md`
-  - SOP Konversi Dokumen: `.agents/skills/convert-document/SKILL.md`
+  - SOP Analisis PRD QA: `.agents/skills/prd-qa-analyzer/SKILL.md`
+  - SOP Analisis PRD Bisnis: `.agents/skills/prd-analyzer-business/SKILL.md`
+  - SOP Master Test Case Suite: `.agents/skills/generate-testcase/SKILL.md`
+  - SOP Konversi Dokumen & Calculation: `.agents/skills/convert-with-calculation/SKILL.md` & `.agents/skills/convert-document/SKILL.md`
 - **Input Review**:
   - Tabel `Feedbacks & Review Log` pada dokumen analisis atau pesan langsung dari user.
 
@@ -55,13 +56,14 @@ Kelompokkan temuan ke dalam salah satu kategori:
 3. **Boundary & Data Gap**: Nilai ekstrem, format karakter khusus, atau floating point precision belum teruji.
 4. **Security & RBAC Gap**: Celah otorisasi direct API / object-level permission.
 5. **Assertion Gap**: Expected result terlalu dangkal (hanya cek UI tanpa cek DB/Network).
+6. **UI Navigation & Menu Grounding Gap**: Mengarang hierarki menu fiktif, rute navigasi tidak sesuai screen capture `./strukturmenu/`, atau salah menentukan keberadaan menu.
 
 ### Langkah 3: Pencatatan ke `Testcase-support/qa-learnings.md`
 Tambahkan entri log terstruktur ke `./Testcase-support/qa-learnings.md`:
 
 ```markdown
 ### [YYYY-MM-DD] - [Nama Fitur / Domain]: [Judul Temuan]
-- **Kategori Gap**: [Business Logic / NFR / Boundary / Security / Assertion]
+- **Kategori Gap**: [Business Logic / NFR / Boundary / Security / Assertion / UI Navigation & Menu Grounding]
 - **Temuan / Feedback**: Penjelasan detail apa yang sempat terlewat atau dikoreksi oleh reviewer.
 - **Root Cause**: Mengapa hal tersebut bisa terlewat pada analisis awal.
 - **Action Item & Guardrail Baru**:
@@ -71,8 +73,8 @@ Tambahkan entri log terstruktur ke `./Testcase-support/qa-learnings.md`:
 
 ### Langkah 4: Kalibrasi Heuristik Skill (Self-Improvement)
 Jika temuan tersebut merupakan pola umum yang berlaku untuk banyak aplikasi:
-- Perbarui daftar checklist pada `prd-qa-analyzer/SKILL.md` (misal: menambahkan poin validasi baru pada 7 Dimensi Checklist Klarifikasi).
-- Perbarui kategori pengujian pada `generate-testcase/SKILL.md` (misal: menambahkan variasi baru pada Exploratory Charters atau Edge Cases).
+- Perbarui daftar checklist pada `prd-qa-analyzer/SKILL.md` dan `prd-analyzer-business/SKILL.md` (misal: menambahkan poin validasi baru pada 7 Dimensi Checklist Klarifikasi atau SOP UI Grounding).
+- Perbarui kategori pengujian pada `generate-testcase/SKILL.md` (misal: menambahkan aturan grounding menu berbasis `./strukturmenu/` atau variasi baru pada Exploratory Charters).
 
 ### Langkah 5: Laporkan Hasil Peningkatan ke User
 Sajikan ringkasan singkat kepada user mengenai apa yang telah dipelajari dan bagaimana sistem telah ditingkatkan agar tidak mengulang celah yang sama.
