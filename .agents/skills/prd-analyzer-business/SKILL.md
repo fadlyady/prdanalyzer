@@ -35,8 +35,15 @@ Skill ini menggunakan path relatif workspace yang dinamis dan modular:
 
 ## 2. Prinsip Utama Analisis QA & Heuristik Bisnis (Senior QA Heuristics)
 
-### 1. 🛑 STRICT NO-ASSUMPTION & MANDATORY INTERACTIVE CLARIFICATION GATE (Wajib Berhenti & Bertanya)
+### 1. 📖 EXHAUSTIVE DOCUMENT INGESTION & ZERO-OMISSION DISSECTION (Bedah Dokumen Menyeluruh)
+- **Mandatory End-to-End Traversal**: Agent **WAJIB** membaca dan memetakan dokumen sumber (PRD, TRD, API Spec, lampiran arsitektur) dari baris awal hingga baris terakhir secara mendalam. Dilarang keras melakukan *skimming* atau melompat langsung ke sintesis konseptual tingkat tinggi.
+- **Total Extraction of Explicit Tables & Scenarios**: Setiap tabel data, matriks transisi status, diagram alur, sampel skenario pengujian, atau aturan kalkulasi yang tercantum di dalam dokumen input **WAJIB diekstrak 100% ke dalam dokumen analisis**.
+- **Proactive Combinatorial Extension**: Setelah seluruh skenario eksplisit dari dokumen sumber terpetakan, Agent wajib mengembangkan (*extend*) skenario tersebut secara proaktif ke kondisi batas (*boundary*), fluktuasi *in-transit*, *out-of-order events*, *race conditions*, dan skenario kegagalan (*resilience/debt*).
+
+### 2. 🛑 STRICT NO-ASSUMPTION & MANDATORY INTERACTIVE CLARIFICATION GATE (Wajib Berhenti & Bertanya)
 - **Zero-Wild-Guess Policy**: Agent **DILARANG KERAS** mengasumsikan sendiri aturan bisnis yang belum lengkap, rumus kalkulasi/pricing yang ambigu, batas limit kuota/timeout yang tidak tertulis, penanganan error code yang kosong, perilaku sistem saat kondisi offline/kegagalan, **MENGARANG PATH URL/SCHEMA ENDPOINT API** jika tidak ada OpenAPI/TRD resmi di `./adhoc-document/` (wajib menggunakan narasi pendekatan fungsional yang netral), atau **MENGARANG POHON HIERARKI MENU UI** yang tidak terdapat pada teks PRD atau tangkapan layar `./strukturmenu/`.
+- **Strict Isolation of Living PM Questions**: Pertanyaan klarifikasi yang belum dijawab secara resmi oleh Product Manager (PM) **DILARANG KERAS dijawab sendiri oleh Agent**; seluruh pertanyaan terbuka wajib disimpan di file `./result-testcase/questions-for-pm-<feature>.md` dan ditandai `[PENDING PM CLARIFICATION]`.
+- **Strict Grep-Before-Answer Communication**: Saat menjawab konfirmasi atau menyebutkan ID Test Case, nomor baris, atau nama tabel di dalam chat, Agent **WAJIB melakukan pencarian eksak (`grep_search` / `view_file`) ke file fisik terlebih dahulu** untuk mencegah halusinasi kode ID.
 - **Menu & UI Navigation Grounding (`./strukturmenu/`)**:
   - Periksa teks PRD dan seluruh tangkapan layar di `./strukturmenu/` untuk memverifikasi apakah suatu menu, tombol CTA, atau modal dialog **benar-benar ada** atau **tidak ada**.
   - Tentukan alur navigasi klik yang nyata (contoh: Klik Menu A $\rightarrow$ Klik Submenu B $\rightarrow$ Klik CTA C).
@@ -226,3 +233,13 @@ graph TD
    - Simpan dokumen ke: `./result-testcase/PRD_Analysis_<Feature_Name>.md`.
 7. **Laporan & Handover**:
    - Laporkan ringkasan temuan kritis, scope boundary yang telah terkunci, dan informasikan bahwa dokumen siap diturunkan ke skill `generate-testcase`.
+
+---
+
+## 7. Protokol Anti-Regresi & Pencegahan Konflik Aturan (Universal Guardrail)
+
+> [!CAUTION]
+> **PRINSIP KEKEBALAN DAN KONSISTENSI SKILL (ANTI-REGRESSION POLICY):**
+> 1. **Dilarang Mengubah/Menghapus Rule Tanpa Persetujuan**: Seluruh aturan fundamental yang sudah stabil pada skill ini **TIDAK BOLEH diubah, diganti, atau dihapus sepihak oleh AI**, kecuali penambahan aturan baru tersebut terbukti objektif lebih baik dan telah disetujui oleh User.
+> 2. **Pre-Calibration Sanity & Conflict Check**: Setiap pembaruan atau penambahan aturan baru harus dipastikan **TIDAK BERTENTANGAN** dengan guardrail fundamental (*Zero-Wild-Guess Policy*, grounding visual `./strukturmenu/`, *Living PM Questions Management*, *Mandatory Clarification Gate*). Aturan baru harus bersifat memperketat / melengkapi (*additive/enriching*), bukan membatalkan aturan dasar.
+

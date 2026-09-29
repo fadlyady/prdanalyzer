@@ -220,7 +220,10 @@ File Excel dibuat menggunakan script Python (`openpyxl`) dengan spesifikasi 15 k
 
 ## 10. Urutan Proses Eksekusi Wajib (*Execution SOP*)
 
-1. **Baca dan Validasi Input**: Baca dokumen `./result-testcase/PRD_Analysis_<Feature_Name>.md`. Pastikan tidak ada data yang kurang.
+1. **Baca dan Validasi Input (Exhaustive Source Parsing)**:
+   - Baca dokumen `./result-testcase/PRD_Analysis_<Feature_Name>.md` dan dokumen PRD/TRD sumber dari awal hingga akhir.
+   - **Ekstraksi Skenario Eksplisit Sumber**: Jika dokumen sumber (PRD/TRD) memuat tabel skenario/sampel uji resmi, seluruh skenario tersebut **WAJIB dimasukkan 100%** ke dalam Master Test Suite sebagai baseline pengujian (Tier 1).
+   - **Proactive Combinatorial Extension**: Kembangkan skenario dasar tersebut secara proaktif ke permutasi kondisi batas (*in-transit rate changes*, *downgrades*, *out-of-order webhooks*, *debt accumulation*).
 2. **Review Knowledge UI & Screen Captures (`./strukturmenu/`) & Technical Specs (`./adhoc-document/`)**:
    - Periksa seluruh berkas tangkapan layar di `./strukturmenu/` (contoh: `chatroom-web/`, `dashboard-crm/`, `customer-dashboard/`) serta teks tertulis PRD untuk memverifikasi keberadaan menu, tombol CTA, modal dialog, dan alur antarmuka nyata.
    - **Tentukan Alur Navigasi Nyata**: Susun alur klik Menu A $\rightarrow$ Submenu B $\rightarrow$ CTA C yang 100% grounded pada tangkapan layar.
@@ -236,6 +239,18 @@ File Excel dibuat menggunakan script Python (`openpyxl`) dengan spesifikasi 15 k
    - Jalankan script dan pastikan file Excel dibuat dengan styling 15 kolom rapi dan valid.
 6. **Eksekusi Tahap 2 (Automation-Ready Markdown)**:
    - Buat file `./result-testcase/test-cases-<feature-name>.md` dengan struktur 3-Tier Coverage, Triple-Layer Assertions, dan tagging prioritas + kompleksitas automasi.
-7. **Verifikasi Orphan & Pelaporan**:
+7. **🛑 Cross-File Consistency Verification Gate & Pelaporan**:
+   - **Verifikasi Integritas 1-ke-1**: Jalankan skrip audit untuk memastikan bahwa seluruh baris di Excel (`Test_Cases_*.xlsx`) memiliki ID, Title, Priority, Type, dan Step yang identik 100% dengan heading dan konten di file Markdown (`test-cases-*.md`).
+   - **Strict Grep-Before-Answer**: Dilarang menyebutkan kode Test Case ID, nomor baris, atau nama tabel dalam percakapan tanpa melakukan pencarian eksak (`grep_search` / `view_file`) ke file fisik terlebih dahulu untuk mencegah halusinasi kode ID.
    - Pastikan tidak ada orphan test cases (semua test case memiliki referensi AC/Story yang sah).
    - Hitung distribusi prioritas (P1/P2/P3), breakdown tipe test, dan laporkan ringkasan ke user.
+
+---
+
+## 11. Protokol Anti-Regresi & Pencegahan Konflik Aturan (Universal Guardrail)
+
+> [!CAUTION]
+> **PRINSIP KEKEBALAN DAN KONSISTENSI SKILL (ANTI-REGRESSION POLICY):**
+> 1. **Dilarang Mengubah/Menghapus Rule Tanpa Persetujuan**: Seluruh aturan fundamental yang sudah stabil pada skill ini **TIDAK BOLEH diubah, diganti, atau dihapus sepihak oleh AI**, kecuali penambahan aturan baru tersebut terbukti objektif lebih baik dan telah disetujui oleh User.
+> 2. **Pre-Calibration Sanity & Conflict Check**: Setiap pembaruan atau penambahan aturan baru harus dipastikan **TIDAK BERTENTANGAN** dengan guardrail fundamental (*Triple-Layer Assertions*, *3-Tier Coverage Matrix*, grounding visual `./strukturmenu/`, *Adversarial Edge-Case Review*, *Risk-Driven BVA*). Aturan baru harus bersifat memperketat / melengkapi (*additive/enriching*), bukan membatalkan aturan dasar.
+

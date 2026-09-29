@@ -54,4 +54,13 @@ File ini berfungsi sebagai **Single Source of Truth (SSOT) untuk Continuous Lear
 
 ---
 
+### [2026-09-18] - Exhaustive Document Ingestion & Zero-Omission Dissection Protocol
+- **Kategori Gap**: Document Parsing Depth & Complete Coverage Ingestion
+- **Temuan / Feedback**: Informasi penting di dalam dokumen teknis (seperti tabel skenario pengujian, sampel kasus transisi status, dan detail arsitektural) sempat terlewat pada iterasi awal analisis. Ini bukan tentang membuat aturan kaku pada judul section tertentu, melainkan keharusan untuk membedah dokumen input secara mendalam dan menyeluruh (*exhaustive*) agar tidak ada informasi berharga yang terabaikan.
+- **Root Cause**: Pola pemrosesan dokumen yang masih bersifat selektif (*skimming* / *surface-level parsing*), di mana agen terlalu cepat menarik kesimpulan konseptual tingkat tinggi tanpa menginventarisasi seluruh tabel teknis dan sampel kasus yang sudah disediakan di dokumen sumber.
+- **Action Item & Guardrail Baru**:
+  1. **Exhaustive Document Traversal (Bedah Total)**: Sebelum menyusun analisis, agen wajib membaca dan memetakan seluruh isi dokumen dari awal hingga akhir tanpa melewatkan tabel data, diagram, sampel skenario teknis, atau lampiran.
+  2. **Inventory & Anchor of Source Scenarios**: Jika dokumen input sudah memuat contoh skenario atau tabel transisi status, seluruh butir tersebut wajib diinventarisasi sebagai baseline pengujian, kemudian dikembangkan secara proaktif ke skenario kombinatorial yang lebih luas (*extended permutations*, *race conditions*, *rate changes*, dan *error boundaries*).
+  3. **Strict Grep-Before-Answer Communication**: Dilarang menyebutkan kode Test Case ID, nomor baris, atau nama tabel dalam percakapan tanpa melakukan pencarian eksak (`grep_search` / `view_file`) ke file fisik terlebih dahulu untuk mencegah halusinasi penamaan.
+  4. **Strict Isolation of Pending PM Questions**: Pertanyaan klarifikasi yang belum dijawab resmi oleh Product Manager dilarang keras dijawab secara sepihak; wajib dipertahankan dengan label `[PENDING PM CLARIFICATION]`.
 

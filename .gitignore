@@ -22,8 +22,17 @@ venv/
 *.bak
 scratch/
 
-# Untracked custom tasks & local knowledge
-otherTasks/
-result-testcase/
-strukturmenu/
-adhoc-document/
+# Untracked custom tasks & local knowledge (ignore contents, preserve folder structure)
+otherTasks/*
+!otherTasks/.gitkeep
+
+adhoc-document/*
+!adhoc-document/.gitkeep
+
+result-testcase/*
+!result-testcase/.gitkeep
+
+# Ignore all files in strukturmenu and its subfolders, but keep structure & .gitkeep
+strukturmenu/**
+!strukturmenu/**/
+!strukturmenu/**/.gitkeep

@@ -117,3 +117,13 @@ graph TD
     G --> H
     H --> I["6. Berikan link berkas terhitung langsung ke User"]
 ```
+
+---
+
+## 6. Protokol Anti-Regresi & Pencegahan Konflik Aturan (Universal Guardrail)
+
+> [!CAUTION]
+> **PRINSIP KEKEBALAN DAN KONSISTENSI SKILL (ANTI-REGRESSION POLICY):**
+> 1. **Dilarang Mengubah/Menghapus Rule Tanpa Persetujuan**: Seluruh aturan fundamental yang sudah stabil pada skill ini **TIDAK BOLEH diubah, diganti, atau dihapus sepihak oleh AI**, kecuali penambahan aturan baru tersebut terbukti objektif lebih baik dan telah disetujui oleh User.
+> 2. **Pre-Calibration Sanity & Conflict Check**: Setiap pembaruan atau penambahan aturan baru harus dipastikan **TIDAK BERTENTANGAN** dengan formula pembobotan kuantitatif (4/3/2/1), logika matematis Go/Conditional Go/No-Go, dan visual scorecard TIW. Aturan baru harus bersifat memperketat / melengkapi (*additive/enriching*), bukan membatalkan aturan dasar.
+
