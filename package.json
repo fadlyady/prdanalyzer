@@ -1,0 +1,27 @@
+{
+  "name": "prdanalyzer",
+  "version": "1.0.0",
+  "description": "Repository ini dirancang untuk tim **Quality Assurance (QA), Product Manager (PM), dan Software Engineer (SWE)** guna mempercepat siklus analisis kebutuhan dan pengujian perangkat lunak di berbagai domain aplikasi (**Web SPA/SSR, Mobile Android/iOS, Backend REST/GraphQL/gRPC APIs, Microservices, Event-Driven/Webhooks, Data Pipelines, hingga IoT**).",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "browser:list": "node scripts/browser_bridge.js list",
+    "browser:inspect": "node scripts/browser_bridge.js inspect",
+    "browser:screenshot": "node scripts/browser_bridge.js screenshot",
+    "browser:test": "node scripts/browser_bridge.js run"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fadlyady/prdanalyzer.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/fadlyady/prdanalyzer/issues"
+  },
+  "homepage": "https://github.com/fadlyady/prdanalyzer#readme",
+  "devDependencies": {
+    "playwright": "^1.64.1"
+  }
+}

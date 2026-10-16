@@ -20,7 +20,27 @@ venv/
 # Scratch & Temporary
 *.tmp
 *.bak
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
 scratch/
+
+# Environment & Credentials (NEVER COMMIT SECRETS)
+.env
+.env.*
+!.env.example
+
+# Node Dependencies
+node_modules/
+
+# Browser Automation & Testing Artifacts
+chrome-qa-profile/
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
 
 # Untracked custom tasks & local knowledge (ignore contents, preserve folder structure)
 otherTasks/*
@@ -32,7 +52,22 @@ adhoc-document/*
 result-testcase/*
 !result-testcase/.gitkeep
 
+# Browser Automation Results & Evidence
+automate-result/*
+!automate-result/.gitkeep
+
+# Supplementary Test Data (ignore local datasets, preserve README and gitkeep)
+automate-support/*
+!automate-support/.gitkeep
+!automate-support/README.md
+
 # Ignore all files in strukturmenu and its subfolders, but keep structure & .gitkeep
 strukturmenu/**
 !strukturmenu/**/
 !strukturmenu/**/.gitkeep
+
+# IDE & Editors
+.idea/
+.vscode/
+*.swp
+*.swo
