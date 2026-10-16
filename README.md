@@ -20,6 +20,7 @@ Framework ini didukung oleh **Agentic AI Custom Skills** yang mengimplementasika
   - [Step 4: Menghasilkan Test Cases Suite (`generate-testcase`)](#step-4-menghasilkan-test-cases-suite-generate-testcase)
   - [Step 5: Ekspor ke Word / PDF (`convert-document`)](#step-5-ekspor-ke-word--pdf-convert-document)
   - [Step 6: Continuous Learning & Review Feedback (`qa-review-learning`)](#step-6-continuous-learning--review-feedback-qa-review-learning)
+- [Panduan Analisis Web Menggunakan Firecrawl](#-panduan-analisis-web-menggunakan-firecrawl)
 - [Ringkasan Custom Agent Skills](#-ringkasan-custom-agent-skills)
 - [3-Tier Test Coverage Matrix & Triple-Layer Assertions](#-3-tier-test-coverage-matrix--triple-layer-assertions)
 
@@ -35,7 +36,7 @@ Framework ini didukung oleh **Agentic AI Custom Skills** yang mengimplementasika
 Jalankan perintah berikut pada terminal di root direktori project:
 
 ```bash
-pip3 install python-docx reportlab openpyxl markdown pillow typing-extensions
+pip3 install -r requirements.txt
 ```
 
 ---
@@ -60,7 +61,10 @@ pip3 install python-docx reportlab openpyxl markdown pillow typing-extensions
 │
 ├── strukturmenu/                         # Referensi UI & Screenshot Menu Aplikasi (Modular)
 ├── adhoc-document/                       # Dokumen Teknis Ad-hoc (OpenAPI, Postman, DB Schema)
+├── scripts/                              # Helper Tools & Automation Scripts
+│   └── web_analyzer.py                   # Web Scraper/Crawler via Firecrawl
 ├── result-testcase/                      # Folder Output Utama (MD, DOCX, PDF, XLSX)
+├── .env.example                          # Template konfigurasi environment (Firecrawl API Key)
 └── README.md
 ```
 
@@ -84,6 +88,13 @@ graph TD
 
 ### Step 1: Persiapan Dokumen & Input Awal
 Letakkan dokumen PRD (`.docx`, `.pdf`, atau `.md`) di dalam workspace, serta lengkapi dokumen teknis di `adhoc-document/` atau referensi UI di `strukturmenu/` jika tersedia.
+
+> [!TIP]
+> **Analisis Langsung dari URL / Website (via Firecrawl)**:
+> Jika Anda ingin menganalisis web aplikasi langsung, dokumentasi online, atau PRD web:
+> 1. Set `FIRECRAWL_API_KEY` di file `.env` (ambil gratis dari [firecrawl.dev](https://www.firecrawl.dev/)).
+> 2. Jalankan: `python3 scripts/web_analyzer.py <URL_TARGET>`
+> 3. Dokumen Markdown bersih akan otomatis tersimpan di `adhoc-document/` dan siap diproses di Step 2!
 
 ---
 
@@ -120,6 +131,66 @@ Jika ada revisi, masukan dari meeting TIW, atau temuan bug baru di staging/produ
 > *"Tolong review masukan berikut menggunakan skill `qa-review-learning`: [Tuliskan feedback / bug report]. Perbarui knowledge base dan tingkatkan heuristik pengujian kita."*
 
 Agent akan menganalisis *root cause gap*, mencatat pelajaran ke `Testcase-support/qa-learnings.md`, dan mengalibrasi SOP skill.
+
+---
+
+## 🌐 Panduan Analisis Web Menggunakan Firecrawl
+
+Tool [`scripts/web_analyzer.py`](scripts/web_analyzer.py) memanfaatkan layanan **[Firecrawl](https://www.firecrawl.dev/)** untuk mengekstrak dan mengonversi halaman web aplikasi, dokumentasi online, atau PRD berbasis web (Notion, Confluence, GitBook, dsb.) menjadi dokumen **Markdown bersih (~2.000–5.000 tokens)** yang hemat token LLM dan bebas dari kode bloat HTML/JS/CSS.
+
+Dokumen Markdown yang dihasilkan otomatis disimpan ke folder `adhoc-document/`, sehingga langsung siap diproses oleh agent menggunakan skill `prd-qa-analyzer`.
+
+### 1. Konfigurasi Awal (Setup API Key)
+
+1. Dapatkan API Key gratis di [firecrawl.dev](https://www.firecrawl.dev/) (tersedia free tier 500 kredit).
+2. Buat file `.env` di root direktori project dari template:
+   ```bash
+   cp .env.example .env
+   ```
+3. Buka file `.env` dan masukkan API Key Anda:
+   ```env
+   FIRECRAWL_API_KEY=fc-xxxxxxxxxxxxxxxx
+   ```
+
+### 2. Mode Penggunaan & Perintah CLI
+
+#### A. Mode Scrape (Default: 1 Halaman Spesifik)
+Gunakan mode ini untuk mengambil satu halaman spesifik (misal satu halaman PRD fitur atau spesifikasi modul):
+```bash
+python3 scripts/web_analyzer.py https://contoh-aplikasi.com/fitur-baru
+```
+Output akan otomatis disimpan di `adhoc-document/<nama_url>.md`.
+
+#### B. Mode Crawl (Multi-Halaman / Eksplorasi Sub-Halaman)
+Gunakan mode ini untuk menelusuri domain/sub-halaman secara menyeluruh (misal mengekstrak seluruh dokumentasi panduan fitur):
+```bash
+python3 scripts/web_analyzer.py https://contoh-aplikasi.com/docs --mode crawl --limit 10
+```
+> Parameter `--limit` menentukan jumlah maksimal halaman yang di-crawl (default: 10). Output akan disimpan di `adhoc-document/<nama_url>_crawl.md`.
+
+#### C. Mode Map (Pemetaan Seluruh URL / Sitemap)
+Gunakan mode ini untuk memetakan seluruh arsitektur URL atau sitemap suatu website:
+```bash
+python3 scripts/web_analyzer.py https://contoh-aplikasi.com --mode map
+```
+Output daftar link akan disimpan di `adhoc-document/<nama_url>_sitemap.md`.
+
+#### D. Opsi Kustom Folder Output
+Jika Anda ingin menyimpan file hasil ekstraksi ke folder selain `adhoc-document/` (misal `scratch/`):
+```bash
+python3 scripts/web_analyzer.py https://contoh-aplikasi.com/fitur --output-dir scratch
+```
+
+### 3. Alur Integrasi dengan AI Agent
+
+Setelah file Markdown dihasilkan dari Firecrawl, lanjutkan dengan alur pengujian AI:
+
+1. **Analisis PRD / Web**:
+   > *"Tolong lakukan analisis PRD untuk file `adhoc-document/<nama_file>.md` menggunakan skill `prd-qa-analyzer`."*
+2. **Klarifikasi Gate**:
+   Jawab pertanyaan verifikasi 7 Dimensi (*Logic, Scope, RBAC, Data Lifecycle, dsb.*) dari Agent.
+3. **Generate Test Case**:
+   > *"Tolong buatkan Master Test Case lengkap (Excel & Markdown) menggunakan skill `generate-testcase`."*
 
 ---
 
