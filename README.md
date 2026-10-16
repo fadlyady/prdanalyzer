@@ -6,7 +6,8 @@ Framework ini didukung oleh **Agentic AI Custom Skills** yang mengimplementasika
 1. **Analisis PRD Mendalam & Penegakan Strict Interactive Validation Gate (`prd-qa-analyzer` & `prd-analyzer-business`)**: Mengekstraksi requirement bisnis, batasan scope, pemetaan risiko bisnis multi-pilar (Financial, Ops, Customer, Compliance, Reputational, Support), aturan otorisasi (RBAC/ABAC), state transition invariants, NFR (idempotency, concurrency, resilience), dan security guardrails tanpa asumsi liar.
 2. **Pembuatan Master Test Case Suite 3-Tier (`generate-testcase`)**: Menghasilkan file Excel berstandar industri (15 kolom terstruktur) dan file Markdown otomasi deklaratif dengan **Triple-Layer Assertions (UI + API Contract + DB State Persistence)**, **Adversarial Edge-Case Candidates**, serta **Exploratory Heuristic Charters**.
 3. **Ekspor Dokumen Resmi Layak Audit (Word `.docx` / PDF `.pdf`) & Weighted Risk Calculation (`convert-document` & `convert-with-calculation`)**: Mengonversi hasil analisis menjadi dokumen berstandar **TIW (Test Idea & Walkthrough)** dengan Traceability Matrix, kalkulasi matematis bobot risiko (4/3/2/1), dan rekomendasi rilis objektif (*Go / Conditional Go / No-Go*).
-4. **Mekanisme Continuous Learning & Review Drop-Box (`qa-review-learning`)**: Menyerap masukan sprint walkthrough / laporan bug escape melalui folder `./knowledge-review/` (Excel & Markdown), mencatat SSOT ke `Testcase-support/qa-learnings.md` dengan format *Before vs After*, dan mengalibrasi heuristik skill secara presisi di bawah **Protokol Anti-Regresi Universal**.
+4. **Eksekusi Pengujian Browser Staging Berstandar Senior QA (`browser-qa-execution`)**: Mengeksekusi test case secara langsung pada browser Chrome (Staging) dengan **Automatic Browser Lifecycle Management** (otomatis memeriksa dan membuka Google Chrome jika belum aktif, serta otomatis menutup browser setelah pengujian selesai), menegakkan 6 gerbang validasi kualitas (Strict Markdown `.md`, Supplementary test data `automate-support/`, Kredensial `.env` 3-Tier, Pre-Flight Action Permission Gate untuk create/edit/delete dengan opsi eksekusi penuh vs Partial Test di mode aman, Flagging transparan `PASSED`/`FAILED`/`PARTIAL TEST`, dan RBAC strict execution), menjalankan 5 skenario exploratory mandatori, mengarsipkan evidence screenshot per run, serta menyusun laporan eksekutif Word (`.docx`) tanpa embedded images ke `./automate-result/`.
+5. **Mekanisme Continuous Learning & Review Drop-Box (`qa-review-learning`)**: Menyerap masukan sprint walkthrough / laporan bug escape melalui folder `./knowledge-review/` (Excel & Markdown), mencatat SSOT ke `Testcase-support/qa-learnings.md` dengan format *Before vs After*, dan mengalibrasi heuristik skill secara presisi di bawah **Protokol Anti-Regresi Universal**.
 
 ---
 
@@ -55,8 +56,16 @@ pip3 install python-docx reportlab openpyxl markdown pillow typing-extensions
 │   │       ├── calc_engine.py            # Quantitative Weighted Risk Math Engine
 │   │       ├── md_to_docx.py             # Word Converter dengan Embedded Scorecard
 │   │       └── md_to_pdf.py              # PDF Converter dengan Embedded Scorecard
+│   ├── browser-qa-execution/             # SOP Eksekusi Pengujian Browser Staging Berstandar Senior QA
+│   │   └── scripts/
+│   │       ├── universal_executor.js     # Universal Agnostic Step Interpreter & Test Runner
+│   │       ├── convert_to_md_testcase.py # Konverter Test Case Excel ke Markdown (.md)
+│   │       ├── parse_testcase.py         # Parser Test Case Universal
+│   │       ├── generate_docx_report.py   # Word DOCX Execution Report Generator
+│   │       └── test_runner_bridge.js     # Runner Helper & CDP Connector
 │   └── qa-review-learning/               # SOP Continuous Learning & Walkthrough Review Loop
 │
+├── automate-support/                     # 📦 Penyimpanan Data Pendukung Uji (Katalog, CSV, Mock Payload)
 ├── knowledge-review/                     # 📥 Drop-Box Folder Masukan Review & Walkthrough
 │   ├── TEMPLATE_Review_Feedback_Sample.xlsx # Template Input Review Tabel Excel
 │   └── TEMPLATE_Review_Feedback_Sample.md   # Template Input Review Narasi Markdown
@@ -69,7 +78,10 @@ pip3 install python-docx reportlab openpyxl markdown pillow typing-extensions
 │
 ├── strukturmenu/                         # Referensi UI & Screenshot Menu Aplikasi (Modular Grounding)
 ├── adhoc-document/                       # Dokumen Teknis Ad-hoc (OpenAPI, Postman, DB Schema)
-├── result-testcase/                      # Folder Output Utama (MD, DOCX, PDF, XLSX, Scorecards)
+├── result-testcase/                      # Folder Output Analisis & Test Cases (Wajib format .md untuk eksekusi)
+├── automate-result/                      # 📊 Folder Laporan Eksekusi Pengujian & Arsip Evidence Screenshot
+│   ├── Report_<Feature>_<Timestamp>.docx # Laporan Eksekutif Word (Clean, Tanpa Embedded Images)
+│   └── run_<Feature>_<Timestamp>/        # Subfolder Screenshot Evidence per Run
 └── README.md
 ```
 
@@ -100,6 +112,14 @@ Letakkan dokumen PRD (`.docx`, `.pdf`, atau `.md`) di dalam workspace, serta len
 ### Step 2: Menjalankan Analisis PRD (`prd-qa-analyzer` / `prd-analyzer-business`)
 Minta agent menganalisis dokumen PRD:
 > *"Tolong lakukan analisis PRD untuk file `[PRD] Nama_Fitur.docx` menggunakan skill `prd-qa-analyzer` (atau `prd-analyzer-business`)."*
+
+> [!TIP]
+> **On-Demand Live Browser UI Inspection**:
+> Pada `prd-analyzer-business`, Agent akan selalu bertanya di awal (*Gate 0*) apakah Anda ingin melakukan inspeksi langsung ke aplikasi via Chrome browser (port 9222). Jika disetujui, Agent akan:
+> - Menggunakan kredensial `Owner` dari `.env`. Jika terdapat lebih dari 1 kredensial `USER_OWNER_<NAME>`, Agent **wajib bertanya** akun mana yang digunakan.
+> - Menjalankan crawling *read-only* (aman tanpa mutasi data/create/delete).
+> - Menyimpan hasil tree menu & katalog CTA ke `./strukturmenu/<app-name>/` per kunjungan (*visit*) dalam format `.json` dan `.md`.
+> - Melakukan komparasi otomatis (*comparative UI drift diff*) terhadap kunjungan sebelumnya.
 
 ---
 
@@ -144,6 +164,7 @@ Agent akan memvalidasi variabel di **Gate 0**, melakukan **Triangulasi 3-Way**, 
 | **`generate-testcase`** | [`.agents/skills/generate-testcase/`](.agents/skills/generate-testcase/SKILL.md) | *"Generate test case dari hasil analisa...", "Buat test suite Excel 15 kolom..."* |
 | **`convert-document`** | [`.agents/skills/convert-document/`](.agents/skills/convert-document/SKILL.md) | *"Convert dokumen md ke docx/pdf standar TIW..."* |
 | **`convert-with-calculation`** | [`.agents/skills/convert-with-calculation/`](.agents/skills/convert-with-calculation/SKILL.md) | *"Convert dokumen dengan perhitungan bobot risiko & scorecard Go/No-Go..."* |
+| **`browser-qa-execution`** | [`.agents/skills/browser-qa-execution/`](.agents/skills/browser-qa-execution/SKILL.md) | *"Jalankan browser testing staging...", "Eksekusi test case langsung di browser aktif..."* |
 | **`qa-review-learning`** | [`.agents/skills/qa-review-learning/`](.agents/skills/qa-review-learning/SKILL.md) | *"Review hasil review walkthrough di knowledge-review/...", "Update skill dari temuan..."* |
 
 ---
