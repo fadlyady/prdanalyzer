@@ -361,7 +361,7 @@ def create_report(data_json_path, output_docx_path):
     r_ev.font.size = Pt(9.5)
 
     ev_path_p = doc.add_paragraph()
-    r_path = ev_path_p.add_run(f"📁 {data.get('evidence_dir', 'result-testcase/browser_inspections/')}")
+    r_path = ev_path_p.add_run(f"📁 {data.get('evidence_dir', 'browser-execution/automate-result/')}")
     r_path.font.name = "Courier New"
     r_path.font.size = Pt(9)
     r_path.font.bold = True

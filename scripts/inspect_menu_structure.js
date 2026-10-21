@@ -20,9 +20,14 @@ const fs = require('fs');
 const path = require('path');
 const { spawn } = require('child_process');
 
-const PROJECT_ROOT = path.resolve(__dirname, '../');
-const STRUKTUR_MENU_DIR = path.join(PROJECT_ROOT, 'strukturmenu');
+const PROJECT_ROOT = path.resolve(__dirname, '..');
 const ENV_PATH = path.join(PROJECT_ROOT, '.env');
+const docAnalyzerStrukturDir = path.join(PROJECT_ROOT, 'doc-analyzer', 'strukturmenu');
+const STRUKTUR_MENU_DIR = fs.existsSync(docAnalyzerStrukturDir)
+  ? docAnalyzerStrukturDir
+  : (fs.existsSync(path.join(PROJECT_ROOT, 'strukturmenu'))
+      ? path.join(PROJECT_ROOT, 'strukturmenu')
+      : docAnalyzerStrukturDir);
 const CDP_PORT = process.env.CDP_PORT || '9222';
 const CDP_URL = process.env.CDP_URL || `http://localhost:${CDP_PORT}`;
 
@@ -66,22 +71,63 @@ async function checkCDPAlive() {
   }
 }
 
-async function ensureBrowserOpen() {
+// Cross-platform Multi-Path Chrome Executable Discovery
+function findChromeExecutable() {
+  if (process.platform === 'darwin') {
+    const macPaths = [
+      '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+      '/Applications/Chromium.app/Contents/MacOS/Chromium',
+      path.join(process.env.HOME || '', 'Applications/Google Chrome.app/Contents/MacOS/Google Chrome')
+    ];
+    for (const p of macPaths) {
+      if (fs.existsSync(p)) return p;
+    }
+    return 'google-chrome';
+  } else if (process.platform === 'win32') {
+    const winPaths = [
+      path.join(process.env['PROGRAMFILES'] || 'C:\\Program Files', 'Google\\Chrome\\Application\\chrome.exe'),
+      path.join(process.env['PROGRAMFILES(X86)'] || 'C:\\Program Files (x86)', 'Google\\Chrome\\Application\\chrome.exe'),
+      path.join(process.env['LOCALAPPDATA'] || '', 'Google\\Chrome\\Application\\chrome.exe'),
+      path.join(process.env['PROGRAMW6432'] || 'C:\\Program Files', 'Google\\Chrome\\Application\\chrome.exe')
+    ];
+    for (const p of winPaths) {
+      if (fs.existsSync(p)) return p;
+    }
+    return 'chrome.exe';
+  } else {
+    const linuxPaths = [
+      '/usr/bin/google-chrome-stable',
+      '/usr/bin/google-chrome',
+      '/usr/bin/chromium-browser',
+      '/usr/bin/chromium',
+      '/snap/bin/chromium'
+    ];
+    for (const p of linuxPaths) {
+      if (fs.existsSync(p)) return p;
+    }
+    return 'google-chrome';
+  }
+}
+
+async function ensureBrowserOpen(initialUrl) {
   if (await checkCDPAlive()) return;
 
   console.log(`\x1b[33m[BROWSER] Chrome port ${CDP_PORT} belum aktif. Meluncurkan Chrome QA otomatis...\x1b[0m`);
-  const chromeAppPath = process.platform === 'darwin'
-    ? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
-    : (process.platform === 'win32'
-      ? process.env['PROGRAMFILES(X86)'] + '\\Google\\Chrome\\Application\\chrome.exe'
-      : 'google-chrome');
+  const chromeAppPath = findChromeExecutable();
+  const profileDir = path.join(process.env.HOME || process.env.USERPROFILE || '', 'chrome-qa-profile');
 
-  const profileDir = path.join(process.env.HOME || process.env.USERPROFILE, 'chrome-qa-profile');
-
-  const proc = spawn(chromeAppPath, [
+  const spawnArgs = [
     `--remote-debugging-port=${CDP_PORT}`,
-    `--user-data-dir=${profileDir}`
-  ], {
+    `--user-data-dir=${profileDir}`,
+    '--no-first-run',
+    '--no-default-browser-check',
+    '--start-maximized'
+  ];
+  if (initialUrl) {
+    spawnArgs.push(initialUrl);
+  }
+
+  const proc = spawn(chromeAppPath, spawnArgs, {
     detached: true,
     stdio: 'ignore'
   });
@@ -99,8 +145,8 @@ async function ensureBrowserOpen() {
   throw new Error(`Gagal meluncurkan Chrome pada port ${CDP_PORT} dalam 15 detik.`);
 }
 
-async function getBrowser() {
-  await ensureBrowserOpen();
+async function getBrowser(initialUrl) {
+  await ensureBrowserOpen(initialUrl);
   const res = await fetch(`${CDP_URL}/json`).catch(() => null);
   if (res && res.ok) {
     const targets = await res.json();
@@ -843,10 +889,21 @@ async function main() {
     console.log(`Selected Owner: \x1b[36m${selectedOwner.usernameVar}\x1b[0m (${selectedOwner.username})`);
   }
 
-  const baseUrl = targetUrl || rawEnv.E2E_BASE_URL_STAGING || rawEnv.BASE_URL || 'https://chat-dev.everpro.id';
+  let baseUrl = targetUrl || rawEnv.E2E_BASE_URL_STAGING || rawEnv.BASE_URL;
+  if (!baseUrl) {
+    const foundUrlKey = Object.keys(rawEnv).find(k => /(?:URL|HOST|DOMAIN|STAGING)/i.test(k) && /^https?:\/\//i.test(rawEnv[k]));
+    if (foundUrlKey) {
+      baseUrl = rawEnv[foundUrlKey];
+      console.log(`[TARGET URL] Menggunakan URL dari .env: ${foundUrlKey} = ${baseUrl}`);
+    }
+  }
+  if (!baseUrl) {
+    console.error(`\x1b[31m[ERROR] Target URL belum ditentukan! Harap gunakan flag --url=<URL> atau tentukan variabel URL (misal: BASE_URL=https://...) di file .env.\x1b[0m`);
+    process.exit(1);
+  }
   console.log(`Base URL   : ${baseUrl}\n`);
 
-  const browser = await getBrowser();
+  const browser = await getBrowser(baseUrl);
   const context = browser.contexts()[0];
   let page = context.pages()[0] || await context.newPage();
 
@@ -909,25 +966,65 @@ async function main() {
     }
   });
 
-  // 2. Prepare Output Directory & Timestamp
-  const appDir = path.join(STRUKTUR_MENU_DIR, appName);
-  if (!fs.existsSync(appDir)) {
-    fs.mkdirSync(appDir, { recursive: true });
-  }
-
-  const existingFiles = fs.readdirSync(appDir).filter(f => f.startsWith(`menu_structure_${appName}_`) && f.endsWith('.json'));
-  let previousVisitData = null;
-  if (existingFiles.length > 0) {
-    existingFiles.sort();
-    const lastFile = existingFiles[existingFiles.length - 1];
-    try {
-      previousVisitData = JSON.parse(fs.readFileSync(path.join(appDir, lastFile), 'utf-8'));
-    } catch (e) {}
-  }
-
+  // 2. Prepare Output Directory & Timestamp (Option B: Hierarchical by App/Host Slug in live-analyzer)
   const now = new Date();
   const pad = n => String(n).padStart(2, '0');
   const timestamp = `${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+
+  // Derive appSlug from baseUrl hostname or appName
+  let hostSlug = '';
+  try {
+    const parsedUrl = new URL(baseUrl);
+    hostSlug = parsedUrl.hostname.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  } catch (e) {}
+
+  const cleanAppName = (appName || 'app').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  const appSlug = hostSlug || cleanAppName;
+
+  // Live analyzer directories
+  const liveAnalyzerDir = path.join(STRUKTUR_MENU_DIR, 'live-analyzer');
+  const liveAppDir = path.join(liveAnalyzerDir, appSlug);
+  const currentRunDir = path.join(liveAppDir, timestamp);
+
+  if (!fs.existsSync(currentRunDir)) {
+    fs.mkdirSync(currentRunDir, { recursive: true });
+  }
+
+  // Look for previous visit data for UI Drift Detection
+  let previousVisitData = null;
+  // Tier A: Check previous timestamp runs inside liveAppDir
+  if (fs.existsSync(liveAppDir)) {
+    const pastRunDirs = fs.readdirSync(liveAppDir)
+      .filter(f => f !== timestamp && fs.statSync(path.join(liveAppDir, f)).isDirectory() && /^\d{8}_\d{6}$/.test(f))
+      .sort();
+    if (pastRunDirs.length > 0) {
+      const lastRunDir = path.join(liveAppDir, pastRunDirs[pastRunDirs.length - 1]);
+      const lastRunFiles = fs.readdirSync(lastRunDir).filter(f => f.startsWith('menu_structure_') && f.endsWith('.json') && !f.includes('_latest'));
+      if (lastRunFiles.length > 0) {
+        const masterFile = lastRunFiles.find(f => f.includes(`menu_structure_${appName}_`) || f.includes('master')) || lastRunFiles[lastRunFiles.length - 1];
+        try {
+          previousVisitData = JSON.parse(fs.readFileSync(path.join(lastRunDir, masterFile), 'utf-8'));
+        } catch (e) {}
+      }
+    }
+  }
+
+  // Tier B: Fallback check in legacy/manual app directory (e.g. strukturmenu/dashboard-crm/ or chatroom-web/)
+  if (!previousVisitData) {
+    const legacyAppDir = path.join(STRUKTUR_MENU_DIR, appName);
+    if (fs.existsSync(legacyAppDir)) {
+      const existingLegacyFiles = fs.readdirSync(legacyAppDir).filter(f => f.startsWith(`menu_structure_${appName}_`) && f.endsWith('.json'));
+      if (existingLegacyFiles.length > 0) {
+        existingLegacyFiles.sort();
+        const lastFile = existingLegacyFiles[existingLegacyFiles.length - 1];
+        try {
+          previousVisitData = JSON.parse(fs.readFileSync(path.join(legacyAppDir, lastFile), 'utf-8'));
+        } catch (e) {}
+      }
+    }
+  }
+
+  console.log(`Output Directory: \x1b[36m${currentRunDir}\x1b[0m`);
 
   // 3. Sequential Deep Traversal (Visit each submenu & extract deep tier-2 features)
   console.log(`\n\x1b[34m[DEEP TRAVERSAL] Menginspeksi halaman untuk setiap menu & sub-menu...\x1b[0m`);
@@ -1058,14 +1155,14 @@ async function main() {
           page: pageStruct
         };
 
-        const singleJsonPath = path.join(appDir, `${singleFileBase}_${timestamp}.json`);
-        const singleMdPath = path.join(appDir, `${singleFileBase}_${timestamp}.md`);
+        const singleJsonPath = path.join(currentRunDir, `${singleFileBase}_${timestamp}.json`);
+        const singleMdPath = path.join(currentRunDir, `${singleFileBase}_${timestamp}.md`);
         const singleMdContent = generateSingleMenuMarkdown(pageStruct, appName, selectedOwner ? selectedOwner.username : 'Active Session', now.toLocaleString());
 
         fs.writeFileSync(singleJsonPath, JSON.stringify(singleMenuPayload, null, 2), 'utf-8');
         fs.writeFileSync(singleMdPath, singleMdContent, 'utf-8');
-        fs.writeFileSync(path.join(appDir, `${singleFileBase}_latest.json`), JSON.stringify(singleMenuPayload, null, 2), 'utf-8');
-        fs.writeFileSync(path.join(appDir, `${singleFileBase}_latest.md`), singleMdContent, 'utf-8');
+        fs.writeFileSync(path.join(currentRunDir, `${singleFileBase}_latest.json`), JSON.stringify(singleMenuPayload, null, 2), 'utf-8');
+        fs.writeFileSync(path.join(currentRunDir, `${singleFileBase}_latest.md`), singleMdContent, 'utf-8');
 
         console.log(`   📄 [MODULAR KNOWLEDGE] Tersimpan: ${singleFileBase}_${timestamp}.md`);
       } else {
@@ -1079,10 +1176,12 @@ async function main() {
   // 4. Generate Master Index & Overall Artifacts
   const payload = {
     appName,
+    appSlug,
     baseUrl,
-    appDir,
+    runDir: currentRunDir,
     ownerAccount: selectedOwner ? selectedOwner.username : 'Active Session',
     timestamp: now.toLocaleString(),
+    timestampId: timestamp,
     menuTree,
     pages: pagesData
   };
@@ -1102,26 +1201,127 @@ async function main() {
   }
 
   const jsonFilename = `menu_structure_${appName}_${timestamp}.json`;
-  const jsonPath = path.join(appDir, jsonFilename);
+  const jsonPath = path.join(currentRunDir, jsonFilename);
   fs.writeFileSync(jsonPath, JSON.stringify(payload, null, 2), 'utf-8');
 
   const mdFilename = `menu_structure_${appName}_${timestamp}.md`;
-  const mdPath = path.join(appDir, mdFilename);
+  const mdPath = path.join(currentRunDir, mdFilename);
   const mdContent = generateMarkdownReport(payload, diff);
   fs.writeFileSync(mdPath, mdContent, 'utf-8');
 
-  fs.writeFileSync(path.join(appDir, 'latest.json'), JSON.stringify(payload, null, 2), 'utf-8');
-  fs.writeFileSync(path.join(appDir, 'latest.md'), mdContent, 'utf-8');
+  // Save latest pointers inside the run directory
+  fs.writeFileSync(path.join(currentRunDir, 'latest.json'), JSON.stringify(payload, null, 2), 'utf-8');
+  fs.writeFileSync(path.join(currentRunDir, 'latest.md'), mdContent, 'utf-8');
 
-  console.log(`\n\x1b[32m[SUCCESS] Knowledge Lengkap Hierarki Menu Berhasil Disimpan:\x1b[0m`);
-  console.log(`- JSON : ${jsonPath}`);
-  console.log(`- MD   : ${mdPath}`);
-  console.log(`- Pointer 'latest.json' & 'latest.md' telah diperbarui.\n`);
+  // Save latest pointers and run metadata at app level in live-analyzer/<app-slug>/
+  fs.writeFileSync(path.join(liveAppDir, 'latest.json'), JSON.stringify(payload, null, 2), 'utf-8');
+  fs.writeFileSync(path.join(liveAppDir, 'latest.md'), mdContent, 'utf-8');
+  const runMetadata = {
+    appSlug,
+    appName,
+    baseUrl,
+    latestTimestamp: timestamp,
+    latestRunDir: currentRunDir,
+    updatedAt: now.toISOString()
+  };
+  fs.writeFileSync(path.join(liveAppDir, 'latest_run.json'), JSON.stringify(runMetadata, null, 2), 'utf-8');
+
+  // If cleanAppName is different from appSlug, also create/update alias pointer in live-analyzer/<cleanAppName>/
+  if (cleanAppName && cleanAppName !== appSlug) {
+    const aliasDir = path.join(liveAnalyzerDir, cleanAppName);
+    if (!fs.existsSync(aliasDir)) fs.mkdirSync(aliasDir, { recursive: true });
+    fs.writeFileSync(path.join(aliasDir, 'latest.json'), JSON.stringify(payload, null, 2), 'utf-8');
+    fs.writeFileSync(path.join(aliasDir, 'latest.md'), mdContent, 'utf-8');
+    fs.writeFileSync(path.join(aliasDir, 'latest_run.json'), JSON.stringify(runMetadata, null, 2), 'utf-8');
+  }
+
+  console.log(`\n\x1b[32m[SUCCESS] Knowledge Lengkap Hierarki Menu Berhasil Disimpan (Option B):\x1b[0m`);
+  console.log(`- Folder Run : ${currentRunDir}`);
+  console.log(`- Master JSON: ${jsonPath}`);
+  console.log(`- Master MD  : ${mdPath}`);
+  console.log(`- App Pointer: ${path.join(liveAppDir, 'latest.md')}`);
+  console.log(`- Metadata   : ${path.join(liveAppDir, 'latest_run.json')}\n`);
 
   await browser.close();
 }
 
-main().catch(err => {
-  console.error(`\x1b[31m[FATAL] Error running menu inspector: ${err.message}\x1b[0m`);
-  process.exit(1);
-});
+/**
+ * Helper to discover the latest live analysis run for an application or URL
+ */
+function resolveLatestLiveAnalysis(targetAppOrUrl) {
+  const baseDir = path.join(STRUKTUR_MENU_DIR, 'live-analyzer');
+  if (!fs.existsSync(baseDir)) return null;
+
+  let candidates = [];
+  if (targetAppOrUrl) {
+    try {
+      const u = new URL(targetAppOrUrl);
+      candidates.push(u.hostname.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''));
+    } catch (e) {}
+    candidates.push(targetAppOrUrl.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''));
+  }
+
+  const dirs = fs.readdirSync(baseDir).filter(f => {
+    try {
+      return fs.statSync(path.join(baseDir, f)).isDirectory();
+    } catch (e) {
+      return false;
+    }
+  });
+
+  let targetDir = null;
+  for (const c of candidates) {
+    if (dirs.includes(c)) {
+      targetDir = path.join(baseDir, c);
+      break;
+    }
+  }
+  if (!targetDir && dirs.length > 0) {
+    targetDir = path.join(baseDir, dirs[0]);
+  }
+  if (!targetDir) return null;
+
+  // Check if latest_run.json exists
+  const metaPath = path.join(targetDir, 'latest_run.json');
+  if (fs.existsSync(metaPath)) {
+    try {
+      const meta = JSON.parse(fs.readFileSync(metaPath, 'utf-8'));
+      if (meta && meta.latestRunDir && fs.existsSync(meta.latestRunDir)) {
+        return meta;
+      }
+    } catch (e) {}
+  }
+
+  // Otherwise check timestamp folders
+  const runs = fs.readdirSync(targetDir)
+    .filter(f => {
+      try {
+        return fs.statSync(path.join(targetDir, f)).isDirectory() && /^\d{8}_\d{6}$/.test(f);
+      } catch (e) {
+        return false;
+      }
+    })
+    .sort();
+  if (runs.length > 0) {
+    const latestTimestamp = runs[runs.length - 1];
+    return {
+      appSlug: path.basename(targetDir),
+      latestTimestamp,
+      latestRunDir: path.join(targetDir, latestTimestamp),
+      latestMd: path.join(targetDir, 'latest.md'),
+      latestJson: path.join(targetDir, 'latest.json')
+    };
+  }
+  return null;
+}
+
+if (require.main === module) {
+  main().catch(err => {
+    console.error(`\x1b[31m[FATAL] Error running menu inspector: ${err.message}\x1b[0m`);
+    process.exit(1);
+  });
+}
+
+module.exports = {
+  resolveLatestLiveAnalysis
+};

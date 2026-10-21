@@ -12,7 +12,9 @@ const { execSync, spawn } = require('child_process');
 
 const PROJECT_ROOT = path.resolve(__dirname, '../../../../');
 const ENV_PATH = path.join(PROJECT_ROOT, '.env');
-const AUTOMATE_RESULT_DIR = path.join(PROJECT_ROOT, 'automate-result');
+const AUTOMATE_RESULT_DIR = fs.existsSync(path.join(PROJECT_ROOT, 'browser-execution', 'automate-result'))
+  ? path.join(PROJECT_ROOT, 'browser-execution', 'automate-result')
+  : path.join(PROJECT_ROOT, 'automate-result');
 const CDP_URL = process.env.CDP_URL || 'http://localhost:9222';
 
 // 1. Parse .env credentials & role mappings
@@ -115,7 +117,37 @@ function validateCredentialsForRole(env, targetRole) {
   };
 }
 
-// 3. Create run directory
+// 3. Discover URL variables from .env
+function discoverUrlVariables(env) {
+  const urlVars = [];
+  for (const [key, val] of Object.entries(env)) {
+    if (/(?:URL|HOST|DOMAIN|STAGING|ENDPOINT)/i.test(key) && /^https?:\/\//i.test(val)) {
+      urlVars.push({ key, value: val });
+    }
+  }
+  return urlVars;
+}
+
+// 4. Check runtime dependencies (Playwright & python-docx)
+function checkRuntimeDependencies() {
+  const missing = [];
+  try {
+    require.resolve('playwright');
+  } catch (e) {
+    missing.push({ type: 'npm', name: 'playwright', fix: 'npm install' });
+  }
+  try {
+    execSync('python3 -c "import docx"', { stdio: 'ignore' });
+  } catch (e) {
+    missing.push({ type: 'python', name: 'python-docx', fix: 'pip install -r requirements.txt' });
+  }
+  return {
+    ok: missing.length === 0,
+    missing
+  };
+}
+
+// 5. Create run directory
 function createRunDir(featureName = 'test') {
   const now = new Date();
   const timestamp = now.toISOString().replace(/[-:T]/g, '').slice(0, 14);
@@ -126,12 +158,41 @@ function createRunDir(featureName = 'test') {
   return { runId, runDir, timestamp };
 }
 
-function getChromeExecutable() {
+// 6. Cross-platform Multi-Path Chrome Executable Discovery
+function findChromeExecutable() {
   if (process.platform === 'darwin') {
-    return '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+    const macPaths = [
+      '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+      '/Applications/Chromium.app/Contents/MacOS/Chromium',
+      path.join(process.env.HOME || '', 'Applications/Google Chrome.app/Contents/MacOS/Google Chrome')
+    ];
+    for (const p of macPaths) {
+      if (fs.existsSync(p)) return p;
+    }
+    return 'google-chrome';
   } else if (process.platform === 'win32') {
-    return process.env['PROGRAMFILES(X86)'] + '\\Google\\Chrome\\Application\\chrome.exe';
+    const winPaths = [
+      path.join(process.env['PROGRAMFILES'] || 'C:\\Program Files', 'Google\\Chrome\\Application\\chrome.exe'),
+      path.join(process.env['PROGRAMFILES(X86)'] || 'C:\\Program Files (x86)', 'Google\\Chrome\\Application\\chrome.exe'),
+      path.join(process.env['LOCALAPPDATA'] || '', 'Google\\Chrome\\Application\\chrome.exe'),
+      path.join(process.env['PROGRAMW6432'] || 'C:\\Program Files', 'Google\\Chrome\\Application\\chrome.exe')
+    ];
+    for (const p of winPaths) {
+      if (fs.existsSync(p)) return p;
+    }
+    return 'chrome.exe';
   } else {
+    // Linux
+    const linuxPaths = [
+      '/usr/bin/google-chrome-stable',
+      '/usr/bin/google-chrome',
+      '/usr/bin/chromium-browser',
+      '/usr/bin/chromium',
+      '/snap/bin/chromium'
+    ];
+    for (const p of linuxPaths) {
+      if (fs.existsSync(p)) return p;
+    }
     return 'google-chrome';
   }
 }
@@ -145,20 +206,40 @@ async function checkCDPAlive() {
   }
 }
 
-async function ensureBrowserOpen() {
+// 7. Get all open browser page tabs via CDP
+async function getOpenBrowserTabs() {
+  try {
+    const res = await fetch(`${CDP_URL}/json`).catch(() => null);
+    if (!res || !res.ok) return [];
+    const targets = await res.json();
+    return targets.filter(t => t.type === 'page' && !t.url.startsWith('chrome-extension://'));
+  } catch (e) {
+    return [];
+  }
+}
+
+async function ensureBrowserOpen(targetUrl = null) {
   if (await checkCDPAlive()) {
     console.log(`\x1b[32m[BROWSER] Chrome dengan port remote debugging (${CDP_URL}) sudah aktif.\x1b[0m`);
     return;
   }
 
   console.log(`\x1b[33m[BROWSER] Chrome port 9222 belum aktif. Membuka Google Chrome QA otomatis...\x1b[0m`);
-  const chromeAppPath = getChromeExecutable();
+  const chromeAppPath = findChromeExecutable();
   const profileDir = path.join(process.env.HOME || process.env.USERPROFILE, 'chrome-qa-profile');
 
-  const proc = spawn(chromeAppPath, [
+  const args = [
     '--remote-debugging-port=9222',
-    `--user-data-dir=${profileDir}`
-  ], {
+    `--user-data-dir=${profileDir}`,
+    '--no-first-run',
+    '--no-default-browser-check',
+    '--start-maximized'
+  ];
+  if (targetUrl) {
+    args.push(targetUrl);
+  }
+
+  const proc = spawn(chromeAppPath, args, {
     detached: true,
     stdio: 'ignore'
   });
@@ -173,7 +254,7 @@ async function ensureBrowserOpen() {
       return;
     }
   }
-  throw new Error(`Gagal meluncurkan Chrome pada port 9222 dalam 15 detik.`);
+  throw new Error(`Gagal meluncurkan Chrome pada port 9222 dalam 15 detik. Pastikan executable Chrome terpasang di sistem (${chromeAppPath}).`);
 }
 
 async function closeBrowser() {
@@ -232,6 +313,10 @@ module.exports = {
   getRolesFromEnv,
   getDetailedCredentialsFromEnv,
   validateCredentialsForRole,
+  discoverUrlVariables,
+  checkRuntimeDependencies,
+  findChromeExecutable,
+  getOpenBrowserTabs,
   createRunDir,
   checkCDPAlive,
   ensureBrowserOpen,
