@@ -32,13 +32,17 @@ def parse_markdown(md_path):
             title = match[1].strip()
             body = match[2].strip()
 
-            # Extract role
+            # Extract role (do NOT fallback to hardcoded 'owner')
             role_match = re.search(r'\*{0,2}(?:Role|Actor|Aktor)\*{0,2}\s*[:\-]\s*([^\n]+)', body, re.IGNORECASE)
             if role_match:
                 role = role_match.group(1).replace('*', '').strip()
             else:
                 title_role = re.search(r'\b(?:sebagai|as)\s+([A-Za-z0-9_-]+)', title, re.IGNORECASE)
-                role = title_role.group(1).strip() if title_role else "owner"
+                role = title_role.group(1).strip() if title_role else ""
+
+            # Extract Target URL if defined
+            url_match = re.search(r'\*{0,2}(?:Target\s*URL|URL|Path|Rute)\*{0,2}\s*[:\-]\s*([^\n]+)', body, re.IGNORECASE)
+            target_url = url_match.group(1).replace('*', '').strip() if url_match else ""
 
             # Extract steps
             steps_match = re.search(r'\*{0,2}(?:Steps?|Langkah(?:-langkah)?)\*{0,2}\s*[:\-]\s*([\s\S]*?)(?=(?:\n\s*[-*]?\s*\*{0,2}(?:Expected(?:\s+Results?)?|Hasil|Data|Precondition)\*{0,2}\s*[:\-]|\Z))', body, re.IGNORECASE)
@@ -60,6 +64,7 @@ def parse_markdown(md_path):
                 "id": tc_id,
                 "title": title,
                 "role": role,
+                "target_url": target_url,
                 "priority": priority,
                 "steps": clean_steps,
                 "expected": expected
@@ -77,14 +82,20 @@ def parse_markdown(md_path):
                     row_dict = dict(zip(header_cols, cols))
                     tc_id = row_dict.get('id') or row_dict.get('test id') or row_dict.get('testcase id') or row_dict.get('tc id') or f"TC-{len(testcases)+1:03d}"
                     title = row_dict.get('title') or row_dict.get('test title') or row_dict.get('scenario') or row_dict.get('nama skenario') or "-"
-                    role = row_dict.get('role') or row_dict.get('actor') or "owner"
+                    role = row_dict.get('role') or row_dict.get('actor') or row_dict.get('aktor') or ""
+                    if not role:
+                        title_role = re.search(r'\b(?:sebagai|as)\s+([A-Za-z0-9_-]+)', title, re.IGNORECASE)
+                        role = title_role.group(1).strip() if title_role else ""
+                    target_url = row_dict.get('url') or row_dict.get('target url') or row_dict.get('target_url') or row_dict.get('path') or ""
                     steps = row_dict.get('steps') or row_dict.get('test steps') or row_dict.get('langkah') or ""
                     expected = row_dict.get('expected result') or row_dict.get('expected') or row_dict.get('hasil') or ""
+                    priority = row_dict.get('priority') or row_dict.get('prioritas') or "P1"
                     testcases.append({
                         "id": tc_id,
                         "title": title,
                         "role": role,
-                        "priority": "P1",
+                        "target_url": target_url,
+                        "priority": priority,
                         "steps": [s.strip() for s in re.split(r'\n|;\s*', steps) if s.strip()],
                         "expected": expected
                     })
@@ -133,13 +144,21 @@ def parse_excel(xlsx_path):
             row_dict.get("title") or row_dict.get("test title / summary") or row_dict.get("test title") or
             row_dict.get("scenario") or row_dict.get("decription") or "-"
         )
-        # Determine role from role column or title or precondition
-        role_raw = row_dict.get("role / actor") or row_dict.get("role") or row_dict.get("actor") or ""
+        # Determine role from role column or title or precondition (no hardcoded 'owner' fallback)
+        role_raw = (
+            row_dict.get("role / actor") or row_dict.get("role") or
+            row_dict.get("actor") or row_dict.get("aktor") or ""
+        )
         if not role_raw:
             title_role = re.search(r'\b(?:sebagai|as)\s+([A-Za-z0-9_-]+)', title, re.IGNORECASE)
-            role = title_role.group(1).strip() if title_role else "owner"
+            role = title_role.group(1).strip() if title_role else ""
         else:
             role = role_raw
+
+        target_url = (
+            row_dict.get("target_url") or row_dict.get("target url") or
+            row_dict.get("url") or row_dict.get("path") or ""
+        )
 
         step_desc = row_dict.get("step_desc") or row_dict.get("test steps") or row_dict.get("steps") or ""
         precond = row_dict.get("precondition") or ""
@@ -163,6 +182,7 @@ def parse_excel(xlsx_path):
             "id": tc_id,
             "title": title,
             "role": role,
+            "target_url": target_url,
             "priority": priority,
             "steps": clean_steps,
             "expected": expected
@@ -175,14 +195,101 @@ def parse_excel(xlsx_path):
         "testcases": testcases
     }
 
+def validate_testcase_contract(tc, index=1):
+    """
+    Validates that a parsed test case satisfies the mandatory schema contract:
+    - id: Non-empty string
+    - title: Non-empty string (describes what is being tested)
+    - steps: Array of non-empty strings (at least 1 actionable UI step)
+    - expected: Non-empty string (expected UI assertion)
+    - role: Preserved as-is (empty string triggers actor resolution gate)
+    - target_url: Preserved as-is (optional per-testcase URL override)
+    Returns: (is_valid: bool, errors: list, normalized_tc: dict)
+    """
+    errors = []
+    tc_id = (tc.get("id") or "").strip()
+    if not tc_id:
+        tc_id = f"TC-{index:03d}"
+
+    title = (tc.get("title") or "").strip()
+    if not title or title == "-":
+        errors.append("Field 'title' / 'scenario' kosong.")
+
+    steps = tc.get("steps") or []
+    if not isinstance(steps, list) or len(steps) == 0:
+        errors.append("Field 'steps' / 'langkah aksi' kosong.")
+    else:
+        valid_steps = [str(s).strip() for s in steps if str(s).strip()]
+        if len(valid_steps) == 0:
+            errors.append("Field 'steps' tidak memiliki langkah aksi yang valid.")
+        else:
+            steps = valid_steps
+
+    expected = (tc.get("expected") or "").strip()
+    if not expected:
+        errors.append("Field 'expected result' / 'ekspektasi' kosong.")
+
+    role = (tc.get("role") or "").strip()
+    target_url = (tc.get("target_url") or "").strip()
+    priority = (tc.get("priority") or "P1").strip()
+
+    normalized = {
+        "id": tc_id,
+        "title": title,
+        "role": role,
+        "target_url": target_url,
+        "priority": priority,
+        "steps": steps,
+        "expected": expected
+    }
+
+    is_valid = len(errors) == 0
+    return is_valid, errors, normalized
+
 def parse_file(file_path):
     ext = os.path.splitext(file_path)[1].lower()
     if ext == ".md":
-        return parse_markdown(file_path)
+        raw = parse_markdown(file_path)
     elif ext in [".xlsx", ".xlsm"]:
-        return parse_excel(file_path)
+        raw = parse_excel(file_path)
     else:
         raise ValueError(f"Unsupported test case format: {ext}. Only .md and .xlsx are supported.")
+
+    raw_testcases = raw.get("testcases", [])
+    valid_testcases = []
+    invalid_testcases = []
+
+    for idx, tc in enumerate(raw_testcases, start=1):
+        is_valid, errors, normalized_tc = validate_testcase_contract(tc, index=idx)
+        if is_valid:
+            valid_testcases.append(normalized_tc)
+        else:
+            invalid_testcases.append({
+                "index": idx,
+                "id": normalized_tc.get("id"),
+                "title": normalized_tc.get("title"),
+                "reasons": errors,
+                "raw": tc
+            })
+
+    total = len(raw_testcases)
+    if len(invalid_testcases) == 0:
+        contract_status = "PASSED"
+    elif len(valid_testcases) > 0:
+        contract_status = "PARTIAL_VALID"
+    else:
+        contract_status = "FAILED"
+
+    return {
+        "source_type": raw.get("source_type"),
+        "file_path": file_path,
+        "contract_status": contract_status,
+        "total_testcases": total,
+        "valid_count": len(valid_testcases),
+        "invalid_count": len(invalid_testcases),
+        "testcases": valid_testcases,
+        "invalid_testcases": invalid_testcases
+    }
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:

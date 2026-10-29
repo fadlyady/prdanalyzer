@@ -29,9 +29,11 @@ Skill ini digunakan untuk menjalankan **Mekanisme Continuous Learning, Retrospec
   - SOP Analisis PRD Bisnis: `.agents/skills/prd-analyzer-business/SKILL.md`
   - SOP Master Test Case Suite: `.agents/skills/generate-testcase/SKILL.md`
   - SOP Konversi Dokumen & Calculation: `.agents/skills/convert-with-calculation/SKILL.md` & `.agents/skills/convert-document/SKILL.md`
+  - SOP Eksekusi Pengujian Browser Staging: `.agents/skills/browser-qa-execution/SKILL.md`
 - **Dokumen Input Triangulasi**:
   - Dokumen Hasil Analisis PRD (`doc-analyzer/result-testcase/PRD_Analysis_*.md` atau fallback `result-testcase/`)
   - Dokumen Test Case Suite (`doc-analyzer/result-testcase/Test_Cases_*.xlsx` / `.md` atau fallback `result-testcase/`)
+  - Laporan Eksekusi Browser (`browser-execution/automate-result/Report_*.docx` & screenshot run)
   - Dokumen Pendukung Asli (PRD Asli `.docx`/`.pdf`, folder `./doc-analyzer/strukturmenu/`, `./doc-analyzer/adhoc-document/`, API Spec, Diagram Arsitektur)
 
 ---
@@ -92,6 +94,7 @@ Lakukan evaluasi silang tiga arah secara komprehensif antara **Catatan Review (`
 | **Product Manager (PM) / Business Owner** | Scope fitur, logika bisnis, aturan kuota/pricing, user flow, terminologi bisnis | **HIGH (Weight 3) - CRITICAL (Weight 4)** | `prd-analyzer-business`<br/>• Clarification Checklist<br/>• Business Risk Chains |
 | **Tech Lead / Backend / Architect** | API contract, DB persistence, konsistensi data, concurrency, idempotency, NFR, error code | **HIGH (Weight 3) - CRITICAL (Weight 4)** | `prd-qa-analyzer` & `generate-testcase`<br/>• Triple-Layer Assertions<br/>• Narasi kontrak API/DB |
 | **QA Lead / Senior QA Reviewer** | Test coverage, boundary value (BVA), exploratory charters, negative test scenarios | **MEDIUM (Weight 2) - HIGH (Weight 3)** | `generate-testcase`<br/>• Adversarial Edge Cases<br/>• Standar BVA 3-Value depth |
+| **QA Automation / Browser Execution Lead** | Flakiness eksekusi, selector drift, dynamic DOM, delay render dropdown, session reset antar role | **HIGH (Weight 3) - CRITICAL (Weight 4)** | `browser-qa-execution`<br/>• Smart Locators & Dropdown Timing<br/>• Session Reset & Multi-Credential |
 | **Bug Escape (Incident Staging / Prod)** | Kebocoran bug nyata yang lolos ke staging/production | **CRITICAL (Weight 4)** *(Mandatory RCA)* | **Semua Skill Terkait**<br/>• Wajib 5-Whys RCA<br/>• Tambah Anti-Miss Guardrail permanen |
 
 #### B. Skala Pembobotan Severity (4 / 3 / 2 / 1)
@@ -107,6 +110,7 @@ Lakukan evaluasi silang tiga arah secara komprehensif antara **Catatan Review (`
 | **Phase 2: Clarification Gate** | Asumsi sepihak tanpa bertanya ke PM | Menemukan formula ambigu tetapi langsung berasumsi tanpa mencatatnya di tabel Open Questions. |
 | **Phase 3: Deep Modeling & Heuristic** | Blind spot pada Concurrency, State Transition, atau NFR | Model SFDIPOT tidak mengeksplorasi kondisi koneksi terputus, timeout, idempotency, atau RBAC. |
 | **Phase 4: Test Case Generation** | Assertion dangkal atau skenario pengujian bolong | Hanya memvalidasi respon UI tanpa memverifikasi field payload API atau tabel database. |
+| **Phase 5: Browser QA Execution** | Selector drift / Dropdown delay / Session contamination / Mutasi tak sengaja | Locator kaku terhadap dynamic DOM, timing polling dropdown terlalu pendek, cookies role lama belum di-clear, atau mutasi aktif di mode aman. |
 
 ---
 

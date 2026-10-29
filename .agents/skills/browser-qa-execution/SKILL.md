@@ -41,12 +41,24 @@ Skill ini dirancang bersifat **100% Universal, Domain-Agnostic, & Cross-Device P
   - Digunakan sebagai referensi letak tombol, selector, atau navigasi menu jika skenario memerlukan klarifikasi visual.
 - **Konfigurasi Environment & Kredensial Role**:
   `./.env` (memuat variabel target URL seperti `BASE_URL`, `STAGING_URL`, atau `E2E_BASE_URL_STAGING`, serta kredensial `USER_<ROLE>_<NAME>`, `PASS_<ROLE>_<NAME>`).
-- **Skrip & Mesin Eksekusi Universal**:
-  - Universal Agnostic Executor: `./.agents/skills/browser-qa-execution/scripts/universal_executor.js`
-  - Test Runner Bridge & Chrome Auto-Discovery: `./.agents/skills/browser-qa-execution/scripts/test_runner_bridge.js`
-  - Test Case Parser: `./.agents/skills/browser-qa-execution/scripts/parse_testcase.py`
-  - Excel to Markdown Converter: `./.agents/skills/browser-qa-execution/scripts/convert_to_md_testcase.py`
-  - Generator Laporan Word DOCX: `./.agents/skills/browser-qa-execution/scripts/generate_docx_report.py`
+- **Mesin Eksekusi & Guard (Dual Engine)**:
+  - **Primary Engine (Hard Guardrail via MCP)**: `browser-qa-guard` MCP Server (`mcp-server-browser-qa/src/index.js`)
+    * `qa_check_browser_state`: Memeriksa port CDP 9222 & mendaftar tab terbuka (Gate 2).
+    * `qa_init_browser`: Peluncuran Chrome & penegakan Domain Allowlist (Gate 2).
+    * `qa_list_available_roles`: Deteksi role dari `.env` dengan password ter-masking (Gate 3).
+    * `qa_set_mutation_permission`: Mengaktifkan/menonaktifkan Safe Mode mutasi (Gate 4).
+    * `qa_login_role`: Injeksi form login DOM langsung tanpa membocorkan password ke prompt AI (Gate 3).
+    * `qa_execute_action`: Eksekusi aksi klik/ketik dengan interceptor mutasi otomatis (Gate 4).
+    * `qa_assert_element`: Verifikasi UI state visible/contains_text/url_contains (Gate 5).
+    * `qa_capture_evidence`: Pengambilan screenshot otomatis berformat terstandar (Gate 5).
+    * `qa_reset_session`: Pembersihan cookies & web storage antar role (Gate 6).
+    * `qa_close_browser`: Penutupan browser Chrome secara bersih (Post-flight).
+  - **Fallback Engine (Local CLI Scripts)**:
+    * Universal Agnostic Executor: `./.agents/skills/browser-qa-execution/scripts/universal_executor.js`
+    * Test Runner Bridge & Chrome Auto-Discovery: `./.agents/skills/browser-qa-execution/scripts/test_runner_bridge.js`
+    * Test Case Parser: `./.agents/skills/browser-qa-execution/scripts/parse_testcase.py`
+    * Excel to Markdown Converter: `./.agents/skills/browser-qa-execution/scripts/convert_to_md_testcase.py`
+    * Generator Laporan Word DOCX: `./.agents/skills/browser-qa-execution/scripts/generate_docx_report.py`
 - **Target Output Hasil Uji**:
   - **Laporan Dokumen Word (Executive DOCX)**:
     `./browser-execution/automate-result/Report_<FeatureName>_<YYYYMMDD_HHMMSS>.docx`
@@ -65,18 +77,28 @@ Sebelum dan selama menjalankan pengujian, Senior QA **WAJIB** mematuhi 6 gerbang
 ┌────────────────────────────────────────────────────────────────────────┐
 │                   6 MANDATORY QA VALIDATION GATES                      │
 ├────────────────────────────────────────────────────────────────────────┤
-│ GATE 1: STRICT MARKDOWN (.MD) & TEST DATA RESOLUTION                   │
-│ - File test case WAJIB berformat Markdown (.md).                       │
-│ - Jika pada doc-analyzer/result-testcase/ TIDAK DITEMUKAN file .md     │
-│   (misal hanya tersedia .xlsx): Agent WAJIB BERHENTI & BERTANYA user:  │
-│   (A) Konversi otomatis berkas ke format .md standar.                  │
-│   (B) User menyediakan/memformat file .md sendiri.                     │
-│ - Jika terdapat >1 file .md, WAJIB bertanya file mana yang dipilih.   │
+│ GATE 1: UNIVERSAL TEST CASE CONTRACT GUARD (.MD & .XLSX)               │
+│ - Mendukung format Markdown (.md) dan Excel (.xlsx) secara transparan. │
+│ - MANDATORY TEST CASE SCHEMA CONTRACT: Setiap skenario WAJIB memuat:   │
+│   * id: ID Pengujian unik non-kosong (misal: TC-001).                  │
+│   * title / scenario: Deskripsi tujuan skenario non-kosong.            │
+│   * steps / langkah: Minimal memiliki 1 baris aksi (klik/input/pilih). │
+│     JIKA LANGKAH KOSONG: Baris otomatis ditolak (REJECTED).            │
+│   * expected: Ekspektasi hasil non-kosong untuk verifikasi assertion.  │
+│   * role / actor: Aktor penguji (opsional; jika kosong memicu Gate 3). │
+│   * target_url / path: URL spesifik skenario (opsional; memicu Gate 2).│
+│ - PRE-FLIGHT LINTING: Jika ditemukan baris cacat, runner menampilkan   │
+│   rekap dan alasan kecacatan, serta memberi opsi lanjut skenario valid │
+│   atau perbaiki file terlebih dahulu.                                  │
 │ - Supplementary Data: Jika skenario menyebutkan data uji tambahan      │
 │   (upload file/mock payload), periksa ./browser-execution/             │
 │   automate-support/ dan pastikan pemetaan file ke skenario ke user.    │
 ├────────────────────────────────────────────────────────────────────────┤
-│ GATE 2: TARGET URL, BROWSER STATE & TAB CLEANUP GATE                   │
+│ GATE 2: TARGET URL, BROWSER STATE & DYNAMIC URL RESOLUTION GATE        │
+│ - DYNAMIC PER-TESTCASE URL: Jika skenario mendefinisikan URL/path      │
+│   spesifik (misal /settings atau URL modul berbeda), runner secara     │
+│   otomatis bernavigasi ke halaman tersebut setelah memvalidasi domain  │
+│   allowlist staging untuk mencegah pembajakan/kebocoran ke produksi.   │
 │ - Kondisi A: BROWSER SUDAH DIBUKA (Port 9222 aktif):                   │
 │   * Mesin membaca seluruh tab terbuka via CDP (GET /json).             │
 │   * Tampilkan tab aktif saat ini: [Judul Tab] ([URL Tab]).             │
@@ -101,19 +123,23 @@ Sebelum dan selama menjalankan pengujian, Senior QA **WAJIB** mematuhi 6 gerbang
 │     Auto-discovery Chrome binary (Mac/Windows/Linux), luncurkan dengan │
 │     --start-maximized dan arahkan langsung ke target URL.              │
 ├────────────────────────────────────────────────────────────────────────┤
-│ GATE 3: CREDENTIAL VERIFICATION, DISAMBIGUATION & SESSION GATE         │
-│ - Multi-Credential Disambiguation: Jika skenario menyebut role umum    │
-│   (misal: "sebagai CS", "sebagai Owner") & di .env ada >1 kredensial   │
-│   ber-prefix serupa (misal USER_CS_A & USER_CS_B):                     │
-│   WAJIB BERHENTI & BERTANYA ke user kredensial mana yang digunakan.    │
-│   DILARANG memilih sepihak atau acak!                                  │
-│ - Missing Credential Alert: Jika skenario membutuhkan role tertentu    │
-│   namun TIDAK DITEMUKAN satupun kredensial di .env: WAJIB MEMBERI      │
-│   INFO ke user untuk update .env (USER_<ROLE>_<NAME> & PASS_...)       │
-│   dan menunda eksekusi role tersebut sampai .env diperbarui.           │
-│ - Active Session Mismatch Gate: Jika browser sudah dalam status login  │
-│   tetapi user/role aktif BERBEDA dengan role skenario test case:       │
-│   WAJIB BERTANYA ke user opsi penanganan (Logout & Re-login vs Lanjut).│
+│ GATE 3: SMART CREDENTIAL RESOLVER, BILINGUAL SYNONYM & ACTOR GATE      │
+│ - BILINGUAL SYNONYM MAPPING: Mesin memetakan sinonim secara cerdas:    │
+│   * Pemilik / Owner / Bos -> USER_OWNER_* / USER_PEMILIK_*             │
+│   * Anggota / Member / User / Pelanggan -> USER_MEMBER_* / USER_ANGGOTA│
+│   * CS / Agent / Staff / Operator -> USER_CS_* / USER_AGENT_*          │
+│   * Admin / Superadmin -> USER_ADMIN_*                                 │
+│ - 3 PERCABANGAN RESOLUSI KREDENSIAL:                                   │
+│   1. KASUS 1 (Actor Cocok di .env): Jika tunggal langsung auto-select; │
+│      jika >1 user ber-prefix sama, WAJIB bertanya akun mana dipilih.   │
+│   2. KASUS 2 (Actor Disebut tapi TIDAK ADA di .env): Berhenti dan beri │
+│      alert ke user: (A) Lengkapi .env (USER_<ROLE>_<NAME>), atau       │
+│      (B) Pilih dari role kredensial yang sudah tersedia di .env.       │
+│   3. KASUS 3 (Actor KOSONG di Test Case): DILARANG mengasumsikan role  │
+│      sepihak! Mesin WAJIB berhenti dan meminta user memilih role login │
+│      dari daftar kredensial yang tersedia di .env.                     │
+│ - Active Session Mismatch Gate: Jika browser sudah login tetapi role    │
+│   aktif BERBEDA: Tanya opsi penanganan (Logout & Re-login vs Lanjut).  │
 ├────────────────────────────────────────────────────────────────────────┤
 │ GATE 4: PRE-FLIGHT ACTION PERMISSION GATE (CREATE / EDIT / DELETE)     │
 │ - SEBELUM eksekusi dijalankan, Agent WAJIB BERTANYA kepada user:       │

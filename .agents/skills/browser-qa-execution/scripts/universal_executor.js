@@ -24,10 +24,12 @@ const {
   discoverUrlVariables,
   checkRuntimeDependencies,
   getOpenBrowserTabs,
-  checkCDPAlive
+  checkCDPAlive,
+  resolveProjectRoot,
+  resolveTestCaseUrl
 } = require('./test_runner_bridge');
 
-const PROJECT_ROOT = path.resolve(__dirname, '../../../../');
+const PROJECT_ROOT = resolveProjectRoot(__dirname);
 const AUTOMATE_RESULT_DIR = fs.existsSync(path.join(PROJECT_ROOT, 'browser-execution', 'automate-result'))
   ? path.join(PROJECT_ROOT, 'browser-execution', 'automate-result')
   : path.join(PROJECT_ROOT, 'automate-result');
@@ -63,12 +65,28 @@ function createRunDir(featureName = 'test') {
   return { runId, runDir, timestamp };
 }
 
-// 3. Parse Markdown testcase using parse_testcase.py
-function parseMarkdownTestcase(mdFilePath) {
+// 3. Parse testcase file (Markdown or Excel) with Mandatory Schema Contract Guard
+function parseTestcaseFile(filePath) {
   const pyScript = path.resolve(__dirname, 'parse_testcase.py');
-  const stdout = execSync(`python3 "${pyScript}" "${mdFilePath}"`, { encoding: 'utf-8' });
-  return JSON.parse(stdout);
+  const stdout = execSync(`python3 "${pyScript}" "${filePath}"`, { encoding: 'utf-8' });
+  const parsed = JSON.parse(stdout);
+
+  if (parsed.contract_status === 'FAILED') {
+    throw new Error(`[CONTRACT ERROR] Seluruh skenario dalam file (${filePath}) gagal validasi kontrak wajib (id/title/steps/expected). Rincian: ${JSON.stringify(parsed.invalid_testcases, null, 2)}`);
+  }
+
+  if (parsed.contract_status === 'PARTIAL_VALID') {
+    console.warn(`\x1b[33m[CONTRACT WARNING] Ditemukan ${parsed.invalid_count} test case yang tidak memenuhi kontrak wajib dari total ${parsed.total_testcases} skenario:\x1b[0m`);
+    parsed.invalid_testcases.forEach(inv => {
+      console.warn(`   ⚠ Dilewati: [${inv.id || 'NO-ID'}] "${inv.title || 'Untitled'}" -> Masalah: ${inv.reasons.join(', ')}`);
+    });
+  }
+
+  return parsed;
 }
+
+// Backward-compatible alias
+const parseMarkdownTestcase = parseTestcaseFile;
 
 // 4. Smart Locator Resolvers
 async function findInput(page, term) {
@@ -365,11 +383,11 @@ async function executeUniversalSuite(testcaseMdPath) {
     // ==========================================
     const batchesByRole = {};
     testcases.forEach(tc => {
-      const rName = (tc.role || 'Owner').trim();
-      const normR = rName.toUpperCase();
+      const rName = (tc.role || '').trim();
+      const normR = rName ? rName.toUpperCase() : 'ROLE_NOT_SPECIFIED';
       if (!batchesByRole[normR]) {
         batchesByRole[normR] = {
-          roleDisplay: rName,
+          roleDisplay: rName || 'Role Belum Ditentukan',
           normalizedRole: normR,
           cases: []
         };
@@ -385,6 +403,7 @@ async function executeUniversalSuite(testcaseMdPath) {
 
     const results = [];
     const evidenceFiles = [];
+    const partialContextList = [];
     const groupedRolesForReport = {};
 
     const skipRolesArg = process.argv.find(a => a.startsWith('--skip-roles='));
@@ -416,8 +435,41 @@ async function executeUniversalSuite(testcaseMdPath) {
         continue;
       }
 
-      // 2. Validasi kredensial role di .env (Gate 3)
-      const credCheck = validateCredentialsForRole(env, normRole);
+      // 2. Validasi kredensial role di .env (Gate 3) dengan Smart Resolver
+      let targetLookup = normRole;
+      if (normRole === 'ROLE_NOT_SPECIFIED') {
+        const cliRoleArg = process.argv.find(a => a.toLowerCase().startsWith('--role=') || a.toLowerCase().startsWith('--default-role='));
+        if (cliRoleArg) {
+          targetLookup = cliRoleArg.split('=')[1].trim().toUpperCase();
+          console.log(`   \x1b[32m[ACTOR RESOLUTION] Menggunakan role dari parameter CLI: ${targetLookup}\x1b[0m`);
+        }
+      }
+
+      let credCheck = validateCredentialsForRole(env, targetLookup === 'ROLE_NOT_SPECIFIED' ? '' : targetLookup);
+
+      if (credCheck.status === 'ROLE_NOT_SPECIFIED') {
+        if (credCheck.availableRoleNames.length === 1) {
+          targetLookup = credCheck.availableRoleNames[0];
+          credCheck = validateCredentialsForRole(env, targetLookup);
+          console.log(`   \x1b[32m[AUTO-SELECT ROLE] Hanya ditemukan 1 role di .env [${targetLookup}], otomatis digunakan untuk skenario tanpa actor.\x1b[0m`);
+        } else {
+          console.log(`   \x1b[31m[GATE 3 ROLE NOT SPECIFIED] ${credCheck.message}\x1b[0m`);
+          console.log(`   \x1b[33m[SKIPPED BATCH] Skenario tanpa actor dilewati. Harap sertakan parameter --role=<NAMA_ROLE> atau definisikan actor di test case.\x1b[0m\n`);
+          for (const tc of batch.cases) {
+            const skipItem = {
+              id: tc.id,
+              title: tc.title,
+              action: tc.title,
+              status: 'SKIP WITH REASON',
+              notes: `Test case tidak mendefinisikan actor dan terdapat >1 role di .env (${credCheck.availableRoleNames.join(', ')}). Gunakan --role=<ROLE>.`
+            };
+            results.push(skipItem);
+            groupedRolesForReport[batch.roleDisplay.toLowerCase()].push(skipItem);
+          }
+          continue;
+        }
+      }
+
       if (credCheck.status === 'MISSING') {
         console.log(`   \x1b[33m[GATE 3 MISSING] ${credCheck.message}\x1b[0m`);
         console.log(`   \x1b[33m[SKIPPED BATCH] Seluruh skenario untuk role "${batch.roleDisplay}" ditandai SKIP WITH REASON.\x1b[0m\n`);
@@ -437,21 +489,21 @@ async function executeUniversalSuite(testcaseMdPath) {
 
       let selectedCred = credCheck.credential;
       if (credCheck.status === 'AMBIGUOUS') {
-        const credArg = process.argv.find(a => a.toLowerCase().startsWith(`--credential-${normRole.toLowerCase()}=`) || a.toLowerCase().startsWith(`--user-${normRole.toLowerCase()}=`));
-        const ownerArg = (normRole === 'OWNER' ? process.argv.find(a => a.startsWith('--owner-key=')) : null);
+        const credArg = process.argv.find(a => a.toLowerCase().startsWith(`--credential-${targetLookup.toLowerCase()}=`) || a.toLowerCase().startsWith(`--user-${targetLookup.toLowerCase()}=`));
+        const ownerArg = (targetLookup === 'OWNER' ? process.argv.find(a => a.startsWith('--owner-key=')) : null);
         const chosenKey = credArg ? credArg.split('=')[1].trim().toUpperCase() : (ownerArg ? ownerArg.split('=')[1].trim().toUpperCase() : null);
 
         if (chosenKey) {
           selectedCred = credCheck.candidates.find(c => c.identifier.toUpperCase() === chosenKey || c.key.toUpperCase() === chosenKey) || credCheck.candidates[0];
         } else {
           selectedCred = credCheck.candidates[0];
-          console.log(`   \x1b[33m[AMBIGUOUS RESOLUTION] Menggunakan kredensial pertama untuk ${normRole}: ${selectedCred.key} (${selectedCred.username}).\x1b[0m`);
+          console.log(`   \x1b[33m[AMBIGUOUS RESOLUTION] Menggunakan kredensial pertama untuk ${targetLookup}: ${selectedCred.key} (${selectedCred.username}).\x1b[0m`);
         }
       }
 
       // 3. Sesi Switching: Jika sudah login dengan role berbeda sebelumnya, lakukan reset sesi bersih (Logout)
-      if (currentActiveRole !== null && currentActiveRole !== normRole) {
-        console.log(`   \x1b[33m[ROLE SWITCH] Berpindah dari role "${currentActiveRole}" ke "${normRole}". Melakukan logout & reset sesi bersih...\x1b[0m`);
+      if (currentActiveRole !== null && currentActiveRole !== targetLookup) {
+        console.log(`   \x1b[33m[ROLE SWITCH] Berpindah dari role "${currentActiveRole}" ke "${targetLookup}". Melakukan logout & reset sesi bersih...\x1b[0m`);
         await resetSession(page, context, targetBaseUrl);
       }
 
@@ -459,11 +511,22 @@ async function executeUniversalSuite(testcaseMdPath) {
       if (selectedCred && targetBaseUrl) {
         await performRoleLogin(page, selectedCred, targetBaseUrl);
       }
-      currentActiveRole = normRole;
+      currentActiveRole = targetLookup;
 
       for (let idx = 0; idx < batch.cases.length; idx++) {
         const tc = batch.cases[idx];
         console.log(`\x1b[36m[ROLE: ${batch.roleDisplay.toUpperCase()}] [RUN ${idx + 1}/${batch.cases.length}] ${tc.id}: ${tc.title}\x1b[0m`);
+
+        // Dynamic URL navigation per testcase
+        const urlRes = resolveTestCaseUrl(tc, targetBaseUrl);
+        if (urlRes.isOverride && urlRes.ok) {
+          const currentUrl = page.url();
+          if (currentUrl !== urlRes.url) {
+            console.log(`   \x1b[35m[DYNAMIC URL] Navigasi ke URL spesifik test case: ${urlRes.url}\x1b[0m`);
+            await page.goto(urlRes.url, { waitUntil: 'domcontentloaded', timeout: 20000 }).catch(e => console.warn(`   [URL NAV WARN] ${e.message}`));
+            await page.waitForTimeout(2000);
+          }
+        }
 
     const hasBackendVerification = /database|db\b|webhook|endpoint|tabel\s+db|sql/i.test(tc.expected || '') ||
                                    /database|db\b|webhook|endpoint/i.test((tc.steps || []).join(' '));
@@ -473,6 +536,7 @@ async function executeUniversalSuite(testcaseMdPath) {
     let isPartial = hasBackendVerification;
     let isMutationSkipped = false;
     let mutationSkipReason = '';
+    const capturedInputs = [];
 
     // Check steps
     const steps = tc.steps || [];
@@ -601,6 +665,7 @@ async function executeUniversalSuite(testcaseMdPath) {
         try {
           const inp = await findInput(page, inputHint);
           await inp.fill(valToFill);
+          capturedInputs.push({ field: inputHint, value: valToFill });
           if (/tekan\s*enter/i.test(stepText)) {
             await inp.press('Enter');
           }
@@ -669,6 +734,16 @@ async function executeUniversalSuite(testcaseMdPath) {
 
     results.push(tcResultItem);
     groupedRolesForReport[batch.roleDisplay.toLowerCase()].push(tcResultItem);
+
+    if (isPartial && scenarioPassed) {
+      partialContextList.push({
+        id: tc.id,
+        title: tc.title,
+        expected: tc.expected || '',
+        captured_inputs: capturedInputs,
+        status: 'PARTIAL_DB_VERIFICATION_NEEDED'
+      });
+    }
 
     console.log(`   Status: ${status === 'PASSED' ? '\x1b[32mPASSED\x1b[0m' : (status === 'FAILED' ? '\x1b[31mFAILED\x1b[0m' : '\x1b[33mPARTIAL TEST\x1b[0m')}\n`);
   }
@@ -748,6 +823,17 @@ async function executeUniversalSuite(testcaseMdPath) {
   const jsonTempPath = path.join(runDir, 'report_data.json');
   fs.writeFileSync(jsonTempPath, JSON.stringify(reportPayload, null, 2));
 
+  if (partialContextList.length > 0) {
+    const executionContextPath = path.join(runDir, 'execution_context.json');
+    fs.writeFileSync(executionContextPath, JSON.stringify({
+      run_id: runId,
+      timestamp,
+      target_file: targetFile,
+      total_partial_scenarios: partialContextList.length,
+      partial_scenarios: partialContextList
+    }, null, 2));
+  }
+
   const docxOutputPath = path.join(AUTOMATE_RESULT_DIR, `Report_${baseFileName}_${timestamp}.docx`);
   const pythonScript = path.resolve(__dirname, 'generate_docx_report.py');
 
@@ -756,6 +842,16 @@ async function executeUniversalSuite(testcaseMdPath) {
     console.log(`\x1b[32m[SUCCESS] Laporan Word DOCX berhasil dibuat di:\x1b[0m ${docxOutputPath}\n`);
   } catch (err) {
     console.error(`[ERROR] Gagal generate docx: ${err.message}`);
+  }
+
+  if (partialCount > 0) {
+    console.log(`\x1b[36m======================================================================\x1b[0m`);
+    console.log(`\x1b[36m💡 OPSIONAL - VALIDASI DATABASE LANJUTAN:\x1b[0m`);
+    console.log(`\x1b[36m   Terdapat ${partialCount} skenario berstatus PARTIAL TEST WITH REASON yang memerlukan\x1b[0m`);
+    console.log(`\x1b[36m   verifikasi data di database. Data runtime disimpan di:\x1b[0m`);
+    console.log(`\x1b[36m   ${path.join(runDir, 'execution_context.json')}\x1b[0m`);
+    console.log(`\x1b[36m   Anda dapat menjalankan skill 'database-qa-validation' jika ingin melanjutkan validasi.\x1b[0m`);
+    console.log(`\x1b[36m======================================================================\x1b[0m\n`);
   }
 
     return {
@@ -802,4 +898,8 @@ Options:
   });
 }
 
-module.exports = { executeUniversalSuite };
+module.exports = {
+  executeUniversalSuite,
+  parseTestcaseFile,
+  parseMarkdownTestcase
+};

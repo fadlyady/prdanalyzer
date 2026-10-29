@@ -1,0 +1,24 @@
+{
+  "mcpServers": {
+    "browser-qa-guard": {
+      "command": "node",
+      "args": [
+        "mcp-server-browser-qa/src/index.js"
+      ]
+    },
+    "database-qa-everpro": {
+      "command": "node",
+      "args": [
+        "mcp-server-database-qa/runner.js",
+        "-target-db=everpro"
+      ]
+    },
+    "database-qa-external": {
+      "command": "node",
+      "args": [
+        "mcp-server-database-qa/runner.js",
+        "-target-db=external"
+      ]
+    }
+  }
+}

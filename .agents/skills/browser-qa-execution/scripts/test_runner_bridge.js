@@ -10,7 +10,22 @@ const fs = require('fs');
 const path = require('path');
 const { execSync, spawn } = require('child_process');
 
-const PROJECT_ROOT = path.resolve(__dirname, '../../../../');
+// Dynamic Workspace Root Resolver: detects .git or package.json upwards, with fallback to WORKSPACE_ROOT or process.cwd()
+function resolveProjectRoot(startDir = __dirname) {
+  if (process.env.WORKSPACE_ROOT && fs.existsSync(process.env.WORKSPACE_ROOT)) {
+    return process.env.WORKSPACE_ROOT;
+  }
+  let curr = startDir;
+  while (curr !== path.parse(curr).root) {
+    if (fs.existsSync(path.join(curr, '.git')) || fs.existsSync(path.join(curr, 'package.json'))) {
+      return curr;
+    }
+    curr = path.dirname(curr);
+  }
+  return process.cwd();
+}
+
+const PROJECT_ROOT = resolveProjectRoot(__dirname);
 const ENV_PATH = path.join(PROJECT_ROOT, '.env');
 const AUTOMATE_RESULT_DIR = fs.existsSync(path.join(PROJECT_ROOT, 'browser-execution', 'automate-result'))
   ? path.join(PROJECT_ROOT, 'browser-execution', 'automate-result')
@@ -78,43 +93,113 @@ function getDetailedCredentialsFromEnv(env) {
   return grouped;
 }
 
-// 2c. Validate credentials for a required role (detecting MISSING, SINGLE, or AMBIGUOUS)
+// 2c. Validate credentials for a required role with bilingual synonym mapping
 function validateCredentialsForRole(env, targetRole) {
-  const cleanRole = (targetRole || '').trim().toUpperCase();
   const grouped = getDetailedCredentialsFromEnv(env);
+  const availableRoleNames = Object.keys(grouped);
 
-  let matchingKeys = [cleanRole];
-  if (cleanRole === 'CS' || cleanRole === 'AGENT') matchingKeys = ['CS', 'AGENT'];
-  if (cleanRole === 'OWNER') matchingKeys = ['OWNER'];
-  if (cleanRole === 'ADMIN') matchingKeys = ['ADMIN'];
+  // If role is not defined in testcase, halt and ask user
+  if (!targetRole || !targetRole.trim()) {
+    return {
+      status: 'ROLE_NOT_SPECIFIED',
+      role: null,
+      availableRoles: grouped,
+      availableRoleNames,
+      message: `Test case tidak mendefinisikan actor/role spesifik. Role yang tersedia di .env: [${availableRoleNames.join(', ')}]. Silakan pilih kredensial yang ingin digunakan.`
+    };
+  }
 
+  const rawClean = targetRole.trim().toUpperCase();
+
+  // Bilingual QA synonym mapping (ID & EN)
+  const SYNONYM_MAP = {
+    'PEMILIK': ['OWNER', 'PEMILIK', 'BOS'],
+    'OWNER': ['OWNER', 'PEMILIK', 'BOS'],
+    'BOS': ['OWNER', 'PEMILIK', 'BOS'],
+    'ANGGOTA': ['ANGGOTA', 'MEMBER', 'USER', 'PELANGGAN'],
+    'MEMBER': ['MEMBER', 'ANGGOTA', 'USER', 'PELANGGAN'],
+    'USER': ['USER', 'MEMBER', 'ANGGOTA', 'PELANGGAN'],
+    'PELANGGAN': ['PELANGGAN', 'MEMBER', 'USER', 'ANGGOTA'],
+    'AGENT': ['AGENT', 'CS', 'STAFF', 'OPERATOR'],
+    'CS': ['CS', 'AGENT', 'STAFF', 'OPERATOR'],
+    'STAFF': ['STAFF', 'CS', 'AGENT', 'OPERATOR'],
+    'OPERATOR': ['OPERATOR', 'CS', 'AGENT', 'STAFF'],
+    'ADMIN': ['ADMIN', 'SUPERADMIN', 'ADMINISTRATOR'],
+    'SUPERADMIN': ['SUPERADMIN', 'ADMIN', 'ADMINISTRATOR'],
+    'ADMINISTRATOR': ['ADMINISTRATOR', 'ADMIN', 'SUPERADMIN']
+  };
+
+  const lookupKeys = SYNONYM_MAP[rawClean] || [rawClean];
   let matched = [];
-  for (const k of matchingKeys) {
+  for (const k of lookupKeys) {
     if (grouped[k]) matched = matched.concat(grouped[k]);
   }
 
+  // Case 2: Role mentioned but no credentials in .env
   if (matched.length === 0) {
     return {
       status: 'MISSING',
       role: targetRole,
-      message: `Kredensial untuk role "${targetRole}" tidak ditemukan di file .env. Mohon tambahkan USER_${cleanRole}_<NAME> dan PASS_${cleanRole}_<NAME>.`
+      availableRoles: grouped,
+      availableRoleNames,
+      message: `Kredensial untuk role "${targetRole}" tidak ditemukan di file .env. Opsi: (A) Lengkapi .env dengan USER_${rawClean}_<NAME> dan PASS_${rawClean}_<NAME>, atau (B) Pilih menggunakan salah satu kredensial yang sudah ada di .env: [${availableRoleNames.join(', ')}].`
     };
   }
 
+  // Case 1B: Multiple credentials found for the same role prefix (disambiguation required)
   if (matched.length > 1) {
     return {
       status: 'AMBIGUOUS',
       role: targetRole,
       candidates: matched,
-      message: `Ditemukan ${matched.length} kredensial untuk role "${targetRole}" di .env: ${matched.map(m => m.key).join(', ')}.`
+      message: `Ditemukan ${matched.length} kredensial untuk role "${targetRole}" di .env: ${matched.map(m => m.key).join(', ')}. Harap pilih kredensial yang ingin digunakan.`
     };
   }
 
+  // Case 1A: Exactly 1 matching credential
   return {
     status: 'OK',
     role: targetRole,
     credential: matched[0]
   };
+}
+
+// 2d. Resolve per-testcase dynamic URL vs base URL
+function resolveTestCaseUrl(testcase, defaultBaseUrl, allowlistDomains = []) {
+  const targetUrl = (testcase && testcase.target_url ? testcase.target_url : '').trim();
+  if (!targetUrl) {
+    return { url: defaultBaseUrl, isOverride: false, ok: true };
+  }
+
+  // If targetUrl is an absolute http/https URL
+  if (/^https?:\/\//i.test(targetUrl)) {
+    try {
+      const parsed = new URL(targetUrl);
+      if (allowlistDomains.length > 0) {
+        const allowed = allowlistDomains.some(d => parsed.hostname === d || parsed.hostname.endsWith(`.${d}`));
+        if (!allowed) {
+          return {
+            url: targetUrl,
+            isOverride: true,
+            ok: false,
+            message: `Target URL "${targetUrl}" tidak terdaftar di allowlist domain staging: [${allowlistDomains.join(', ')}].`
+          };
+        }
+      }
+      return { url: targetUrl, isOverride: true, ok: true };
+    } catch (e) {
+      return { url: defaultBaseUrl, isOverride: false, ok: false, message: `Format Target URL tidak valid: "${targetUrl}".` };
+    }
+  }
+
+  // If targetUrl is a relative path (e.g. /dashboard/pelanggan)
+  try {
+    const base = new URL(defaultBaseUrl);
+    const combined = new URL(targetUrl, base.origin).toString();
+    return { url: combined, isOverride: true, ok: true };
+  } catch (e) {
+    return { url: defaultBaseUrl, isOverride: false, ok: true };
+  }
 }
 
 // 3. Discover URL variables from .env
@@ -306,6 +391,7 @@ async function connectBrowser() {
 
 module.exports = {
   PROJECT_ROOT,
+  resolveProjectRoot,
   ENV_PATH,
   AUTOMATE_RESULT_DIR,
   CDP_URL,
@@ -313,6 +399,7 @@ module.exports = {
   getRolesFromEnv,
   getDetailedCredentialsFromEnv,
   validateCredentialsForRole,
+  resolveTestCaseUrl,
   discoverUrlVariables,
   checkRuntimeDependencies,
   findChromeExecutable,

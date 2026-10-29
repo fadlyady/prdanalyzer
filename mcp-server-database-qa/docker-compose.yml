@@ -1,0 +1,42 @@
+version: '3.8'
+
+# ==============================================================================
+# Database QA MCP Gateway (Docker / OrbStack Bastion)
+# ==============================================================================
+# Menjalankan 2 Gateway terisolasi untuk DEV_everpro dan DEV_db-external-dev.
+# Kredensial database tersimpan secara aman di level container (.env.docker),
+# sehingga host workspace dan AI Agent tidak memiliki akses langsung / password.
+# ==============================================================================
+
+services:
+  # Gateway 1: Database Inti Everpro (DEV_everpro)
+  mcp-everpro-gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mcp-qa-everpro-gateway
+    restart: unless-stopped
+    command: ["-transport", "http", "-addr", "0.0.0.0:8080", "-statement-timeout", "5s"]
+    ports:
+      - "8081:8080"
+    environment:
+      - DATABASE_URL=${DB_EVERPRO_URL:-postgres://${DB_EVERPRO_USER}:${DB_EVERPRO_PASS}@${DB_EVERPRO_HOST}:${DB_EVERPRO_PORT:-5432}/${DB_EVERPRO_NAME}?sslmode=disable}
+    env_file:
+      - path: .env.docker
+        required: false
+
+  # Gateway 2: Database Layanan Eksternal (DEV_db-external-dev)
+  mcp-external-gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mcp-qa-external-gateway
+    restart: unless-stopped
+    command: ["-transport", "http", "-addr", "0.0.0.0:8080", "-statement-timeout", "5s"]
+    ports:
+      - "8082:8080"
+    environment:
+      - DATABASE_URL=${DB_EXTERNAL_DEV_URL:-postgres://${DB_EXTERNAL_DEV_USER}:${DB_EXTERNAL_DEV_PASS}@${DB_EXTERNAL_DEV_HOST}:${DB_EXTERNAL_DEV_PORT:-5432}/${DB_EXTERNAL_DEV_NAME}?sslmode=disable}
+    env_file:
+      - path: .env.docker
+        required: false
