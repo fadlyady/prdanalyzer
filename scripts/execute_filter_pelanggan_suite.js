@@ -14,8 +14,10 @@ const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
 
-const PROJECT_ROOT = path.resolve(__dirname, '../');
-const AUTOMATE_RESULT_DIR = path.join(PROJECT_ROOT, 'automate-result');
+const docExecutionResultDir = path.join(PROJECT_ROOT, 'browser-execution', 'automate-result');
+const AUTOMATE_RESULT_DIR = fs.existsSync(docExecutionResultDir)
+  ? docExecutionResultDir
+  : path.join(PROJECT_ROOT, 'automate-result');
 
 function createRunDir() {
   const now = new Date();
@@ -483,7 +485,11 @@ async function runSuite() {
     feature_name: 'Filter Data Pelanggan CRM',
     environment: 'Staging',
     base_url: 'https://chat-dev.everpro.id/customers',
-    testcase_file: process.argv[2] || '/Users/eldofadlyady/Documents/PRD-ANALYZER/prdanalyzer/result-testcase/test-cases-filter-data-pelanggan.md',
+    testcase_file: process.argv[2] || (
+      fs.existsSync(path.join(PROJECT_ROOT, 'doc-analyzer/result-testcase/test-cases-filter-data-pelanggan.md'))
+        ? path.join(PROJECT_ROOT, 'doc-analyzer/result-testcase/test-cases-filter-data-pelanggan.md')
+        : path.join(PROJECT_ROOT, 'result-testcase/test-cases-filter-data-pelanggan.md')
+    ),
     evidence_dir: runDir,
     timestamp: new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' }),
     qa_lead: 'Senior QA Engineer (Antigravity Browser Bridge)',

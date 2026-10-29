@@ -18,14 +18,14 @@ Skill ini digunakan untuk mengonversi dokumen hasil analisa PRD, Test Matrix, da
 ## 1. Lokasi Berkas & Skrip Pendukung Dinamis
 
 - **Dokumen Sumber (Markdown)**: 
-  - `./result-testcase/PRD_Analysis_<Feature_Name>.md` (atau path berkas `.md` kustom).
+  - `./doc-analyzer/result-testcase/PRD_Analysis_<Feature_Name>.md` (atau path berkas `.md` kustom, dengan fallback ke `./result-testcase/`).
 - **Skrip Konverter & Engine Perhitungan**:
   - Calculation Engine: `.agents/skills/convert-with-calculation/scripts/calc_engine.py`
   - Word Converter: `.agents/skills/convert-with-calculation/scripts/md_to_docx.py`
   - PDF Converter: `.agents/skills/convert-with-calculation/scripts/md_to_pdf.py`
 - **Target Output**:
-  - `./result-testcase/PRD_Analysis_<Feature_Name>.docx`
-  - `./result-testcase/PRD_Analysis_<Feature_Name>.pdf`
+  - `./doc-analyzer/result-testcase/PRD_Analysis_<Feature_Name>.docx`
+  - `./doc-analyzer/result-testcase/PRD_Analysis_<Feature_Name>.pdf`
 
 ---
 
@@ -83,21 +83,21 @@ Dokumen Word dan PDF yang dihasilkan secara otomatis menyertakan:
 ### A. Konversi ke DOCX / DOC
 ```bash
 python3 .agents/skills/convert-with-calculation/scripts/md_to_docx.py \
-  result-testcase/PRD_Analysis_<Feature_Name>.md \
-  result-testcase/PRD_Analysis_<Feature_Name>.docx
+  doc-analyzer/result-testcase/PRD_Analysis_<Feature_Name>.md \
+  doc-analyzer/result-testcase/PRD_Analysis_<Feature_Name>.docx
 ```
 
 ### B. Konversi ke PDF
 ```bash
 python3 .agents/skills/convert-with-calculation/scripts/md_to_pdf.py \
-  result-testcase/PRD_Analysis_<Feature_Name>.md \
-  result-testcase/PRD_Analysis_<Feature_Name>.pdf
+  doc-analyzer/result-testcase/PRD_Analysis_<Feature_Name>.md \
+  doc-analyzer/result-testcase/PRD_Analysis_<Feature_Name>.pdf
 ```
 
 ### C. Eksekusi Engine Perhitungan Mandiri (JSON Output)
 ```bash
 python3 .agents/skills/convert-with-calculation/scripts/calc_engine.py \
-  result-testcase/PRD_Analysis_<Feature_Name>.md
+  doc-analyzer/result-testcase/PRD_Analysis_<Feature_Name>.md
 ```
 
 ---
@@ -106,13 +106,13 @@ python3 .agents/skills/convert-with-calculation/scripts/calc_engine.py \
 
 ```mermaid
 graph TD
-    A["1. Terima permintaan ekspor dari User (docx / pdf / all)"] --> B["2. Identifikasi file input .md di result-testcase/"]
+    A["1. Terima permintaan ekspor dari User (docx / pdf / all)"] --> B["2. Identifikasi file input .md di doc-analyzer/result-testcase/"]
     B --> C["3. Eksekusi calc_engine.py (Hitung Basic & Weighted Coverage + Go/No-Go)"]
     C --> D{"4. Format Tujuan?"}
     D -- "docx / doc" --> E["Eksekusi md_to_docx.py dengan Embedded Scorecard"]
     D -- "pdf" --> F["Eksekusi md_to_pdf.py dengan Embedded Scorecard"]
     D -- "Keduanya" --> G["Eksekusi md_to_docx.py & md_to_pdf.py"]
-    E --> H["5. Verifikasi file hasil di result-testcase/"]
+    E --> H["5. Verifikasi file hasil di doc-analyzer/result-testcase/"]
     F --> H
     G --> H
     H --> I["6. Berikan link berkas terhitung langsung ke User"]

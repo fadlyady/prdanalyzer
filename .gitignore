@@ -31,6 +31,7 @@ scratch/
 .env
 .env.*
 !.env.example
+!.env.docker.example
 
 # Node Dependencies
 node_modules/
@@ -46,22 +47,39 @@ playwright/.cache/
 otherTasks/*
 !otherTasks/.gitkeep
 
+# Document Analyzer Folders (ignore contents, preserve folder structure)
+doc-analyzer/adhoc-document/*
+!doc-analyzer/adhoc-document/.gitkeep
+
+doc-analyzer/result-testcase/*
+!doc-analyzer/result-testcase/.gitkeep
+
+doc-analyzer/strukturmenu/**
+!doc-analyzer/strukturmenu/**/
+!doc-analyzer/strukturmenu/**/.gitkeep
+
+# Browser Automation & Testing Folders
+browser-execution/automate-result/*
+!browser-execution/automate-result/.gitkeep
+
+browser-execution/automate-support/*
+!browser-execution/automate-support/.gitkeep
+!browser-execution/automate-support/README.md
+
+# Legacy paths (backward compatibility)
 adhoc-document/*
 !adhoc-document/.gitkeep
 
 result-testcase/*
 !result-testcase/.gitkeep
 
-# Browser Automation Results & Evidence
 automate-result/*
 !automate-result/.gitkeep
 
-# Supplementary Test Data (ignore local datasets, preserve README and gitkeep)
 automate-support/*
 !automate-support/.gitkeep
 !automate-support/README.md
 
-# Ignore all files in strukturmenu and its subfolders, but keep structure & .gitkeep
 strukturmenu/**
 !strukturmenu/**/
 !strukturmenu/**/.gitkeep

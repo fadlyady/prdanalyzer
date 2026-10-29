@@ -48,7 +48,7 @@ File ini berfungsi sebagai **Single Source of Truth (SSOT) untuk Continuous Lear
   - **Wajib Bertanya pada Area Abu-Abu**: Identifikasi area yang ambigu (aturan kalkulasi, limit, atau keberadaan menu UI) dan ajukan ke user secara terstruktur sebelum eksekusi.
   - **Opsi User**:
     1. *Melengkapi Data*: Digunakan langsung pada analisis dan test case.
-    2. *Skip / Ditunda*: Disimpan ke berkas terpisah `./result-testcase/questions-for-pm-<feature_name>.md` dan ditandai `[PENDING PM CLARIFICATION]`.
+    2. *Skip / Ditunda*: Disimpan ke berkas terpisah `./doc-analyzer/result-testcase/questions-for-pm-<feature_name>.md` dan ditandai `[PENDING PM CLARIFICATION]`.
     3. *Gunakan Default*: Terapkan format netral `[Nama Modul - Role]` untuk UI dan `[Service/Contract] <Service>...` untuk API tanpa mengarang entitas fiktif.
 
 
@@ -63,4 +63,22 @@ File ini berfungsi sebagai **Single Source of Truth (SSOT) untuk Continuous Lear
   2. **Inventory & Anchor of Source Scenarios**: Jika dokumen input sudah memuat contoh skenario atau tabel transisi status, seluruh butir tersebut wajib diinventarisasi sebagai baseline pengujian, kemudian dikembangkan secara proaktif ke skenario kombinatorial yang lebih luas (*extended permutations*, *race conditions*, *rate changes*, dan *error boundaries*).
   3. **Strict Grep-Before-Answer Communication**: Dilarang menyebutkan kode Test Case ID, nomor baris, atau nama tabel dalam percakapan tanpa melakukan pencarian eksak (`grep_search` / `view_file`) ke file fisik terlebih dahulu untuk mencegah halusinasi penamaan.
   4. **Strict Isolation of Pending PM Questions**: Pertanyaan klarifikasi yang belum dijawab resmi oleh Product Manager dilarang keras dijawab secara sepihak; wajib dipertahankan dengan label `[PENDING PM CLARIFICATION]`.
+
+---
+
+### [2026-10-19] - Tab Cleanup, Role Batching & Clean Session Reset (Anti-RBAC Contamination)
+- **Kategori Gap**: Multi-Role Test Execution, Browser State Hygiene & RBAC Integrity
+- **Temuan / Feedback**: Ketika menjalankan test case yang memiliki berbagai role berbeda di tiap baris (misal Owner, CS, Admin), eksekusi tanpa manajemen sesi menimbulkan *Role Bleed / RBAC Contamination* (skenario CS dijalankan dengan akun Owner). Selain itu, tab browser bertumpuk jika dibuka tanpa penutupan tab sisa sebelumnya.
+- **Root Cause**:
+  1. Flat sequential execution loop pada satu tab tanpa deteksi perubahan role antar baris.
+  2. Ketiadaan mekanisme *Tab Cleanup* pada inisialisasi browser sehingga tab pengujian lama menumpuk.
+  3. Ketiadaan *Clean Session Reset* (`clearCookies`, clear `localStorage`/`sessionStorage`) sebelum berpindah ke role lain.
+- **Action Item & Guardrail Baru**:
+  1. **Tab Cleanup & Single Work Tab Mandate**: Saat menghubungkan runner ke Chrome CDP, runner mendeteksi seluruh tab terbuka dan secara otomatis menutup tab-tab sisa pengujian sebelumnya, menyisakan tepat **1 tab kerja aktif**. Seluruh skenario dalam suite dieksekusi pada tab tersebut tanpa membuka tab baru sembarangan.
+  2. **Role Batching Protocol (Zero-Repeated Login)**:
+     - Skenario pengujian dikelompokkan secara otomatis berdasarkan Role (`groupedByRole`).
+     - Login hanya dieksekusi **satu kali per batch role** (mengeliminasi overhead waktu login-logout bolak-balik di setiap baris).
+  3. **Clean Session Reset on Role Switch**: Saat runner berpindah dari satu role batch ke role batch berikutnya, runner secara otomatis membersihkan seluruh cookies dan storage sesi (`await context.clearCookies()`, `localStorage.clear()`, `sessionStorage.clear()`), lalu melakukan login dengan kredensial role baru dari `.env`.
+  4. **Multi-Role RBAC Report Isolation**: Laporan Word (`.docx`) otomatis memisahkan tabel pengujian ke dalam sub-bagian masing-masing role secara terisolasi dan rapi.
+
 
