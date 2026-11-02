@@ -21,17 +21,62 @@ async function checkCDPAlive() {
   }
 }
 
-async function ensureBrowserOpen() {
+function findChromeExecutable() {
+  if (process.platform === 'darwin') {
+    const macPaths = [
+      '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+      '/Applications/Chromium.app/Contents/MacOS/Chromium',
+      path.join(process.env.HOME || '', 'Applications/Google Chrome.app/Contents/MacOS/Google Chrome')
+    ];
+    for (const p of macPaths) {
+      if (fs.existsSync(p)) return p;
+    }
+    return 'google-chrome';
+  } else if (process.platform === 'win32') {
+    const winPaths = [
+      path.join(process.env['PROGRAMFILES'] || 'C:\\Program Files', 'Google\\Chrome\\Application\\chrome.exe'),
+      path.join(process.env['PROGRAMFILES(X86)'] || 'C:\\Program Files (x86)', 'Google\\Chrome\\Application\\chrome.exe'),
+      path.join(process.env['LOCALAPPDATA'] || '', 'Google\\Chrome\\Application\\chrome.exe'),
+      path.join(process.env['PROGRAMW6432'] || 'C:\\Program Files', 'Google\\Chrome\\Application\\chrome.exe')
+    ];
+    for (const p of winPaths) {
+      if (fs.existsSync(p)) return p;
+    }
+    return 'chrome.exe';
+  } else {
+    const linuxPaths = [
+      '/usr/bin/google-chrome-stable',
+      '/usr/bin/google-chrome',
+      '/usr/bin/chromium-browser',
+      '/usr/bin/chromium',
+      '/snap/bin/chromium'
+    ];
+    for (const p of linuxPaths) {
+      if (fs.existsSync(p)) return p;
+    }
+    return 'google-chrome';
+  }
+}
+
+async function ensureBrowserOpen(initialUrl) {
   if (await checkCDPAlive()) return;
 
   console.log(`\x1b[33m[BROWSER] Chrome port ${CDP_PORT} belum aktif. Meluncurkan Chrome QA otomatis...\x1b[0m`);
-  const chromeAppPath = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
-  const profileDir = path.join(process.env.HOME, 'chrome-qa-profile');
+  const chromeAppPath = findChromeExecutable();
+  const profileDir = path.join(process.env.HOME || process.env.USERPROFILE || '', 'chrome-qa-profile');
 
-  const proc = spawn(chromeAppPath, [
+  const spawnArgs = [
     `--remote-debugging-port=${CDP_PORT}`,
-    `--user-data-dir=${profileDir}`
-  ], {
+    `--user-data-dir=${profileDir}`,
+    '--no-first-run',
+    '--no-default-browser-check',
+    '--start-maximized'
+  ];
+  if (initialUrl) {
+    spawnArgs.push(initialUrl);
+  }
+
+  const proc = spawn(chromeAppPath, spawnArgs, {
     detached: true,
     stdio: 'ignore'
   });
@@ -77,9 +122,9 @@ async function closeBrowser() {
   }
 }
 
-async function getBrowser() {
+async function getBrowser(initialUrl) {
   try {
-    await ensureBrowserOpen();
+    await ensureBrowserOpen(initialUrl);
     // Self-healing: Pastikan minimal ada 1 target tab halaman yang aktif
     const res = await fetch(`${CDP_URL}/json`).catch(() => null);
     if (res && res.ok) {
@@ -267,7 +312,9 @@ async function takeScreenshot(target = '0', outputFilename = 'browser_snapshot.p
   const browser = await getBrowser();
   const page = await getTargetPage(browser, target);
 
-  const outDir = path.resolve(__dirname, '../result-testcase/browser_inspections');
+  const primaryOutDir = path.resolve(__dirname, '../doc-analyzer/result-testcase/browser_inspections');
+  const fallbackOutDir = path.resolve(__dirname, '../result-testcase/browser_inspections');
+  const outDir = fs.existsSync(path.resolve(__dirname, '../doc-analyzer')) ? primaryOutDir : fallbackOutDir;
   if (!fs.existsSync(outDir)) {
     fs.mkdirSync(outDir, { recursive: true });
   }

@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "browser-qa-guard": {
+      "command": "node",
+      "args": [
+        "mcp-server-browser-qa/src/index.js"
+      ]
+    }
+  }
+}

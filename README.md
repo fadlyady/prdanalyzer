@@ -6,7 +6,7 @@ Framework ini didukung oleh **Agentic AI Custom Skills** yang mengimplementasika
 1. **Analisis PRD Mendalam & Penegakan Strict Interactive Validation Gate (`prd-qa-analyzer` & `prd-analyzer-business`)**: Mengekstraksi requirement bisnis, batasan scope, pemetaan risiko bisnis multi-pilar (Financial, Ops, Customer, Compliance, Reputational, Support), aturan otorisasi (RBAC/ABAC), state transition invariants, NFR (idempotency, concurrency, resilience), dan security guardrails tanpa asumsi liar.
 2. **Pembuatan Master Test Case Suite 3-Tier (`generate-testcase`)**: Menghasilkan file Excel berstandar industri (15 kolom terstruktur) dan file Markdown otomasi deklaratif dengan **Triple-Layer Assertions (UI + API Contract + DB State Persistence)**, **Adversarial Edge-Case Candidates**, serta **Exploratory Heuristic Charters**.
 3. **Ekspor Dokumen Resmi Layak Audit (Word `.docx` / PDF `.pdf`) & Weighted Risk Calculation (`convert-document` & `convert-with-calculation`)**: Mengonversi hasil analisis menjadi dokumen berstandar **TIW (Test Idea & Walkthrough)** dengan Traceability Matrix, kalkulasi matematis bobot risiko (4/3/2/1), dan rekomendasi rilis objektif (*Go / Conditional Go / No-Go*).
-4. **Eksekusi Pengujian Browser Staging Berstandar Senior QA (`browser-qa-execution`)**: Mengeksekusi test case secara langsung pada browser Chrome (Staging) dengan **Automatic Browser Lifecycle Management** (otomatis memeriksa dan membuka Google Chrome jika belum aktif, serta otomatis menutup browser setelah pengujian selesai), menegakkan 6 gerbang validasi kualitas (Strict Markdown `.md`, Supplementary test data `automate-support/`, Kredensial `.env` 3-Tier, Pre-Flight Action Permission Gate untuk create/edit/delete dengan opsi eksekusi penuh vs Partial Test di mode aman, Flagging transparan `PASSED`/`FAILED`/`PARTIAL TEST`, dan RBAC strict execution), menjalankan 5 skenario exploratory mandatori, mengarsipkan evidence screenshot per run, serta menyusun laporan eksekutif Word (`.docx`) tanpa embedded images ke `./automate-result/`.
+4. **Eksekusi Pengujian Browser Staging Berstandar Senior QA (`browser-qa-execution`)**: Mengeksekusi test case secara langsung pada browser Chrome (Staging) dengan **Cross-Device Portability & Browser Lifecycle Management** (multi-path auto-discovery Chrome lintas OS Mac/Windows/Linux, resolusi tab aktif untuk mencegah salah sasaran tab, auto-discovery variabel URL & kredensial `.env`, serta auto-close browser pasca uji), menegakkan 6 gerbang validasi kualitas (Strict Markdown `.md`, Target URL & Active Tab State Gate, Kredensial `.env` 3-Tier, Pre-Flight Action Permission Gate untuk create/edit/delete dengan opsi eksekusi penuh vs Partial Test di mode aman, Flagging transparan `PASSED`/`FAILED`/`PARTIAL TEST`, dan RBAC strict execution), menjalankan 5 skenario exploratory mandatori, mengarsipkan evidence screenshot per run, serta menyusun laporan eksekutif Word (`.docx`) tanpa embedded images ke `./browser-execution/automate-result/`.
 5. **Mekanisme Continuous Learning & Review Drop-Box (`qa-review-learning`)**: Menyerap masukan sprint walkthrough / laporan bug escape melalui folder `./knowledge-review/` (Excel & Markdown), mencatat SSOT ke `Testcase-support/qa-learnings.md` dengan format *Before vs After*, dan mengalibrasi heuristik skill secara presisi di bawah **Protokol Anti-Regresi Universal**.
 
 ---
@@ -65,7 +65,19 @@ pip3 install python-docx reportlab openpyxl markdown pillow typing-extensions
 │   │       └── test_runner_bridge.js     # Runner Helper & CDP Connector
 │   └── qa-review-learning/               # SOP Continuous Learning & Walkthrough Review Loop
 │
-├── automate-support/                     # 📦 Penyimpanan Data Pendukung Uji (Katalog, CSV, Mock Payload)
+├── doc-analyzer/                         # 📄 Analisis Kebutuhan, Riset Bisnis & Output Test Cases
+│   ├── adhoc-document/                   # Dokumen Teknis Ad-hoc (OpenAPI, Postman, DB Schema)
+│   ├── strukturmenu/                     # Referensi UI & Screenshot Menu Aplikasi (Modular Grounding)
+│   │   ├── live-analyzer/<app>/<run>/    # Hasil Live Browser Inspection per Timestamp & App Slug (Option B)
+│   │   └── <app-name>/                   # Tangkapan Layar Manual (.png, .jpg) & Mockup Desain Offline
+│   └── result-testcase/                  # Folder Output Analisis & Test Cases (.md & .xlsx)
+│
+├── browser-execution/                    # 🚀 Eksekusi Pengujian Browser Staging Live
+│   ├── automate-support/                 # 📦 Penyimpanan Data Pendukung Uji (Katalog, CSV, Mock Payload)
+│   └── automate-result/                  # 📊 Folder Laporan Eksekusi Pengujian & Arsip Evidence Screenshot
+│       ├── Report_<Feature>_<Timestamp>.docx # Laporan Eksekutif Word (Clean, Tanpa Embedded Images)
+│       └── run_<Feature>_<Timestamp>/        # Subfolder Screenshot Evidence per Run
+│
 ├── knowledge-review/                     # 📥 Drop-Box Folder Masukan Review & Walkthrough
 │   ├── TEMPLATE_Review_Feedback_Sample.xlsx # Template Input Review Tabel Excel
 │   └── TEMPLATE_Review_Feedback_Sample.md   # Template Input Review Narasi Markdown
@@ -76,12 +88,6 @@ pip3 install python-docx reportlab openpyxl markdown pillow typing-extensions
 │   ├── [SSOT] Requirement for RBAC.xlsx # Matriks Hak Akses Pengguna
 │   └── Test_Cases_Meta_New_Pricing_2026.xlsx  # Template Master Excel 15 Kolom
 │
-├── strukturmenu/                         # Referensi UI & Screenshot Menu Aplikasi (Modular Grounding)
-├── adhoc-document/                       # Dokumen Teknis Ad-hoc (OpenAPI, Postman, DB Schema)
-├── result-testcase/                      # Folder Output Analisis & Test Cases (Wajib format .md untuk eksekusi)
-├── automate-result/                      # 📊 Folder Laporan Eksekusi Pengujian & Arsip Evidence Screenshot
-│   ├── Report_<Feature>_<Timestamp>.docx # Laporan Eksekutif Word (Clean, Tanpa Embedded Images)
-│   └── run_<Feature>_<Timestamp>/        # Subfolder Screenshot Evidence per Run
 └── README.md
 ```
 
@@ -91,12 +97,12 @@ pip3 install python-docx reportlab openpyxl markdown pillow typing-extensions
 
 ```mermaid
 graph TD
-    A["Step 1: Siapkan PRD, UI Refs (strukturmenu/), & Dokumen Teknis"] --> B["Step 2: Jalankan Skill prd-qa-analyzer / prd-analyzer-business"]
+    A["Step 1: Siapkan PRD, UI Refs (doc-analyzer/strukturmenu/), & Dokumen Teknis"] --> B["Step 2: Jalankan Skill prd-qa-analyzer / prd-analyzer-business"]
     B --> C["Step 3: 🛑 INTERACTIVE CLARIFICATION GATE (Konfirmasi User)"]
-    C --> D["Finalisasi PRD_Analysis_<Feature>.md"]
+    C --> D["Finalisasi PRD_Analysis_<Feature>.md di doc-analyzer/result-testcase/"]
     D --> E["Step 4: Jalankan generate-testcase (Excel & Markdown)"]
     E --> F["Step 5: Jalankan convert-with-calculation / convert-document"]
-    F --> G["Review Meeting / Walkthrough / Staging Execution"]
+    F --> G["Review Meeting / Walkthrough / Staging Execution (browser-execution/)"]
     G --> H["Ada Masukan / Bug Escape?<br/>Simpan ke ./knowledge-review/"]
     H --> I["Step 6: Jalankan qa-review-learning (Anti-Regresi)"]
     I --> B
@@ -105,7 +111,7 @@ graph TD
 ---
 
 ### Step 1: Persiapan Dokumen & Input Awal
-Letakkan dokumen PRD (`.docx`, `.pdf`, atau `.md`) di dalam workspace, serta lengkapi dokumen teknis di `adhoc-document/` atau referensi UI di `strukturmenu/` jika tersedia.
+Letakkan dokumen PRD (`.docx`, `.pdf`, atau `.md`) di dalam workspace, serta lengkapi dokumen teknis di `doc-analyzer/adhoc-document/` atau referensi UI di `doc-analyzer/strukturmenu/` jika tersedia.
 
 ---
 
@@ -114,18 +120,20 @@ Minta agent menganalisis dokumen PRD:
 > *"Tolong lakukan analisis PRD untuk file `[PRD] Nama_Fitur.docx` menggunakan skill `prd-qa-analyzer` (atau `prd-analyzer-business`)."*
 
 > [!TIP]
-> **On-Demand Live Browser UI Inspection**:
+> **On-Demand Live Browser UI Inspection & Parallel 3-Tier Grounding**:
 > Pada `prd-analyzer-business`, Agent akan selalu bertanya di awal (*Gate 0*) apakah Anda ingin melakukan inspeksi langsung ke aplikasi via Chrome browser (port 9222). Jika disetujui, Agent akan:
-> - Menggunakan kredensial `Owner` dari `.env`. Jika terdapat lebih dari 1 kredensial `USER_OWNER_<NAME>`, Agent **wajib bertanya** akun mana yang digunakan.
-> - Menjalankan crawling *read-only* (aman tanpa mutasi data/create/delete).
-> - Menyimpan hasil tree menu & katalog CTA ke `./strukturmenu/<app-name>/` per kunjungan (*visit*) dalam format `.json` dan `.md`.
-> - Melakukan komparasi otomatis (*comparative UI drift diff*) terhadap kunjungan sebelumnya.
+> - **Memverifikasi State Browser**: Jika browser sudah dibuka, agent mengonfirmasi tab aktif saat ini (`[Judul Tab]`) untuk mencegah pembajakan tab kerja; jika belum dibuka, agent menanyakan variabel URL target dari `.env` dan meluncurkan Chrome otomatis lintas-OS (`--start-maximized`).
+> - **Menyelesaikan Kredensial**: Menggunakan kredensial dari `.env`. Jika terdapat lebih dari 1 kredensial ber-prefix serupa (misal `USER_OWNER_*` atau `USER_CS_*`), agent **wajib bertanya** akun mana yang digunakan.
+> - **Menjalankan crawling aman**: *Read-only* (konfirmasi eksplisit sebelum ada aksi mutasi data).
+> - **Menyimpan hasil ke folder run baru (Option B)**: Tree menu & katalog CTA disimpan di `./doc-analyzer/strukturmenu/live-analyzer/<app-slug>/<timestamp>/` dengan pointer `latest.json`/`latest.md` di level app.
+> - **Parallel 3-Tier Grounding**: Menjalankan pengecekan serentak pada **Tier 1 (Staging Live)**, **Tier 2 (Manual Screenshot di `<app-name>/`)**, dan **Tier 3 (Teks PRD)**.
+> - **Mandatory Conflict Clarification Gate**: Jika terdapat perbedaan hierarki menu / alur tombol CTA antara ketiga tier yang meragukan, Agent **wajib berhenti dan bertanya ke user** untuk mengonfirmasi data mana yang valid sebagai acuan.
 
 ---
 
 ### Step 3: Gerbang Klarifikasi Terstruktur (*Interactive Gate* - Wajib)
 > [!IMPORTANT]
-> Agent **DILARANG KERAS** berasumsi sendiri (*Zero-Wild-Guess Policy*). Agent akan berhenti dan menyajikan pertanyaan terstruktur seputar 7 Dimensi (*Logic, Scope, RBAC, Error Fallbacks, Data Lifecycle, Idempotency, Platform*). Berikan jawaban/keputusan bisnis sebelum agent menyusun dokumen final `result-testcase/PRD_Analysis_<Nama_Fitur>.md`.
+> Agent **DILARANG KERAS** berasumsi sendiri (*Zero-Wild-Guess Policy*). Agent akan berhenti dan menyajikan pertanyaan terstruktur seputar 7 Dimensi (*Logic, Scope, RBAC, Error Fallbacks, Data Lifecycle, Idempotency, Platform*). Berikan jawaban/keputusan bisnis sebelum agent menyusun dokumen final `doc-analyzer/result-testcase/PRD_Analysis_<Nama_Fitur>.md`.
 
 ---
 
@@ -134,14 +142,14 @@ Setelah dokumen analisis disetujui, minta agent menyusun test case:
 > *"Analisis PRD sudah disetujui. Tolong buatkan Master Test Case lengkap (Excel & Markdown) menggunakan skill `generate-testcase`."*
 
 Output yang dihasilkan:
-1. `result-testcase/Test_Cases_<Nama_Fitur>.xlsx` (Master Spreadsheet 15 Kolom).
-2. `result-testcase/test-cases-<nama-fitur>.md` (Automation-ready dengan Triple-Layer Assertions & Exploratory Charters).
+1. `doc-analyzer/result-testcase/Test_Cases_<Nama_Fitur>.xlsx` (Master Spreadsheet 15 Kolom).
+2. `doc-analyzer/result-testcase/test-cases-<nama-fitur>.md` (Automation-ready dengan Triple-Layer Assertions & Exploratory Charters).
 
 ---
 
 ### Step 5: Ekspor ke Word / PDF dengan Scorecard (`convert-document` / `convert-with-calculation`)
 Untuk keperluan pelaporan resmi walkthrough ke manajemen / tim dev:
-> *"Tolong konversikan dokumen `result-testcase/PRD_Analysis_<Nama_Fitur>.md` ke format Word dan PDF dengan scorecard rilis menggunakan skill `convert-with-calculation`."*
+> *"Tolong konversikan dokumen `doc-analyzer/result-testcase/PRD_Analysis_<Nama_Fitur>.md` ke format Word dan PDF dengan scorecard rilis menggunakan skill `convert-with-calculation`."*
 
 ---
 
@@ -187,7 +195,7 @@ Folder `./knowledge-review/` berfungsi sebagai **Drop-Box Review Input**. Penggu
 
 Semua skill pada framework ini dilindungi oleh **Universal Anti-Regression Protocol**:
 1. **Dilarang Mengubah/Menghapus Rule Tanpa Persetujuan**: Aturan baku yang sudah stabil **TIDAK BOLEH diubah/dihapus sepihak oleh AI**, kecuali pembaruan terbukti lebih baik dan disetujui User.
-2. **Pre-Calibration Sanity & Conflict Check**: Setiap aturan baru wajib dicek agar **TIDAK BERTENTANGAN** dengan guardrail fundamental (*Zero-Wild-Guess Policy*, grounding visual `./strukturmenu/`, *Triple-Layer Assertions*, dan *Mandatory Clarification Gate*). Penambahan aturan harus bersifat memperkaya (*additive/enriching*).
+2. **Pre-Calibration Sanity & Conflict Check**: Setiap aturan baru wajib dicek agar **TIDAK BERTENTANGAN** dengan guardrail fundamental (*Zero-Wild-Guess Policy*, grounding visual `./doc-analyzer/strukturmenu/`, *Triple-Layer Assertions*, dan *Mandatory Clarification Gate*). Penambahan aturan harus bersifat memperkaya (*additive/enriching*).
 
 ---
 

@@ -22,17 +22,17 @@ Skill ini menggunakan arsitektur masukan yang dinamis dan modular. **Dokumen pen
 
 - **Dokumen Masukan Utama (*Primary Input Document*)**: Terletak di root atau sub-folder workspace (misal: `./[PRD] Feature_Name.docx`, `.pdf`, `.md`, atau TRD teknis).
 - **Berkas Pelengkap & Dokumen Pendukung (*Optional Support Files*)**:
-  - `./adhoc-document/`: Berkas pelengkap ad-hoc (OpenAPI/Swagger JSON, Postman Collection, GraphQL Schema, DB DDL/ERD, sequence diagram, atau catatan rilis teknis). *Opsional, digunakan sebagai grounding kontrak teknis jika ada.*
+  - `./doc-analyzer/adhoc-document/`: Berkas pelengkap ad-hoc (OpenAPI/Swagger JSON, Postman Collection, GraphQL Schema, DB DDL/ERD, sequence diagram, atau catatan rilis teknis). *Opsional, digunakan sebagai grounding kontrak teknis jika ada (fallback ke `./adhoc-document/`).*
   - `./Testcase-support/`: Dokumen acuan RBAC/Permissions SSOT, template standar, catatan arsitektur, dan `qa-learnings.md` (knowledge dari review sebelumnya). *Opsional.*
-  - `./strukturmenu/` atau `./ui-references/<app-name>/`: Tangkapan layar, hierarki navigasi, nama menu, CTA, atau link desain (Figma/Wireframes). *Opsional, hanya jika aplikasi memiliki antarmuka pengguna.*
+  - `./doc-analyzer/strukturmenu/live-analyzer/<app-slug>/<timestamp>/` (hasil live inspection run terbaru) dan `./doc-analyzer/strukturmenu/<app-name>/` (tangkapan layar manual, Figma/Wireframes). *Opsional, digunakan sebagai grounding UI jika aplikasi memiliki antarmuka pengguna.*
 - **Target Output Analisis (2 Berkas Terpisah)**:
-  1. **Dokumen Analisis Komprehensif**: `./result-testcase/PRD_Analysis_<Feature_Name>.md`
-  2. **Living Questions for PM File**: `./result-testcase/questions-for-pm-<feature_name>.md`
+  1. **Dokumen Analisis Komprehensif**: `./doc-analyzer/result-testcase/PRD_Analysis_<Feature_Name>.md`
+  2. **Living Questions for PM File**: `./doc-analyzer/result-testcase/questions-for-pm-<feature_name>.md`
 
 ### 4 Profil Masukan Dokumen (*Input Intake Profiles*):
 1. **Profil 1 — Standalone Business PRD (Word / PDF / Markdown)**: Dokumen bisnis murni tanpa TRD. Analisis berfokus pada *User Stories*, *Business Rules*, *Acceptance Criteria*, dan *User Experience/Flow*.
 2. **Profil 2 — Standalone Technical TRD / Reliability Fix**: Dokumen teknis murni tanpa PRD (misal perbaikan reliabilitas, optimasi database, refactoring backend). Framing dialihkan dari User Persona ke **System Actors** (*Cron Scheduler, Queue Consumer, Upstream Service, Database Engine*) tanpa memaksakan alur menu fiktif.
-3. **Profil 3 — Paired Multi-Docs (PRD + TRD + Adhoc Specs)**: Dokumen bisnis didampingi spesifikasi teknis di `./adhoc-document/`. Skill mengeksekusi *Cross-Document Triangulation* untuk memverifikasi apakah arsitektur di TRD sudah 100% meng-cover business rules di PRD (*Contract & Business Drift Check*).
+3. **Profil 3 — Paired Multi-Docs (PRD + TRD + Adhoc Specs)**: Dokumen bisnis didampingi spesifikasi teknis di `./doc-analyzer/adhoc-document/`. Skill mengeksekusi *Cross-Document Triangulation* untuk memverifikasi apakah arsitektur di TRD sudah 100% meng-cover business rules di PRD (*Contract & Business Drift Check*).
 4. **Profil 4 — Informal / Adhoc Context Notes**: Memo tertulis singkat, rangkuman chat developer, atau requirement tidak formal. Agent merekonstruksi requirement baseline secara terstruktur, memetakan risiko, dan memvalidasinya ke user melalui gerbang klarifikasi.
 
 ---
@@ -48,17 +48,20 @@ Skill ini menggunakan arsitektur masukan yang dinamis dan modular. **Dokumen pen
 - **Strict Information Preservation (Anti-Loss Policy)**: Setiap perbaikan atau update analisis harus memperkaya dan memperkuat dokumen. **DILARANG MENGURANGI INFORMASI** yang sudah ada tanpa persetujuan eksplisit dari User disertai alasan yang objektif.
 
 ### 2. 🛑 STRICT NO-ASSUMPTION & MANDATORY INTERACTIVE CLARIFICATION GATE (Wajib Berhenti & Bertanya)
-- **Zero-Wild-Guess Policy**: Agent **DILARANG KERAS** mengasumsikan sendiri aturan bisnis yang belum lengkap, rumus kalkulasi/pricing yang ambigu, batas limit kuota/timeout yang tidak tertulis, penanganan error code yang kosong, perilaku sistem saat kondisi offline/kegagalan, **MENGARANG PATH URL/SCHEMA ENDPOINT API** jika tidak ada OpenAPI/TRD resmi di `./adhoc-document/` (wajib menggunakan narasi pendekatan fungsional yang netral), atau **MENGARANG POHON HIERARKI MENU UI** yang tidak terdapat pada teks PRD atau tangkapan layar `./strukturmenu/`.
+- **Zero-Wild-Guess Policy**: Agent **DILARANG KERAS** mengasumsikan sendiri aturan bisnis yang belum lengkap, rumus kalkulasi/pricing yang ambigu, batas limit kuota/timeout yang tidak tertulis, penanganan error code yang kosong, perilaku sistem saat kondisi offline/kegagalan, **MENGARANG PATH URL/SCHEMA ENDPOINT API** jika tidak ada OpenAPI/TRD resmi di `./doc-analyzer/adhoc-document/` (wajib menggunakan narasi pendekatan fungsional yang netral), atau **MENGARANG POHON HIERARKI MENU UI** yang tidak terdapat pada teks PRD atau tangkapan layar `./doc-analyzer/strukturmenu/`.
 - **Hard Interactive Pause (Wajib Berhenti di Chat Sebelum Mengambil Keputusan)**:
   - Sebelum menulis dokumen analisis final, jika terdapat informasi yang masih **abu-abu / belum lengkap / ambigu**, Agent **DILARANG MENGAMBIL KEPUTUSAN SENDIRI** atau langsung men-generate dokumen final dengan asumsi sepihak.
   - Agent **WAJIB BERHENTI DI CHAT**, memaparkan daftar pertanyaan terstruktur kepada User, dan meminta User memilih:
     1. *User Menjawab di Chat*: Informasi langsung dikunci dan diintegrasikan ke dokumen analisis final untuk memperdalam akurasi (*Phase 2 Deep Dive*).
-    2. *User Memilih Skip / Menunda / Belum Ada Data*: Seluruh pertanyaan terbuka tersebut dicatat ke berkas terpisah `./result-testcase/questions-for-pm-<feature>.md`, ditandai `[PENDING PM CLARIFICATION]`, dan analisis menerapkan **Standar Nilai Default Netral** (UI menggunakan modul fungsional `[Nama Modul - Role]`, API menggunakan narasi kontrak fungsional `[Service/Contract] <Service>...`).
+    2. *User Memilih Skip / Menunda / Belum Ada Data*: Seluruh pertanyaan terbuka tersebut dicatat ke berkas terpisah `./doc-analyzer/result-testcase/questions-for-pm-<feature>.md`, ditandai `[PENDING PM CLARIFICATION]`, dan analisis menerapkan **Standar Nilai Default Netral** (UI menggunakan modul fungsional `[Nama Modul - Role]`, API menggunakan narasi kontrak fungsional `[Service/Contract] <Service>...`).
 - **Strict Grep-Before-Answer Communication**: Saat menjawab konfirmasi atau menyebutkan ID Test Case, nomor baris, atau nama tabel di dalam chat, Agent **WAJIB melakukan pencarian eksak (`grep_search` / `view_file`) ke file fisik terlebih dahulu** untuk mencegah halusinasi kode ID.
-- **Menu & UI Navigation Grounding (`./strukturmenu/`)**:
-  - Periksa teks PRD dan tangkapan layar di `./strukturmenu/` (jika tersedia) untuk memverifikasi apakah suatu menu, tombol CTA, atau modal dialog **benar-benar ada**.
-  - Tentukan alur navigasi klik yang nyata (contoh: Klik Menu A $\rightarrow$ Klik Submenu B $\rightarrow$ Klik CTA C).
-  - Untuk modul internal/backend tanpa screen capture di `./strukturmenu/` dan tanpa mockup di PRD (misal portal internal Biz Ops Admin), sebutkan modul fungsional PRD secara netral (misal `[Credit Management - Admin]`) tanpa mengarang alur menu fiktif.
+- **Menu & UI Navigation Grounding (Parallel 3-Tier Inspection)**:
+  - Eksekusi serentak 3 tier:
+    * **Tier 1 (Staging Live)**: Run terbaru di `./doc-analyzer/strukturmenu/live-analyzer/<app-slug>/<timestamp>/` (atau `latest.md`/`latest.json`).
+    * **Tier 2 (Manual Screencaptures)**: Seluruh file tangkapan layar di `./doc-analyzer/strukturmenu/<app-name>/` (jangan dilewati agar menangkap fitur baru yang belum dideploy ke staging).
+    * **Tier 3 (PRD Text)**: Teks spesifikasi dan mockup pada dokumen PRD.
+  - 🛑 **Mandatory Conflict Clarification Gate**: Jika terdapat perbedaan hierarki menu / alur tombol CTA antara Tier 1, Tier 2, dan Tier 3 yang menimbulkan keraguan: **Agent WAJIB BERHENTI & BERTANYA KE USER** via `ask_question` untuk memastikan data mana yang dijadikan acuan valid.
+  - Untuk modul internal/backend tanpa visual capture di Tier 1 maupun Tier 2 dan tanpa mockup di PRD (misal portal internal Biz Ops Admin), sebutkan modul fungsional PRD secara netral (misal `[Credit Management - Admin]`) tanpa mengarang alur menu fiktif.
 - **7 Dimensi Checklist Klarifikasi Wajib**:
   1. *Business Logic & Formula Invariants*: Rumus eksak kalkulasi, pembulatan desimal, currency conversion, kondisi diskon/tiering.
   2. *Scope Guardrails*: Batasan tegas apa yang **In-Scope** vs **Out-of-Scope** pada iterasi ini.
@@ -118,7 +121,7 @@ Gunakan kerangka berpikir SFDIPOT (James Bach HTSM) untuk membedah setiap requir
 
 ---
 
-## 4. Struktur Standar Dokumen Hasil Analisis (`result-testcase/PRD_Analysis_<Feature_Name>.md`)
+## 4. Struktur Standar Dokumen Hasil Analisis (`doc-analyzer/result-testcase/PRD_Analysis_<Feature_Name>.md`)
 
 Dokumen analisis wajib memiliki hierarki standar berikut:
 
@@ -128,7 +131,7 @@ Dokumen analisis wajib memiliki hierarki standar berikut:
 ## 1. Ringkasan Fitur & Scope Guardrails
 - **Tujuan Fitur**: Penjelasan nilai bisnis dan fungsionalitas inti (1-2 paragraf).
 - **Arsitektur & Domain Platform**: [Web SPA / Mobile App iOS-Android / Backend API / Event-Driven Microservice].
-- **Referensi Interface & Pengetahuan Pendukung**: [Path UI di ./strukturmenu/, Spesifikasi di ./adhoc-document/, atau "Non-UI / Backend-Only Flow" jika murni servis latar belakang].
+- **Referensi Interface & Pengetahuan Pendukung**: [Path UI di ./doc-analyzer/strukturmenu/, Spesifikasi di ./doc-analyzer/adhoc-document/, atau "Non-UI / Backend-Only Flow" jika murni servis latar belakang].
 - **In-Scope**: Modul, alur, dan batasan fungsional yang secara tegas diuji pada iterasi ini.
 - **Out-of-Scope**: Fitur/modul di luar cakupan yang tidak terdampak atau ditunda pada rilis ini.
 
@@ -164,7 +167,7 @@ Dokumen analisis wajib memiliki hierarki standar berikut:
 
 ---
 
-## 5. Format Berkas Living Questions for PM (`result-testcase/questions-for-pm-<feature>.md`)
+## 5. Format Berkas Living Questions for PM (`doc-analyzer/result-testcase/questions-for-pm-<feature>.md`)
 
 ```markdown
 # Questions for Product Manager (PM): [Nama Fitur]
@@ -191,14 +194,14 @@ graph TD
     F -- "User Menjawab" --> G["5a. Kunci Jawaban & Integrasikan Detail ke Analisis Final"]
     F -- "User Skip / Ditunda" --> H["5b. Simpan Pertanyaan ke questions-for-pm.md (Mark PENDING) & Terapkan Default Netral"]
     D -- "Tidak" --> G
-    G --> I["6. Susun & Simpan PRD_Analysis_<Feature_Name>.md di result-testcase/"]
+    G --> I["6. Susun & Simpan PRD_Analysis_<Feature_Name>.md di doc-analyzer/result-testcase/"]
     H --> I
     I --> J["7. Laporkan Ringkasan ke User & Siap Lanjut ke generate-testcase"]
 ```
 
 1. **Eksplorasi Input & Konteks Pendukung**:
    - Baca dokumen utama (PRD / TRD / Catatan informal) dari awal hingga akhir (*end-to-end traversal*).
-   - Periksa `./Testcase-support/`, `./adhoc-document/`, dan `./strukturmenu/` jika tersedia (bersifat opsional/pelengkap).
+   - Periksa `./Testcase-support/`, `./doc-analyzer/adhoc-document/`, dan `./doc-analyzer/strukturmenu/` jika tersedia (bersifat opsional/pelengkap).
 2. **Bedah Kebutuhan secara Mendalam (SFDIPOT & NFR Analysis)**:
    - Identifikasi alur logika bisnis, state lifecycle, rumus, batasan limit, integrasi pihak ketiga, dan potensi celah keamanan.
 3. **Ekstraksi Ambiguitas & Evaluasi Gap**:
@@ -207,8 +210,8 @@ graph TD
    - **Susun daftar pertanyaan yang mencakup 7 Dimensi Checklist Klarifikasi Wajib**: 1) *Business Logic & Formula*, 2) *Scope Guardrails*, 3) *Role & Authorization*, 4) *Error Response & Fallbacks*, 5) *Data Lifecycle & Invariants*, 6) *Concurrency & Idempotency*, 7) *Platform Constraints*.
    - **WAJIB BERHENTI DI CHAT**. Tampilkan daftar pertanyaan terstruktur tersebut kepada User dan minta User memilih apakah ingin menjawab sekarang di chat atau menyimpannya sebagai living questions.
 5. **Penyusunan & Penyimpanan Dokumen Analisis Final**:
-   - Susun dokumen analisis komprehensif mengikuti Bagian 4 dan simpan ke: `./result-testcase/PRD_Analysis_<Feature_Name>.md`.
-   - Simpan berkas living questions (jika ada pertanyaan yang di-skip) ke: `./result-testcase/questions-for-pm-<feature_name>.md`.
+   - Susun dokumen analisis komprehensif mengikuti Bagian 4 dan simpan ke: `./doc-analyzer/result-testcase/PRD_Analysis_<Feature_Name>.md`.
+   - Simpan berkas living questions (jika ada pertanyaan yang di-skip) ke: `./doc-analyzer/result-testcase/questions-for-pm-<feature_name>.md`.
 6. **Laporan & Handover**:
    - Laporkan ringkasan temuan kritis dan informasikan bahwa dokumen siap diturunkan ke skill `generate-testcase`.
 
@@ -219,4 +222,4 @@ graph TD
 > [!CAUTION]
 > **PRINSIP KEKEBALAN DAN KONSISTENSI SKILL (ANTI-REGRESSION POLICY):**
 > 1. **Dilarang Mengubah/Menghapus Rule Tanpa Persetujuan**: Seluruh aturan fundamental yang sudah stabil pada skill ini **TIDAK BOLEH diubah, diganti, atau dihapus sepihak oleh AI**, kecuali penambahan aturan baru tersebut terbukti objektif lebih baik dan telah disetujui oleh User.
-> 2. **Pre-Calibration Sanity & Conflict Check**: Setiap pembaruan atau penambahan aturan baru harus dipastikan **TIDAK BERTENTANGAN** dengan guardrail fundamental (*Zero-Wild-Guess Policy*, grounding visual `./strukturmenu/`, *Living PM Questions Management*, *Hard Interactive Clarification Pause*). Aturan baru harus bersifat memperketat / melengkapi (*additive/enriching*), bukan membatalkan aturan dasar.
+> 2. **Pre-Calibration Sanity & Conflict Check**: Setiap pembaruan atau penambahan aturan baru harus dipastikan **TIDAK BERTENTANGAN** dengan guardrail fundamental (*Zero-Wild-Guess Policy*, grounding visual `./doc-analyzer/strukturmenu/`, *Living PM Questions Management*, *Hard Interactive Clarification Pause*). Aturan baru harus bersifat memperketat / melengkapi (*additive/enriching*), bukan membatalkan aturan dasar.

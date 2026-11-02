@@ -5,7 +5,7 @@ File ini dapat digunakan sebagai acuan pengisian masukan (review feedback) dalam
 ---
 
 ## 1. Metadata Sesi Review
-- **Nama Fitur / Modul**: [Contoh: Everpro Chat - Meta New Pricing 2026]
+- **Nama Fitur / Modul**: [Contoh: CRM Chat - Meta New Pricing 2026]
 - **Tanggal Sesi Review**: YYYY-MM-DD
 - **Daftar Reviewer & Role**:
   - [Nama PM] - Product Manager

@@ -16,13 +16,13 @@ Skill ini digunakan untuk mengonversi dokumen hasil analisa PRD, Test Matrix, da
 ## 1. Lokasi Berkas & Skrip Pendukung Dinamis
 
 - **Dokumen Sumber (Markdown)**: 
-  - `./result-testcase/PRD_Analysis_<Feature_Name>.md` (atau path berkas `.md` kustom).
+  - `./doc-analyzer/result-testcase/PRD_Analysis_<Feature_Name>.md` (atau path berkas `.md` kustom, dengan fallback ke `./result-testcase/`).
 - **Skrip Konverter**:
   - Word Converter: `.agents/skills/convert-document/scripts/md_to_docx.py`
   - PDF Converter: `.agents/skills/convert-document/scripts/md_to_pdf.py`
 - **Target Output**:
-  - `./result-testcase/PRD_Analysis_<Feature_Name>.docx`
-  - `./result-testcase/PRD_Analysis_<Feature_Name>.pdf`
+  - `./doc-analyzer/result-testcase/PRD_Analysis_<Feature_Name>.docx`
+  - `./doc-analyzer/result-testcase/PRD_Analysis_<Feature_Name>.pdf`
 
 ---
 
@@ -61,16 +61,16 @@ Dokumen Word dan PDF yang dihasilkan secara otomatis menyertakan:
 Jalankan skrip Python:
 ```bash
 python3 .agents/skills/convert-document/scripts/md_to_docx.py \
-  result-testcase/PRD_Analysis_<Feature_Name>.md \
-  result-testcase/PRD_Analysis_<Feature_Name>.docx
+  doc-analyzer/result-testcase/PRD_Analysis_<Feature_Name>.md \
+  doc-analyzer/result-testcase/PRD_Analysis_<Feature_Name>.docx
 ```
 
 ### B. Konversi ke PDF
 Jalankan skrip Python:
 ```bash
 python3 .agents/skills/convert-document/scripts/md_to_pdf.py \
-  result-testcase/PRD_Analysis_<Feature_Name>.md \
-  result-testcase/PRD_Analysis_<Feature_Name>.pdf
+  doc-analyzer/result-testcase/PRD_Analysis_<Feature_Name>.md \
+  doc-analyzer/result-testcase/PRD_Analysis_<Feature_Name>.pdf
 ```
 
 ---
@@ -79,12 +79,12 @@ python3 .agents/skills/convert-document/scripts/md_to_pdf.py \
 
 ```mermaid
 graph TD
-    A["1. Terima permintaan format ekspor dari User (docx / pdf / all)"] --> B["2. Identifikasi file input .md di result-testcase/"]
+    A["1. Terima permintaan format ekspor dari User (docx / pdf / all)"] --> B["2. Identifikasi file input .md di doc-analyzer/result-testcase/"]
     B --> C{"3. Format Tujuan?"}
     C -- "docx / doc" --> D["Eksekusi md_to_docx.py"]
     C -- "pdf" --> E["Eksekusi md_to_pdf.py"]
     C -- "Keduanya" --> F["Eksekusi md_to_docx.py & md_to_pdf.py"]
-    D --> G["4. Verifikasi file hasil di result-testcase/"]
+    D --> G["4. Verifikasi file hasil di doc-analyzer/result-testcase/"]
     E --> G
     F --> G
     G --> H["5. Berikan tautan berkas yang dapat diakses langsung ke User"]

@@ -29,10 +29,12 @@ Skill ini digunakan untuk menjalankan **Mekanisme Continuous Learning, Retrospec
   - SOP Analisis PRD Bisnis: `.agents/skills/prd-analyzer-business/SKILL.md`
   - SOP Master Test Case Suite: `.agents/skills/generate-testcase/SKILL.md`
   - SOP Konversi Dokumen & Calculation: `.agents/skills/convert-with-calculation/SKILL.md` & `.agents/skills/convert-document/SKILL.md`
+  - SOP Eksekusi Pengujian Browser Staging: `.agents/skills/browser-qa-execution/SKILL.md`
 - **Dokumen Input Triangulasi**:
-  - Dokumen Hasil Analisis PRD (`result-testcase/PRD_Analysis_*.md`)
-  - Dokumen Test Case Suite (`result-testcase/Testcase_Suite_*` atau `result-testcase/Test_Cases_*.xlsx`)
-  - Dokumen Pendukung Asli (PRD Asli `.docx`/`.pdf`, folder `./strukturmenu/`, `./adhoc-document/`, API Spec, Diagram Arsitektur)
+  - Dokumen Hasil Analisis PRD (`doc-analyzer/result-testcase/PRD_Analysis_*.md` atau fallback `result-testcase/`)
+  - Dokumen Test Case Suite (`doc-analyzer/result-testcase/Test_Cases_*.xlsx` / `.md` atau fallback `result-testcase/`)
+  - Laporan Eksekusi Browser (`browser-execution/automate-result/Report_*.docx` & screenshot run)
+  - Dokumen Pendukung Asli (PRD Asli `.docx`/`.pdf`, folder `./doc-analyzer/strukturmenu/`, `./doc-analyzer/adhoc-document/`, API Spec, Diagram Arsitektur)
 
 ---
 
@@ -56,9 +58,9 @@ graph TD
 > **DILARANG melakukan review secara sembarangan atau berasumsi tanpa konfirmasi data!**
 > Sebelum memulai analisa review, agen **WAJIB memvalidasi variabel dan dokumen input** kepada user:
 > 1. **Pindai Folder `./knowledge-review/`**: Periksa apakah ada berkas review baru (Excel/Markdown/Word). Tanyakan dan konfirmasi ke user apakah berkas tersebut yang menjadi acuan review.
-> 2. **Dokumen Hasil Analisis**: Pastikan path/nama berkas analisis PRD yang ditinjau (misal: `result-testcase/PRD_Analysis_<Fitur>.md`).
-> 3. **Dokumen Test Case**: Pastikan berkas test case yang diuji (misal: `result-testcase/Test_Cases_<Fitur>.xlsx` / `.md`).
-> 4. **Dokumen Pendukung Asli**: Pastikan dokumen acuan awal yang digunakan (PRD `.docx`/`.pdf`, folder visual `./strukturmenu/`, atau API contract di `./adhoc-document/`).
+> 2. **Dokumen Hasil Analisis**: Pastikan path/nama berkas analisis PRD yang ditinjau (misal: `doc-analyzer/result-testcase/PRD_Analysis_<Fitur>.md`).
+> 3. **Dokumen Test Case**: Pastikan berkas test case yang diuji (misal: `doc-analyzer/result-testcase/Test_Cases_<Fitur>.xlsx` / `.md`).
+> 4. **Dokumen Pendukung Asli**: Pastikan dokumen acuan awal yang digunakan (PRD `.docx`/`.pdf`, folder visual `./doc-analyzer/strukturmenu/`, atau API contract di `./doc-analyzer/adhoc-document/`).
 > 5. **Konteks & Catatan Masukan**: Pastikan sumber catatan review (hasil sprint walkthrough, catatan PM/Tech Lead, atau bug escape staging/production).
 >
 > *Jika salah satu variabel belum teridentifikasi dengan jelas, tanyakan dan konfirmasi terlebih dahulu ke user sebelum melanjutkan.*
@@ -78,8 +80,8 @@ Lakukan evaluasi silang tiga arah secara komprehensif antara **Catatan Review (`
    - Apakah Assertion telah menerapkan *Triple-Layer* (UI state, API Contract payload, dan DB Persistence)?
 3. **Re-Review Dokumen Pendukung (Supporting Documents)**:
    - Bandingkan dengan PRD asli: Apakah ada terminologi atau alur bisnis yang ambigu di PRD tetapi tidak diklarifikasi?
-   - Bandingkan dengan `./strukturmenu/`: Apakah navigasi menu, button trigger, atau modal pop-up sudah ter-grounding dengan tangkapan layar nyata?
-   - Bandingkan dengan `./adhoc-document/`: Apakah ada detail OpenAPI atau DB DDL yang terlewatkan?
+   - Bandingkan dengan `./doc-analyzer/strukturmenu/`: Apakah navigasi menu, button trigger, atau modal pop-up sudah ter-grounding dengan tangkapan layar nyata?
+   - Bandingkan dengan `./doc-analyzer/adhoc-document/`: Apakah ada detail OpenAPI atau DB DDL yang terlewatkan?
 
 ---
 
@@ -92,6 +94,7 @@ Lakukan evaluasi silang tiga arah secara komprehensif antara **Catatan Review (`
 | **Product Manager (PM) / Business Owner** | Scope fitur, logika bisnis, aturan kuota/pricing, user flow, terminologi bisnis | **HIGH (Weight 3) - CRITICAL (Weight 4)** | `prd-analyzer-business`<br/>• Clarification Checklist<br/>• Business Risk Chains |
 | **Tech Lead / Backend / Architect** | API contract, DB persistence, konsistensi data, concurrency, idempotency, NFR, error code | **HIGH (Weight 3) - CRITICAL (Weight 4)** | `prd-qa-analyzer` & `generate-testcase`<br/>• Triple-Layer Assertions<br/>• Narasi kontrak API/DB |
 | **QA Lead / Senior QA Reviewer** | Test coverage, boundary value (BVA), exploratory charters, negative test scenarios | **MEDIUM (Weight 2) - HIGH (Weight 3)** | `generate-testcase`<br/>• Adversarial Edge Cases<br/>• Standar BVA 3-Value depth |
+| **QA Automation / Browser Execution Lead** | Flakiness eksekusi, selector drift, dynamic DOM, delay render dropdown, session reset antar role | **HIGH (Weight 3) - CRITICAL (Weight 4)** | `browser-qa-execution`<br/>• Smart Locators & Dropdown Timing<br/>• Session Reset & Multi-Credential |
 | **Bug Escape (Incident Staging / Prod)** | Kebocoran bug nyata yang lolos ke staging/production | **CRITICAL (Weight 4)** *(Mandatory RCA)* | **Semua Skill Terkait**<br/>• Wajib 5-Whys RCA<br/>• Tambah Anti-Miss Guardrail permanen |
 
 #### B. Skala Pembobotan Severity (4 / 3 / 2 / 1)
@@ -103,10 +106,11 @@ Lakukan evaluasi silang tiga arah secara komprehensif antara **Catatan Review (`
 #### C. Pemetaan Fase Miss-Path (5-Whys Framework)
 | Fase Miss Path | Karakteristik Masalah | Contoh Akar Masalah |
 | :--- | :--- | :--- |
-| **Phase 1: PRD Intake & Grounding** | Halusinasi UI / Mengarang menu fiktif / Salah kutip teks PRD | Tidak membaca `./strukturmenu/` atau melewatkan catatan kaki dokumen PRD. |
+| **Phase 1: PRD Intake & Grounding** | Halusinasi UI / Mengarang menu fiktif / Salah kutip teks PRD | Tidak membaca `./doc-analyzer/strukturmenu/` atau melewatkan catatan kaki dokumen PRD. |
 | **Phase 2: Clarification Gate** | Asumsi sepihak tanpa bertanya ke PM | Menemukan formula ambigu tetapi langsung berasumsi tanpa mencatatnya di tabel Open Questions. |
 | **Phase 3: Deep Modeling & Heuristic** | Blind spot pada Concurrency, State Transition, atau NFR | Model SFDIPOT tidak mengeksplorasi kondisi koneksi terputus, timeout, idempotency, atau RBAC. |
 | **Phase 4: Test Case Generation** | Assertion dangkal atau skenario pengujian bolong | Hanya memvalidasi respon UI tanpa memverifikasi field payload API atau tabel database. |
+| **Phase 5: Browser QA Execution** | Selector drift / Dropdown delay / Session contamination / Mutasi tak sengaja | Locator kaku terhadap dynamic DOM, timing polling dropdown terlalu pendek, cookies role lama belum di-clear, atau mutasi aktif di mode aman. |
 
 ---
 
@@ -118,9 +122,9 @@ Catat entri pembelajaran terstruktur ke `./Testcase-support/qa-learnings.md` men
 ### [YYYY-MM-DD] - [Nama Modul / Fitur]: [Judul Temuan / Feedback]
 - **Target Dokumen yang Ditinjau**:
   - Berkas Feedback: `knowledge-review/<nama-file>`
-  - Hasil Analisa: `result-testcase/PRD_Analysis_<Fitur>.md`
-  - Test Case: `result-testcase/Test_Cases_<Fitur>.xlsx`
-  - Dokumen Pendukung: PRD Asli & `./strukturmenu/`
+  - Hasil Analisa: `doc-analyzer/result-testcase/PRD_Analysis_<Fitur>.md`
+  - Test Case: `doc-analyzer/result-testcase/Test_Cases_<Fitur>.xlsx`
+  - Dokumen Pendukung: PRD Asli & `./doc-analyzer/strukturmenu/`
 - **Sumber Feedback & Severity**: [PM / Tech Lead / QA Lead / Bug Escape] | [CRITICAL (Weight 4) / HIGH (Weight 3) / MEDIUM (Weight 2) / LOW (Weight 1)]
 - **Fase Miss Path**: [Phase 1: Intake / Phase 2: Clarification / Phase 3: Modeling / Phase 4: Test Suite]
 - **Kategori Gap**: [Business Logic / NFR & Concurrency / Boundary & Data / Security & RBAC / Assertion / UI Grounding]
@@ -148,14 +152,14 @@ Catat entri pembelajaran terstruktur ke `./Testcase-support/qa-learnings.md` men
 > **PROTOKOL ANTI-REGRESI & PENCEGAHAN KONFLIK ATURAN (UNIVERSAL GUARDRAIL):**
 > 1. **Dilarang Mengubah/Menghapus Rule Tanpa Persetujuan**: Seluruh aturan fundamental yang sudah stabil pada skill (`prd-qa-analyzer`, `prd-analyzer-business`, `generate-testcase`, `convert-document`, `convert-with-calculation`, `qa-review-learning`) **TIDAK BOLEH diubah, diganti, atau dihapus sepihak oleh AI**, kecuali penambahan aturan baru tersebut terbukti objektif lebih baik dan telah disetujui oleh User.
 > 2. **Pre-Calibration Sanity & Conflict Check**: Sebelum menyuntikkan aturan baru ke skill target:
->    - Pastikan aturan baru **TIDAK BERTENTANGAN** dengan guardrail fundamental (seperti: *Zero-Wild-Guess Policy*, grounding visual `./strukturmenu/`, penegakan *Triple-Layer Assertions*, dan *Mandatory Clarification Gate*).
+>    - Pastikan aturan baru **TIDAK BERTENTANGAN** dengan guardrail fundamental (seperti: *Zero-Wild-Guess Policy*, grounding visual `./doc-analyzer/strukturmenu/`, penegakan *Triple-Layer Assertions*, dan *Mandatory Clarification Gate*).
 >    - Jika terjadi potensi tumpang tindih (*overlap*), aturan baru harus bersifat **memperketat / melengkapi (additive/enriching)**, bukan membatalkan aturan dasar.
 > 3. **Pemberlakuan Universal**: Protokol ini berlaku mengikat di seluruh berkas `.agents/skills/*/SKILL.md`.
 
 #### Panduan Kalibrasi ke Skill Target:
 1. **Update ke `prd-qa-analyzer/SKILL.md` atau `prd-analyzer-business/SKILL.md`**:
    - Tambahkan item spesifik pada *Clarification Checklist* atau *SFDIPOT Heuristic*.
-   - Perketat aturan *UI Navigation Grounding* berbasis `./strukturmenu/`.
+   - Perketat aturan *UI Navigation Grounding* berbasis `./doc-analyzer/strukturmenu/`.
    - Tambahkan *guardrail* mitigasi resiko pada tabel dampak bisnis.
 2. **Update ke `generate-testcase/SKILL.md`**:
    - Tambahkan pola *Exploratory Charters* atau *Adversarial Edge-Case Candidates*.
