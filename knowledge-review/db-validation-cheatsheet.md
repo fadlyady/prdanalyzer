@@ -13,10 +13,10 @@
 
 ### 1. Validasi Riwayat Pesan dari Data Channel ID
 - **Command Key**: Cari pesan ID ini berdasarkan data Channel ID yang saya punya
-- **Target Database**: `DEV_everpro`
+- **Target Database**: `DEV_primary`
 - **Tabel Terkait**: `channels`, `conversations`, `messages`
 - **Alur Langkah Penelusuran**:
-  1. Buka database `DEV_everpro`, akses tabel `channels`.
+  1. Buka database `DEV_primary`, akses tabel `channels`.
   2. Filter berdasarkan `channel_id` yang diberikan oleh user.
   3. Urutkan berdasarkan `created_at` DESC untuk mendapatkan channel yang paling aktif/terbaru.
   4. Ambil nilai kolom `id` paling atas.
@@ -30,10 +30,10 @@
 
 ### 2. Validasi Akun Pengguna Baru & Hak Akses Role
 - **Command Key**: Validasi pendaftaran user baru beserta rolenya
-- **Target Database**: `DEV_everpro`
+- **Target Database**: `DEV_primary`
 - **Tabel Terkait**: `users`, `user_roles`, `roles`
 - **Alur Langkah Penelusuran**:
-  1. Buka database `DEV_everpro`, akses tabel `users`.
+  1. Buka database `DEV_primary`, akses tabel `users`.
   2. Filter kolom `email` sesuai email user yang baru didaftarkan.
   3. Ambil nilai `id` user dan pastikan kolom `status` bernilai `'ACTIVE'`.
   4. Pindah ke tabel `user_roles`, filter kolom `user_id` dengan ID user tadi.
@@ -47,7 +47,7 @@
 ```markdown
 ### [Nomor]. [Judul Alur Pengujian / Validasi]
 - **Command Key**: [Kalimat perintah / kata kunci yang sering Anda ketikkan]
-- **Target Database**: [Pilih: DEV_everpro / DEV_db-external-dev]
+- **Target Database**: [Pilih: DEV_primary / DEV_db-external-dev]
 - **Tabel Terkait**: [Daftar tabel yang terlibat, contoh: table_a, table_b, table_c]
 - **Alur Langkah Penelusuran**:
   1. Buka database [Target DB], akses tabel [Tabel 1].

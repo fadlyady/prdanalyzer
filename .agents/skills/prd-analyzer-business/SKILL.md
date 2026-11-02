@@ -177,7 +177,7 @@ Untuk mencegah **UI/Contract Drift** (perbedaan antara teks di dokumen PRD denga
 
 #### E. Modular Per-Menu Knowledge Architecture (`./doc-analyzer/strukturmenu/live-analyzer/<app-slug>/<timestamp>/`)
 - **Pemisahan Berkas per Run & per Menu (Clean & Modular Storage - Option B)**:
-  - Setiap run *live browser inspection* menghasilkan satu subfolder baru berbasis timestamp: `./doc-analyzer/strukturmenu/live-analyzer/<app-slug>/<YYYYMMDD_HHMMSS>/` (di mana `<app-slug>` diambil dari hostname base URL yang disanitasi, misal `staging-crm-everpro-id` atau slug app).
+  - Setiap run *live browser inspection* menghasilkan satu subfolder baru berbasis timestamp: `./doc-analyzer/strukturmenu/live-analyzer/<app-slug>/<YYYYMMDD_HHMMSS>/` (di mana `<app-slug>` diambil dari hostname base URL yang disanitasi, misal `staging-crm-example-com` atau slug app).
   - Di dalam folder run tersebut, hasil analisis disimpan terpisah per menu/sub-menu:
     - Format JSON: `menu_structure_<groupSlug>_<menuSlug>_<timestamp>.json`
     - Format Markdown: `menu_structure_<groupSlug>_<menuSlug>_<timestamp>.md`

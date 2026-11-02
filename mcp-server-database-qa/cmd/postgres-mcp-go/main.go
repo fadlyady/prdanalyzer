@@ -41,7 +41,7 @@ func main() {
 func run() int {
 	var (
 		dsn              = flag.String("dsn", "", "Postgres connection string or URL. Defaults to $DATABASE_URL or resolves from .env using -target-db.")
-		targetDB         = flag.String("target-db", envOr("DB_TARGET", "everpro"), "Target database: everpro or external. Used to read credentials from .env.")
+		targetDB         = flag.String("target-db", envOr("DB_TARGET", "primary"), "Target database: primary or external. Used to read credentials from .env.")
 		transport        = flag.String("transport", envOr("MCP_TRANSPORT", "stdio"), "Transport to serve: stdio or http.")
 		addr             = flag.String("addr", envOr("MCP_ADDR", "127.0.0.1:8080"), "Listen address for the http transport.")
 		maxConns         = flag.Int("max-conns", 4, "Maximum pooled connections.")
@@ -64,7 +64,7 @@ func run() int {
 
 	activeDSN := resolveDatabaseDSN(*dsn, *targetDB)
 	if activeDSN == "" {
-		fmt.Fprintln(os.Stderr, "no database URL: set DATABASE_URL, pass -dsn, or configure DB_EVERPRO_* / DB_EXTERNAL_DEV_* in .env")
+		fmt.Fprintln(os.Stderr, "no database URL: set DATABASE_URL, pass -dsn, or configure DB_PRIMARY_* / DB_EXTERNAL_DEV_* in .env")
 		usage()
 		return exitUsage
 	}
@@ -318,8 +318,8 @@ func resolveDatabaseDSN(explicitDSN, targetDB string) string {
 				return dsn
 			}
 		}
-	} else if target == "everpro" || target == "dev_everpro" || target == "primary" || target == "core" || target == "main" {
-		for _, syn := range []string{"EVERPRO", "PRIMARY", "CORE", "MAIN"} {
+	} else if target == "primary" || target == "dev_primary" || target == "core" || target == "main" {
+		for _, syn := range []string{"PRIMARY", "CORE", "MAIN"} {
 			if dsn := tryBuildDSNFromPrefix(syn); dsn != "" {
 				return dsn
 			}

@@ -225,7 +225,7 @@ Senior QA wajib menjalankan validasi 3 tingkat (*3-Tier Credential & Session Che
    - Cari kredensial relevan di file `./.env` dengan format `USER_<ROLE>_<IDENTIFIER>` dan `PASS_<ROLE>_<IDENTIFIER>`.
 
 2. **Aturan 1: Multi-Credential Disambiguation Gate (Wajib Bertanya)**:
-   - Jika pada file `.env` ditemukan **lebih dari 1 kredensial** dengan prefix serupa (contoh: terdapat `USER_OWNER_CHATREBORN` dan `USER_OWNER_EVERPRO`):
+   - Jika pada file `.env` ditemukan **lebih dari 1 kredensial** dengan prefix serupa (contoh: terdapat `USER_OWNER_MAIN` dan `USER_OWNER_SECONDARY`):
    - **WAJIB BERHENTI & BERTANYA KEPADA USER**:
      > *"Pada file `.env` ditemukan lebih dari 1 kredensial untuk role **[ROLE]**:*
      > *1. `[KEY_1]` ([username_1])*

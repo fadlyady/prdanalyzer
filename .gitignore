@@ -47,6 +47,10 @@ playwright/.cache/
 otherTasks/*
 !otherTasks/.gitkeep
 
+# Sensitive internal documents in Testcase-support
+Testcase-support/\[SSOT\]*
+Testcase-support/*SSOT*
+
 # Document Analyzer Folders (ignore contents, preserve folder structure)
 doc-analyzer/adhoc-document/*
 !doc-analyzer/adhoc-document/.gitkeep

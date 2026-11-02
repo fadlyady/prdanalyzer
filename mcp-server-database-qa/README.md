@@ -1,7 +1,7 @@
 # Database QA Guard MCP Server (`mcp-server-database-qa`)
 
 > **PostgreSQL Model Context Protocol (MCP) Server for Deterministic, 4-Tier Security-Guarded Database QA Validation.**  
-> Berfungsi sebagai **Security Gateway / Bastion Proxy** antara AI Agent (Cursor, Antigravity, Claude) dan basis data PostgreSQL staging (`DEV_everpro` & `DEV_db-external-dev`). Menjamin **100% Read-Only (Zero Mutation)** dan **Zero Credential Exposure** ke AI context window.
+> Berfungsi sebagai **Security Gateway / Bastion Proxy** antara AI Agent (Cursor, Antigravity, Claude) dan basis data PostgreSQL staging (`DEV_primary` & `DEV_db-external-dev`). Menjamin **100% Read-Only (Zero Mutation)** dan **Zero Credential Exposure** ke AI context window.
 
 ---
 
@@ -64,7 +64,7 @@ Pada mode ini, server berjalan di dalam kontainer Distroless di latar belakang v
 **Kelebihan Mode Gateway**:
 - **Zero Credential Leakage**: Workspace project Anda 100% bersih dari password database. Password hanya hidup di memori kontainer Docker.
 - **Dua Gateway Terisolasi**:
-  - `http://localhost:8081` ➔ Terhubung ke `DEV_everpro`
+  - `http://localhost:8081` ➔ Terhubung ke `DEV_primary`
   - `http://localhost:8082` ➔ Terhubung ke `DEV_db-external-dev`
 - **Distroless Container**: Tidak ada shell (`/bin/sh`), tidak ada `curl`, dan berjalan sebagai user non-root.
 
@@ -101,7 +101,7 @@ Jika tidak ingin menggunakan Docker, server dapat dijalankan langsung di host ma
 2. **Isi kredensial di file `.env` root project** (mendukung format terpisah `HOST`, `PORT`, `USER`, `PASS`, `NAME` atau `URL`).
 3. **Jalankan**:
    ```bash
-   npm run mcp:db:everpro    # Jalankan instance everpro
+   npm run mcp:db:primary    # Jalankan instance primary
    npm run mcp:db:external   # Jalankan instance external
    ```
 
@@ -119,7 +119,7 @@ Daftarkan server ke konfigurasi AI Agent Anda (Cursor, Claude Desktop, Antigravi
       "command": "node",
       "args": ["mcp-server-browser-qa/src/index.js"]
     },
-    "database-qa-everpro": {
+    "database-qa-primary": {
       "url": "http://localhost:8081/mcp"
     },
     "database-qa-external": {
@@ -137,9 +137,9 @@ Daftarkan server ke konfigurasi AI Agent Anda (Cursor, Claude Desktop, Antigravi
       "command": "node",
       "args": ["mcp-server-browser-qa/src/index.js"]
     },
-    "database-qa-everpro": {
+    "database-qa-primary": {
       "command": "node",
-      "args": ["mcp-server-database-qa/runner.js", "-target-db=everpro"]
+      "args": ["mcp-server-database-qa/runner.js", "-target-db=primary"]
     },
     "database-qa-external": {
       "command": "node",

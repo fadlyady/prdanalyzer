@@ -5,7 +5,7 @@
  * 
  * Implements the standard operating procedure for database-qa-validation:
  * - 4-Tier Read-Only Security Mandate via Go MCP Server (postgres-mcp-go)
- * - Target Database Resolution (DEV_everpro vs DEV_db-external-dev)
+ * - Target Database Resolution (DEV_primary vs DEV_db-external-dev)
  * - 4 Search Scenarios (Single Table, Table List, Partial, Non-Full-Scan Discovery)
  * - 2 Evaluation Modes: Data Inspection (Preview) vs Direct Assertion (Expected Match)
  * - Optional Handoff from browser-qa-execution (execution_context.json)
@@ -111,7 +111,7 @@ function discoverDatabasesFromEnv() {
  * Lightweight JSON-RPC Client for postgres-mcp-go over stdio
  */
 class MCPPostgresClient {
-  constructor(targetDB = 'everpro', dbName = null) {
+  constructor(targetDB = 'primary', dbName = null) {
     this.targetDB = targetDB;
     this.dbName = dbName;
     this.proc = null;
@@ -553,7 +553,7 @@ Usage:
   node db_validator.js [options]
 
 Options:
-  --target-db=<everpro|external>  Target database (default: everpro)
+  --target-db=<primary|external>  Target database (default: primary)
   --scenario=<single|table_list|partial|discovery>  Search scenario
   --table=<table_name>            Table name for single table scenario
   --tables=<t1,t2,t3>             Comma-separated tables for table_list scenario
@@ -622,7 +622,7 @@ Examples:
       console.log(`\nSilakan pilih salah satu target menggunakan flag: ${C.bold}--target-db=<target_name>${C.reset}\n`);
       process.exit(1);
     } else {
-      targetDB = 'everpro';
+      targetDB = 'primary';
     }
   }
   const dbName = getArg('--db-name=');

@@ -6,11 +6,11 @@
         "mcp-server-browser-qa/src/index.js"
       ]
     },
-    "database-qa-everpro": {
+    "database-qa-primary": {
       "command": "node",
       "args": [
         "mcp-server-database-qa/runner.js",
-        "-target-db=everpro"
+        "-target-db=primary"
       ]
     },
     "database-qa-external": {

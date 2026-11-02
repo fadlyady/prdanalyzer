@@ -88,8 +88,8 @@ Skill ini dirancang dengan prinsip **Zero-Mutation (100% Read-Only Guard)**, **Z
 Saat user atau test case meminta pengecekan data ke database, AI wajib mengidentifikasi masuk ke dalam skenario mana:
 
 ### Skenario 1: Single Table (DB + 1 Tabel + Keyword/Kunci Awal)
-*Contoh*: *"Cari data user di tabel `users` dengan email `budi@mail.com` pada database DEV_everpro"*
-1. Validasi keberadaan tabel `users` pada `DEV_everpro`.
+*Contoh*: *"Cari data user di tabel `users` dengan email `budi@mail.com` pada database DEV_primary"*
+1. Validasi keberadaan tabel `users` pada `DEV_primary`.
 2. Bentuk query aman berparameter dengan batas baris:
    ```sql
    SELECT * FROM users WHERE email = $1 LIMIT 10;
@@ -98,7 +98,7 @@ Saat user atau test case meminta pengecekan data ke database, AI wajib mengident
 4. Tampilkan tabel pratinjau di terminal.
 
 ### Skenario 2: Table List (DB + Daftar Tabel + Keyword/Kunci Awal)
-*Contoh*: *"Cari nomor pesanan `ORD-20261022-001` di tabel `orders`, `order_items`, dan `shipments` pada DEV_everpro"*
+*Contoh*: *"Cari nomor pesanan `ORD-20261022-001` di tabel `orders`, `order_items`, dan `shipments` pada DEV_primary"*
 1. Validasi keberadaan seluruh tabel yang ada di dalam list user.
 2. Identifikasi kolom foreign key / relasi pada tiap tabel yang cocok dengan format keyword (misal: kolom `order_no` di `orders`, `order_id` di `order_items`, `ref_order` di `shipments`).
 3. Eksekusi query terarah per tabel dalam daftar list dengan `LIMIT 5`.
@@ -151,13 +151,13 @@ Hasil pencarian data dievaluasi berdasarkan ada atau tidaknya **Ekspektasi (Expe
 - AI membandingkan nilai aktual di database dengan nilai ekspektasi:
   - Jika seluruh kolom cocok:
     ```
-    ✅ [PASSED] Database Assertion Match (DEV_everpro.orders)
+    ✅ [PASSED] Database Assertion Match (DEV_primary.orders)
        - status: Expected="PAID" | Actual="PAID" (MATCH)
        - amount: Expected=50000  | Actual=50000  (MATCH)
     ```
   - Jika ada kolom yang tidak cocok:
     ```
-    ❌ [FAILED] Database Assertion Mismatch (DEV_everpro.orders)
+    ❌ [FAILED] Database Assertion Mismatch (DEV_primary.orders)
        - status: Expected="PAID" | Actual="PENDING" (MISMATCH)
        - amount: Expected=50000  | Actual=50000  (MATCH)
     ```

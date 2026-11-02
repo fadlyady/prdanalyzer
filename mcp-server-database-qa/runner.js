@@ -2,7 +2,7 @@
 
 /**
  * Database QA Guard MCP Runner
- * Spawns the self-contained Go binary with automated .env resolution for DEV_everpro and DEV_db-external-dev.
+ * Spawns the self-contained Go binary with automated .env resolution for DEV_primary and DEV_db-external-dev.
  */
 
 import { spawn } from 'child_process';

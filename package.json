@@ -8,7 +8,7 @@
     "postinstall": "npm --prefix mcp-server-browser-qa install",
     "mcp:start": "node mcp-server-browser-qa/src/index.js",
     "mcp:db:build": "cd mcp-server-database-qa && go build -o bin/postgres-mcp-go ./cmd/postgres-mcp-go",
-    "mcp:db:everpro": "node mcp-server-database-qa/runner.js -target-db=everpro",
+    "mcp:db:primary": "node mcp-server-database-qa/runner.js -target-db=primary",
     "mcp:db:external": "node mcp-server-database-qa/runner.js -target-db=external",
     "mcp:db:docker:up": "docker compose -f mcp-server-database-qa/docker-compose.yml up -d --build",
     "mcp:db:docker:down": "docker compose -f mcp-server-database-qa/docker-compose.yml down",
