@@ -22,7 +22,7 @@ description: >-
 > - **Kerahasiaan:** nilai asli (URL, package, akun, DSN) hanya dibaca server/runner dari `.secrets/<ALIAS>.env`; AI tidak membuka file itu dan tidak menulis nama aplikasi, host, package, atau akun asli di artefak — pakai alias (`<ALIAS>`, `{{role:owner}}`, `db:main`).
 > - **Status, scope & verdict:** `.agents/shared/standards/status-verdict-evidence.md` — 7 status (termasuk `BLOCKED` dan `NOT IN SCOPE`), `failure_category` wajib untuk FAILED, pernyataan scope wajib di laporan, charter yang tidak dijalankan ditulis "tidak dijalankan".
 > - **Evidence:** fitur yang terdaftar di `work/<ALIAS>/<fitur>/` otomatis menyimpan run ke `runs/` dan laporan ke `reports/` (tercatat di `runs/index.json`); fitur belum terdaftar memakai folder lama.
-> - **Reviewer & verdict (D7):** user yang menjalankan workflow; laporan tanpa review berlabel `DRAFT`.
+> - **Reviewer & verdict (D7):** user yang menjalankan workflow; laporan tanpa review berlabel `DRAFT` Verdict dihitung modul tunggal `scripts/lib/verdict.cjs` (tidak ada aturan verdict di runner).
 
 
 Skill ini mendefinisikan Standar Operasional Prosedur (SOP) bagi seorang **Senior QA Engineer** dalam menjalankan pengujian fitur secara langsung pada **browser Google Chrome (Staging Environment)** yang terhubung via Chrome DevTools Protocol (CDP port 9222).
@@ -355,6 +355,8 @@ screenshot setiap charter. Runner (`universal_executor.js`) **tidak** menjalanka
      (FAILED product pada P1/P2 = NO-GO). Charter yang tidak benar-benar dijalankan ditulis "tidak dijalankan".
 4. **Review (M5) oleh user yang menjalankan workflow (D7)**: buka screenshot semua FAILED, koreksi status bila perlu, isi
    `failure_category`, catat koreksi di `review.json` folder run. Tanpa review, laporan berlabel `DRAFT`.
+   Alat: `python3 scripts/qa_review.py <folder-run> --init` → isi `review.json` → `python3 scripts/qa_review.py <folder-run>`
+   (verdict dihitung ulang oleh modul tunggal `scripts/lib/verdict.py`; laporan `_REVIEWED.docx` tanpa label DRAFT).
 
 ### Fase 6: Post-Flight Cleanup & Auto-Close Browser (Mandatory Lifecycle)
 Setiap kali pengujian selesai dieksekusi (baik pengujian sukses, conditional go, maupun terjadi penghentian):

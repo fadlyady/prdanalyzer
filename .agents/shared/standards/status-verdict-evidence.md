@@ -28,6 +28,16 @@ FAILED kategori script/environment/data diperbaiki lalu dijalankan ulang; selama
    → `INSUFFICIENT DATA`, bukan angka default.
 5. Verdict rilis keseluruhan hanya bila gabungan scope semua run menutup semua layer AC P1/P2 yang dideklarasikan analisa.
 6. Exploratory/charter yang tidak dijalankan ditulis "tidak dijalankan" — tidak pernah PASS default.
+7. **INSUFFICIENT DATA** juga dipakai bila tidak ada TC yang benar-benar dieksekusi (semua BLOCKED/SKIP/NOT IN SCOPE).
+8. Aturan konservatif selama belum direview: FAILED tanpa `failure_category` dianggap `product`; TC tanpa prioritas dianggap P1.
+
+**Implementasi tunggal:** `scripts/lib/verdict.cjs` (runner JS) dan `scripts/lib/verdict.py` (laporan, review, kalkulasi) —
+diuji dengan vektor bersama `scripts/lib/verdict_cases.json` (`node scripts/lib/verdict_selftest.mjs`). Skill tidak boleh
+menulis aturan verdict sendiri.
+
+**Review (M5/D7):** `python3 scripts/qa_review.py <folder-run> --init` → isi `review.json` (reviewer, koreksi status &
+`failure_category`, opsional `decision` + `decision_reason`) → `python3 scripts/qa_review.py <folder-run>` menghitung ulang
+verdict, menulis `report_data.json`, laporan `reports/Report_<run>_REVIEWED.docx`, dan `runs/index.json`.
 
 ## 4. Evidence minimum per run (`runs/<run-id>/`)
 

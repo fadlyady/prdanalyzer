@@ -1,0 +1,16 @@
+[
+  {"name": "semua passed", "results": [{"id": "A", "status": "PASSED", "priority": "P1"}, {"id": "B", "status": "PASSED", "priority": "P3"}], "expect": "GO"},
+  {"name": "failed product P1 (kasus run 21 Okt dulu CONDITIONAL GO)", "results": [{"id": "A", "status": "PASSED", "priority": "P1"}, {"id": "B", "status": "FAILED", "priority": "P1", "failure_category": "product"}], "expect": "NO-GO"},
+  {"name": "failed tanpa kategori P2 dianggap product", "results": [{"id": "A", "status": "FAILED", "priority": "P2"}], "expect": "NO-GO"},
+  {"name": "failed product P3", "results": [{"id": "A", "status": "PASSED", "priority": "P1"}, {"id": "B", "status": "FAILED", "priority": "P3", "failure_category": "product"}], "expect": "CONDITIONAL GO"},
+  {"name": "failed script P1 = blocked", "results": [{"id": "A", "status": "PASSED", "priority": "P1"}, {"id": "B", "status": "FAILED", "priority": "P1", "failure_category": "script"}], "expect": "CONDITIONAL GO"},
+  {"name": "low confidence P1", "results": [{"id": "A", "status": "PASSED (LOW CONFIDENCE)", "priority": "P1"}], "expect": "CONDITIONAL GO"},
+  {"name": "low confidence P4 saja", "results": [{"id": "A", "status": "PASSED (LOW CONFIDENCE)", "priority": "P4"}, {"id": "B", "status": "PASSED", "priority": "P1"}], "expect": "GO"},
+  {"name": "partial P2", "results": [{"id": "A", "status": "PARTIAL TEST WITH REASON", "priority": "P2"}], "expect": "CONDITIONAL GO"},
+  {"name": "semua blocked (run terhenti)", "results": [{"id": "A", "status": "BLOCKED", "priority": "P1"}, {"id": "B", "status": "BLOCKED", "priority": "P2"}], "expect": "INSUFFICIENT DATA"},
+  {"name": "kosong", "results": [], "expect": "INSUFFICIENT DATA"},
+  {"name": "risiko critical tanpa TC passed", "results": [{"id": "A", "status": "PASSED", "priority": "P1"}, {"id": "B", "status": "PARTIAL", "priority": "P3"}], "risks": [{"id": "R-1", "level": "Critical", "tc_ids": ["B"]}], "expect": "NO-GO"},
+  {"name": "risiko high tertutup TC passed", "results": [{"id": "A", "status": "PASSED", "priority": "P1"}], "risks": [{"id": "R-1", "level": "High", "tc_ids": ["A"]}], "expect": "GO"},
+  {"name": "prioritas hilang = P1", "results": [{"id": "A", "status": "PASSED (LOW CONFIDENCE)"}], "expect": "CONDITIONAL GO"},
+  {"name": "skip & not in scope tidak memengaruhi", "results": [{"id": "A", "status": "PASSED", "priority": "P1"}, {"id": "B", "status": "SKIP WITH REASON"}, {"id": "C", "status": "NOT IN SCOPE"}], "expect": "GO"}
+]

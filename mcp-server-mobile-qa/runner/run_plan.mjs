@@ -35,6 +35,7 @@ const planPath = process.argv[2]; if (!planPath) { console.log('Usage: node runn
 const plan = JSON.parse(fs.readFileSync(path.resolve(process.cwd(), planPath), 'utf8'));
 // Pondasi: plan di work/<ALIAS>/<fitur>/plans/ -> semua evidence & laporan ke fitur itu (MCP ikut lewat QA_WORK_FEATURE).
 const QA = createRequire(import.meta.url)(path.join(path.dirname(fileURLToPath(import.meta.url)), '../..', 'scripts', 'lib', 'qa-env.cjs'));
+const VERDICT_LIB = createRequire(import.meta.url)(path.join(path.dirname(fileURLToPath(import.meta.url)), '../..', 'scripts', 'lib', 'verdict.cjs'));
 const PLAN_ABS = path.resolve(process.cwd(), planPath);
 const PLAN_FEATURE = QA.featureFromPath(path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..'), PLAN_ABS);
 if (PLAN_FEATURE && !process.env.QA_WORK_FEATURE) process.env.QA_WORK_FEATURE = PLAN_FEATURE;
@@ -151,7 +152,7 @@ async function runStep(s, tcId, idx) {
   return { ok: false, detail: 'step tidak dikenal' };
 }
 async function runCase(tc, kind) {
-  const res = { id: tc.id, title: tc.title, steps: [], status: null, notes: [] };
+  const res = { id: tc.id, title: tc.title, priority: tc.priority || null, failure_category: tc.failure_category || null, steps: [], status: null, notes: [] };
   if (tc.skip) { res.status = 'SKIP WITH REASON'; res.notes.push(tc.skip); log(`\n### ${tc.id} — SKIP: ${tc.skip}`); return res; }
   const missing = (tc.requires || []).filter(k => !provided.has(k));
   if (missing.length) { res.status = 'SKIP WITH REASON'; res.notes.push(`Data uji belum tersedia (setup gagal): ${missing.join(', ')}`); log(`\n### ${tc.id} — SKIP: data ${missing.join(', ')} tidak tersedia`); return res; }
@@ -242,13 +243,16 @@ if (out.error) {
   const done = new Set(out.testcases.map(t => t.id));
   for (const tc of plan.testcases || []) {
     if (tc.setupRef || tc.charterSlot || done.has(tc.id)) continue;
-    out.testcases.push({ id: tc.id, title: tc.title || '-', status: 'BLOCKED', failure_category: 'environment', steps: [], evidence: [], notes: [`Tidak dijalankan: run terhenti (${out.error})`] });
+    out.testcases.push({ id: tc.id, title: tc.title || '-', priority: tc.priority || null, status: 'BLOCKED', failure_category: 'environment', steps: [], evidence: [], notes: [`Tidak dijalankan: run terhenti (${out.error})`] });
   }
 }
 const cnt = st => out.testcases.filter(t => t.status.startsWith(st)).length;
 const total = out.testcases.length, passed = cnt('PASSED'), failedN = cnt('FAILED'), partialN = cnt('PARTIAL'), skipped = cnt('SKIP'), blockedN = cnt('BLOCKED');
 const lowN = out.testcases.filter(t => t.status === 'PASSED (LOW CONFIDENCE)').length;
-const verdict = (out.error || !total) ? 'NO-GO' : failedN ? 'NO-GO' : (partialN || lowN || out.charters.some(c => c.status !== 'PASS')) ? 'CONDITIONAL GO' : 'GO';
+// Verdict dari modul tunggal (standar status-verdict-evidence §3). Charter tidak mengubah verdict TC, tetapi FAIL dicatat.
+const VERDICT = VERDICT_LIB.computeVerdict({ results: out.testcases, reviewed: false });
+const verdict = VERDICT.verdict;
+const charterFails = out.charters.filter(c => /^FAIL/i.test(c.status || '')).map(c => c.id);
 const app = out.init?.app || {}; const dev = out.init?.device || {};
 const report = {
   feature_name: plan.featureTitle || plan.feature, environment: 'Staging Android',
@@ -257,7 +261,8 @@ const report = {
   evidence_dir: out.init?.runDir || '-', qa_lead: 'Senior QA Engineer (Mobile QA Guard / Appium)',
   summary: { total, passed, failed: failedN, partial: partialN, blocked: blockedN, skipped, exploratory: out.charters.length },
   release_recommendation: verdict,
-  recommendation_reason: `${passed} passed (${lowN} LOW CONFIDENCE), ${failedN} failed, ${partialN} partial, ${skipped} skip. Mode mutasi: ${out.policy?.mode || (plan.allowMutation ? 'full' : 'safe')} (TAG ${vars.TAG}; dijalankan ${out.close?.mutationLedger?.executed ?? 0}, diblokir ${out.close?.mutationLedger?.blocked ?? 0}).${out.teardown.length ? ` Teardown: ${out.teardown.map(c => `${c.id}=${c.status}`).join(', ')}.` : (out.close?.mutationLedger?.created?.length ? ` ${out.close.mutationLedger.teardownHint}` : '')} Charter: ${out.charters.map(c => `${c.id}=${c.status}`).join(', ')}.${out.setup.length ? ` Data setup: ${out.setup.map(c => `${c.id}=${c.status}`).join(', ')} (TAG ${vars.TAG}).` : ''}${out.error ? ' Run terhenti: ' + out.error : ''}`,
+  verdict: VERDICT, review_status: 'DRAFT',
+  recommendation_reason: `${VERDICT_LIB.verdictSummary(VERDICT)}${charterFails.length ? ` Charter FAIL: ${charterFails.join(', ')}.` : ''} | Rincian run: ${passed} passed (${lowN} LOW CONFIDENCE), ${failedN} failed, ${partialN} partial, ${skipped} skip. Mode mutasi: ${out.policy?.mode || (plan.allowMutation ? 'full' : 'safe')} (TAG ${vars.TAG}; dijalankan ${out.close?.mutationLedger?.executed ?? 0}, diblokir ${out.close?.mutationLedger?.blocked ?? 0}).${out.teardown.length ? ` Teardown: ${out.teardown.map(c => `${c.id}=${c.status}`).join(', ')}.` : (out.close?.mutationLedger?.created?.length ? ` ${out.close.mutationLedger.teardownHint}` : '')} Charter: ${out.charters.map(c => `${c.id}=${c.status}`).join(', ')}.${out.setup.length ? ` Data setup: ${out.setup.map(c => `${c.id}=${c.status}`).join(', ')} (TAG ${vars.TAG}).` : ''}${out.error ? ' Run terhenti: ' + out.error : ''}`,
   roles: { [`${plan.role} (${out.login?.credentialKey || plan.suffix})`]: out.testcases.map(t => ({ id: t.id, title: t.title, action: t.steps.filter(s => s.desc).map(s => s.desc).join(' > ').slice(0, 300), status: t.status, notes: t.notes.join(' | ') || '-' })) },
   exploratory_scenarios: out.charters.map(c => ({ charter: c.title, action: c.steps.filter(s => s.desc).map(s => s.desc).join(' > ').slice(0, 250), observed: c.notes.join(' | ') || c.steps.map(s => s.detail).join(' | ').slice(0, 300), verdict: c.status })),
   evidence_files: [...out.testcases, ...out.charters].flatMap(t => (t.evidence || []).map(f => ({ filename: path.basename(f), scenario: t.id, timestamp: '-' }))),

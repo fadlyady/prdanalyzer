@@ -20,7 +20,7 @@ description: >-
 > - **Kerahasiaan:** nilai asli (URL, package, akun, DSN) hanya dibaca server/runner dari `.secrets/<ALIAS>.env`; AI tidak membuka file itu dan tidak menulis nama aplikasi, host, package, atau akun asli di artefak — pakai alias (`<ALIAS>`, `{{role:owner}}`, `db:main`).
 > - **Status, scope & verdict:** `.agents/shared/standards/status-verdict-evidence.md` — tambahan `BLOCKED` dan `NOT IN SCOPE`, `failure_category` (product/script/environment/data) wajib untuk FAILED, pernyataan scope wajib.
 > - **Evidence & plan:** plan disimpan di `work/<ALIAS>/<fitur>/plans/`; run & laporan otomatis ke `runs/` dan `reports/` fitur itu. Knowledge UI di `profiles/<ALIAS>/knowledge/mobile/`.
-> - **Reviewer & verdict (D7):** user yang menjalankan workflow; laporan tanpa review berlabel `DRAFT`.
+> - **Reviewer & verdict (D7):** user yang menjalankan workflow; laporan tanpa review berlabel `DRAFT` Verdict dihitung modul tunggal `scripts/lib/verdict.cjs`; review lewat `python3 scripts/qa_review.py <folder-run> --init` lalu tanpa `--init`.
 
 
 SOP **Senior QA Engineer** untuk mengeksekusi test case pada **aplikasi mobile staging di HP Android fisik (USB)** melalui MCP server **`mobile-qa-guard`** (Appium UiAutomator2). Pasangan dari skill `browser-qa-execution`.

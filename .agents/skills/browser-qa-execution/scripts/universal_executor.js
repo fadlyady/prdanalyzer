@@ -59,6 +59,7 @@ function loadEnvLegacy() {
 
 // 2. Create timestamped run directory
 const QA_ENV = require(path.join(PROJECT_ROOT, 'scripts', 'lib', 'qa-env.cjs'));
+const { computeVerdict, verdictSummary } = require(path.join(PROJECT_ROOT, 'scripts', 'lib', 'verdict.cjs'));
 let RUN_LOC = null; // lokasi run & laporan (work/<ALIAS>/<fitur>/ bila terdaftar)
 function createRunDir(featureName = 'test', sourceFile = null) {
   RUN_LOC = QA_ENV.resolveRunLocation(PROJECT_ROOT, featureName, AUTOMATE_RESULT_DIR, sourceFile);
@@ -434,7 +435,7 @@ async function executeUniversalSuite(testcaseMdPath) {
             id: tc.id,
             title: tc.title,
             action: tc.title,
-            status: 'SKIP WITH REASON',
+            status: 'SKIP WITH REASON', priority: tc.priority || null,
             notes: `Kredensial untuk role "${batch.roleDisplay}" dilewati sesuai parameter pengujian.`
           };
           results.push(skipItem);
@@ -468,7 +469,7 @@ async function executeUniversalSuite(testcaseMdPath) {
               id: tc.id,
               title: tc.title,
               action: tc.title,
-              status: 'SKIP WITH REASON',
+              status: 'SKIP WITH REASON', priority: tc.priority || null, priority: tc.priority || null,
               notes: `Test case tidak mendefinisikan actor dan terdapat >1 role di .env (${credCheck.availableRoleNames.join(', ')}). Gunakan --role=<ROLE>.`
             };
             results.push(skipItem);
@@ -486,7 +487,7 @@ async function executeUniversalSuite(testcaseMdPath) {
             id: tc.id,
             title: tc.title,
             action: tc.title,
-            status: 'SKIP WITH REASON',
+            status: 'SKIP WITH REASON', priority: tc.priority || null,
             notes: `Kredensial untuk role "${batch.roleDisplay}" belum terdaftar di file .env. Pengujian dilewati.`
           };
           results.push(skipItem);
@@ -746,6 +747,8 @@ async function executeUniversalSuite(testcaseMdPath) {
     const tcResultItem = {
       id: tc.id,
       title: tc.title,
+      priority: tc.priority || null,
+      failure_category: status === 'FAILED' ? null : undefined, // diisi reviewer (M5); kosong = dianggap product
       action: steps.length ? steps[steps.length - 1] : tc.title,
       status: status,
       notes: notes
@@ -816,6 +819,8 @@ async function executeUniversalSuite(testcaseMdPath) {
   const partialCount = results.filter(r => r.status.includes('PARTIAL')).length;
   const skippedCount = results.filter(r => r.status.includes('SKIP')).length;
 
+  const VERDICT = computeVerdict({ results, reviewed: false });
+  const charterFails = exploratoryScenarios.filter(c => c.verdict === 'FAIL').map(c => c.charter);
   const reportPayload = {
     feature_name: baseFileName.replace(/test-cases-?/i, '').replace(/_/g, ' ').toUpperCase(),
     environment: env.E2E_ENV || 'Staging',
@@ -832,10 +837,11 @@ async function executeUniversalSuite(testcaseMdPath) {
       skipped: skippedCount,
       exploratory: charterExecuted
     },
-    release_recommendation: failedCount === 0 ? (partialCount > 0 ? 'CONDITIONAL GO' : 'GO') : 'CONDITIONAL GO',
-    recommendation_reason: failedCount === 0
-      ? `Seluruh ${passedCount} skenario UI passed. ${partialCount > 0 ? `${partialCount} skenario memerlukan pengecekan database/webhook lanjutan.` : ''}`
-      : `Ditemukan ${failedCount} defek pada eksekusi pengujian yang perlu diverifikasi developer.`,
+    // Verdict dari modul tunggal (standar status-verdict-evidence §3); DRAFT sampai direview user (D7)
+    release_recommendation: VERDICT.verdict,
+    verdict: VERDICT,
+    review_status: 'DRAFT',
+    recommendation_reason: verdictSummary(VERDICT) + (charterFails.length ? ` Charter FAIL: ${charterFails.join(', ')} (konfirmasi screenshot).` : ''),
     roles: groupedRolesForReport,
     exploratory_scenarios: exploratoryScenarios,
     evidence_files: evidenceFiles

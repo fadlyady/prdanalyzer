@@ -753,14 +753,14 @@ Laporan Word: `work/<ALIAS>/<fitur>/reports/Report_<fitur>_<waktu>.docx`.
 | `SKIP WITH REASON` | Dikeluarkan atas keputusan user (mis. TC khusus iOS di fase Android) |
 
 Verdict rilis (standar bersama `.agents/shared/standards/status-verdict-evidence.md`), selalu disertai pernyataan scope:
-**NO-GO** bila ada FAILED kategori product pada P1/P2 atau risiko Critical/High tanpa TC lulus; **CONDITIONAL GO** bila ada FAILED product P3/P4 atau LOW CONFIDENCE/PARTIAL/BLOCKED pada P1/P2 (dengan mitigasi & pemilik); **GO** selain itu. Reviewer & pemutus verdict adalah user yang menjalankan workflow.
+**NO-GO** bila ada FAILED kategori product pada P1/P2 atau risiko Critical/High tanpa TC lulus; **CONDITIONAL GO** bila ada FAILED product P3/P4 atau LOW CONFIDENCE/PARTIAL/BLOCKED pada P1/P2 (dengan mitigasi & pemilik); **GO** selain itu. **INSUFFICIENT DATA** bila tidak ada TC yang benar-benar dieksekusi. Selama belum direview, FAILED tanpa kategori dianggap product dan laporan berlabel DRAFT. Aturan ini dihitung satu modul (`scripts/lib/verdict.cjs` / `verdict.py`) untuk browser, mobile, dan laporan. Reviewer & pemutus verdict adalah user yang menjalankan workflow.
 
 **Langkah 8.3 — Wajib review sebelum melapor**
 
 Runner/AI bisa keliru menilai (contoh nyata: error state "Terjadi kesalahan" terbaca sebagai empty state, atau charter gagal diturunkan menjadi OBSERVATION). Sebelum hasil dikirim ke tim:
 1. Buka screenshot setiap TC `FAILED` dan `LOW CONFIDENCE`.
 2. Buka screenshot charter (landscape, font besar, dark mode, offline).
-3. Minta AI: *"Review hasil run `<folder run>` dan buat laporan REVIEWED."* AI akan mengoreksi status dan menghasilkan `Report_<fitur>_<waktu>_REVIEWED.docx`.
+3. Jalankan `npm run qa:review -- <folder run> --init`, isi `review.json` (nama reviewer, koreksi status, `failure_category` untuk setiap FAILED: product/script/environment/data), lalu `npm run qa:review -- <folder run>`. Verdict dihitung ulang dan laporan `Report_<run>_REVIEWED.docx` dibuat tanpa label DRAFT. (Atau minta AI: *"Review hasil run `<folder run>`"* — AI memakai alat yang sama.)
 4. Temuan yang **tidak konsisten** antar run → laporkan sebagai *intermiten* dan jalankan ulang untuk konfirmasi.
 
 ---

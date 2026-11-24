@@ -17,6 +17,9 @@ from docx.enum.table import WD_TABLE_ALIGNMENT, WD_ALIGN_VERTICAL
 from docx.oxml import parse_xml, OxmlElement
 from docx.oxml.ns import nsdecls, qn
 
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..', '..', 'scripts', 'lib')))
+from verdict import compute_verdict, verdict_summary  # modul verdict tunggal (standar status-verdict-evidence §3)
+
 
 NOT_RUN = "TIDAK DIJALANKAN"
 
@@ -70,7 +73,16 @@ def create_report(data_json_path, output_docx_path):
     title_p = doc.add_paragraph()
     title_p.paragraph_format.space_after = Pt(4)
     title_p.paragraph_format.space_before = Pt(0)
-    run_title = title_p.add_run(f"[QA-EXECUTION-REPORT] {data.get('feature_name', 'Feature Test Execution')}")
+    # Verdict: pakai yang sudah dihitung runner; bila tidak ada, hitung dari status TC (tidak ada default GO/CONDITIONAL)
+    all_results = [sc for scs in (data.get("roles") or {}).values() for sc in scs]
+    if not data.get("release_recommendation"):
+        v = compute_verdict(all_results, data.get("risks"), reviewed=data.get("review_status") == "REVIEWED")
+        data["release_recommendation"] = v["verdict"]
+        data.setdefault("recommendation_reason", verdict_summary(v))
+    review_dir = data.get("evidence_dir")
+    reviewed = data.get("review_status") == "REVIEWED" or bool(review_dir and os.path.isfile(os.path.join(review_dir, "review.json")))
+    draft_tag = "" if reviewed else "[DRAFT — belum direview] "
+    run_title = title_p.add_run(f"{draft_tag}[QA-EXECUTION-REPORT] {data.get('feature_name', 'Feature Test Execution')}")
     run_title.font.name = "Arial"
     run_title.font.size = Pt(18)
     run_title.font.bold = True
@@ -174,9 +186,9 @@ def create_report(data_json_path, output_docx_path):
     doc.add_paragraph().paragraph_format.space_after = Pt(6)
 
     # Release Recommendation Box
-    rec = data.get("release_recommendation", "CONDITIONAL GO")
-    rec_color = "166534" if rec == "GO" else ("991B1B" if rec == "NO-GO" else "854D0E")
-    rec_bg = "DCFCE7" if rec == "GO" else ("FEE2E2" if rec == "NO-GO" else "FEF9C3")
+    rec = data["release_recommendation"]
+    rec_color = "166534" if rec == "GO" else ("991B1B" if rec == "NO-GO" else ("475569" if rec == "INSUFFICIENT DATA" else "854D0E"))
+    rec_bg = "DCFCE7" if rec == "GO" else ("FEE2E2" if rec == "NO-GO" else ("F1F5F9" if rec == "INSUFFICIENT DATA" else "FEF9C3"))
 
     rec_table = doc.add_table(rows=1, cols=1)
     rec_table.alignment = WD_TABLE_ALIGNMENT.CENTER
@@ -184,7 +196,7 @@ def create_report(data_json_path, output_docx_path):
     set_cell_background(c_rec, rec_bg)
     set_cell_margins(c_rec, 120, 120, 160, 160)
     p_rec = c_rec.paragraphs[0]
-    r_rec_lbl = p_rec.add_run("RELEASE VERDICT: ")
+    r_rec_lbl = p_rec.add_run(("RELEASE VERDICT (DRAFT): " if not reviewed else "RELEASE VERDICT: "))
     r_rec_lbl.font.name = "Arial"
     r_rec_lbl.font.size = Pt(11)
     r_rec_lbl.font.bold = True
