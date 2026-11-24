@@ -19,6 +19,12 @@
         "${workspaceFolder}/mcp-server-database-qa/runner.js",
         "-target-db=external"
       ]
+    },
+    "mobile-qa-guard": {
+      "command": "node",
+      "args": [
+        "${workspaceFolder}/mcp-server-mobile-qa/src/index.js"
+      ]
     }
   }
 }

@@ -4,7 +4,8 @@
  * Browser QA Guard MCP Server
  * Model Context Protocol (MCP) Server for deterministic, secure QA browser automation.
  * Enforces Gate 2 (Tab/Domain Guard), Gate 3 (Zero-Leak Credential Vault),
- * Gate 4 (Pre-flight Mutation Guard), Gate 5 (Evidence Capture), and Gate 6 (RBAC Session Reset).
+ * Gate 4 (Mutation Policy berlevel: safe | full | full_external — lihat policy.js),
+ * Gate 5 (Evidence Capture + Mutation Ledger), and Gate 6 (RBAC Session Reset).
  */
 
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
@@ -23,11 +24,31 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const WORKSPACE_ROOT = path.resolve(__dirname, '../../');
 
-// Initialize Guard Engines
-const mutationGuard = new MutationGuard();
-const domainGuard = new DomainGuard(['localhost', '127.0.0.1']);
+// Initialize Guard Engines (konfigurasi dibaca ulang dari .env setiap init / set permission)
 const credentialVault = new CredentialVault(WORKSPACE_ROOT);
+const mutationGuard = new MutationGuard(credentialVault.readRawEnv());
+const domainGuard = new DomainGuard(credentialVault.readRawEnv());
 const browserManager = new BrowserManager({ cdpPort: 9222 });
+const reloadPolicy = () => { const env = credentialVault.readRawEnv(); mutationGuard.reload(env); domainGuard.reload(env); return env; };
+const ensureLedger = (featureName) => {
+  if (featureName || !browserManager.evidenceDir) browserManager.setEvidenceDirectory(featureName || 'browser', WORKSPACE_ROOT);
+  mutationGuard.setLedgerFile(path.join(browserManager.evidenceDir, 'mutation_ledger.jsonl'));
+  return path.relative(WORKSPACE_ROOT, mutationGuard.ledgerFile);
+};
+const json = (obj, isError = false) => ({ ...(isError ? { isError: true } : {}), content: [{ type: 'text', text: JSON.stringify(obj, null, 2) }] });
+const withTag = v => (typeof v === 'string' ? v.replace(/\{\{TAG\}\}/g, mutationGuard.tag || '') : v);
+
+/** Info elemen untuk Gate 4: teks tombol, teks kontainer (baris/kartu/dialog/form), link navigasi, di dalam form. */
+async function elementInfo(page, selector) {
+  try {
+    return await page.locator(selector).first().evaluate((el) => {
+      const txt = (el.innerText || el.value || el.getAttribute('aria-label') || el.getAttribute('title') || '').trim();
+      const box = el.closest('tr,li,[role=row],[role=listitem],[role=dialog],dialog,.modal,[class*=modal],[class*=drawer],article,form');
+      const a = el.closest('a[href]'); const href = a ? a.getAttribute('href') || '' : '';
+      return { text: txt.slice(0, 200), ctx: box ? (box.innerText || '').slice(0, 2000) : '', isLink: Boolean(a) && !/^(#|javascript:)/i.test(href), inForm: Boolean(el.closest('form')) };
+    }, null, { timeout: 3000 });
+  } catch { return {}; }
+}
 
 // Create MCP Server Instance
 const server = new Server(
@@ -56,7 +77,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       },
       {
         name: 'qa_init_browser',
-        description: 'Gate 2: Meluncurkan Chrome (jika belum aktif) atau menyambungkan ke tab target. Menerapkan Domain Allowlist untuk mencegah navigasi ke domain yang tidak diizinkan.',
+        description: 'Gate 2: Meluncurkan Chrome (jika belum aktif) atau menyambungkan ke tab target. Domain Allowlist dari .env (QA_STAGING_HOSTS / *_BASE_URL_STAGING); host di QA_PROD_HOSTS_DENY selalu ditolak. Respons memuat kebijakan mutasi aktif (Gate 4) untuk ditampilkan ke user.',
         inputSchema: {
           type: 'object',
           properties: {
@@ -78,15 +99,22 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       },
       {
         name: 'qa_set_mutation_permission',
-        description: 'Gate 4: Mengatur kebijakan mutasi data (CREATE / EDIT / DELETE). Jika allow_mutation=false, semua aksi mutasi akan otomatis diblokir di level runtime dan ditandai PARTIAL TEST WITH REASON.',
+        description: 'Gate 4: Mengatur mode mutasi. safe = read-only (mutasi -> PARTIAL TEST WITH REASON); full = CREATE/UPDATE/DELETE nyata di staging (update/delete hanya pada data ber-TAG); full_external = full + kirim/broadcast ke penerima di QA_TEST_RECIPIENT_ALLOWLIST. Finansial selalu diblokir (kecuali QA_FINANCIAL_SANDBOX=true). Mengembalikan dataTag yang WAJIB dipakai pada data yang dibuat ({{TAG}} di value fill).',
         inputSchema: {
           type: 'object',
           properties: {
-            allow_mutation: { type: 'boolean', description: 'Apakah aksi create/edit/delete diizinkan nyata di browser' },
+            mode: { type: 'string', enum: ['safe', 'full', 'full_external'], description: 'Mode mutasi. Jika kosong: allow_mutation=true -> QA_MUTATION_MODE .env (atau full), false -> safe' },
+            allow_mutation: { type: 'boolean', description: 'Legacy: true = full, false = safe' },
+            data_tag: { type: 'string', description: 'TAG data uji (opsional, untuk rerun memakai TAG lama)' },
+            featureName: { type: 'string', description: 'Nama fitur — folder run evidence & mutation_ledger.jsonl' },
             confirmed_by: { type: 'string', description: 'Identitas atau alasan konfirmasi user' },
           },
-          required: ['allow_mutation'],
         },
+      },
+      {
+        name: 'qa_get_mutation_ledger',
+        description: 'Gate 5: Ringkasan mutasi yang dijalankan/diblokir pada run ini (per kategori, data yang dibuat, lokasi mutation_ledger.jsonl) + petunjuk teardown data ber-TAG.',
+        inputSchema: { type: 'object', properties: {} },
       },
       {
         name: 'qa_login_role',
@@ -105,7 +133,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       },
       {
         name: 'qa_execute_action',
-        description: 'Gate 4: Menjalankan aksi UI (click, fill, select, hover, press, wait) dengan Safe Mode Guard otomatis. Menolak eksekusi mutasi jika izin belum diberikan.',
+        description: 'Gate 4: Menjalankan aksi UI (click, fill, select, hover, press, wait) dengan Mutation Policy otomatis (klasifikasi dari selector + teks elemen). Aksi yang melanggar policy -> PARTIAL TEST WITH REASON. Gunakan {{TAG}} di value untuk menandai data uji. Setelah aksi, URL dicek ulang terhadap domain allowlist.',
         inputSchema: {
           type: 'object',
           properties: {
@@ -117,6 +145,9 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
             selector: { type: 'string', description: 'CSS/Text selector elemen target' },
             value: { type: 'string', description: 'Nilai input jika aksinya fill/select/press' },
             isMutation: { type: 'boolean', description: 'Tandai true jika aksi ini mengubah/membuat/menghapus data', default: false },
+            mutationType: { type: 'string', enum: ['create', 'update', 'delete', 'state_change', 'external', 'financial', 'session_end', 'navigation'], description: 'Kategori eksplisit. "navigation" hanya menurunkan kategori create (mis. tombol Tambah yang membuka form).' },
+            tcId: { type: 'string', description: 'ID Test Case (untuk ledger & evidence)' },
+            step: { type: 'string', description: 'Nama langkah (untuk ledger & evidence)' },
           },
           required: ['action', 'selector'],
         },
@@ -205,17 +236,13 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       case 'qa_init_browser': {
         const { targetUrl, autoLaunch = true, selectedTabId, cleanExtraTabs = true } = args;
 
-        // Domain guard check
-        domainGuard.setTargetUrl(targetUrl);
-        if (!domainGuard.isUrlAllowed(targetUrl)) {
-          return {
-            isError: true,
-            content: [{
-              type: 'text',
-              text: `Domain Guard REJECT: URL "${targetUrl}" tidak diizinkan atau di luar boundary pengujian staging yang aman.`
-            }]
-          };
+        // Domain guard check (allowlist dari .env, target TIDAK otomatis ditambahkan)
+        reloadPolicy();
+        const dg = domainGuard.check(targetUrl);
+        if (!dg.ok) {
+          return json({ status: 'DOMAIN_GUARD_REJECT', targetUrl, reason: dg.reason }, true);
         }
+        domainGuard.setTargetUrl(targetUrl);
 
         // Launch if needed
         if (autoLaunch) {
@@ -234,7 +261,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
               status: 'READY',
               activeUrl: conn.currentUrl,
               pageTitle: conn.title,
-              message: 'Browser berhasil terhubung dan siap menjalankan skenario pengujian.'
+              domainCheck: domainGuard.check(conn.currentUrl || targetUrl),
+              mutationPolicy: mutationGuard.summary(),
+              message: 'Browser berhasil terhubung dan siap menjalankan skenario pengujian. Tampilkan mutationPolicy ke user sebelum eksekusi.'
             }, null, 2)
           }]
         };
@@ -254,21 +283,17 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case 'qa_set_mutation_permission': {
-        const { allow_mutation, confirmed_by } = args;
-        const res = mutationGuard.setPermission(allow_mutation, confirmed_by || 'user');
-        return {
-          content: [{
-            type: 'text',
-            text: JSON.stringify({
-              status: 'POLICY_UPDATED',
-              mode: res.mode,
-              allowMutation: res.mutationAllowed,
-              notice: res.mutationAllowed
-                ? 'PERINGATAN: Live Mutation AKTIF. Aksi create/edit/delete akan dijalankan nyata.'
-                : 'Safe Mode AKTIF: Aksi mutasi akan otomatis diblokir dan ditandai PARTIAL TEST WITH REASON.'
-            }, null, 2)
-          }]
-        };
+        const { mode, allow_mutation, data_tag, featureName, confirmed_by } = args;
+        reloadPolicy();
+        if (!mode && typeof allow_mutation !== 'boolean') return json({ status: 'CURRENT_POLICY', ...mutationGuard.summary() });
+        if (mode && mode !== 'safe' && browserManager.activePage) {
+          const dg = domainGuard.check(browserManager.activePage.url());
+          if (!dg.ok) return json({ status: 'DOMAIN_GUARD_REJECT', reason: `Mode ${mode} ditolak: halaman aktif bukan staging. ${dg.reason}` }, true);
+        }
+        const res = mutationGuard.setPermission(mode ? mode !== 'safe' : allow_mutation, confirmed_by || 'user', { mode, tag: data_tag });
+        const ledger = (res.mode !== 'safe' || featureName) ? ensureLedger(featureName) : null;
+        mutationGuard.record({ status: 'POLICY', category: 'policy', target: res.mode, actor: confirmed_by || 'user' });
+        return json({ status: 'POLICY_UPDATED', ...res, ledgerFile: ledger });
       }
 
       case 'qa_login_role': {
@@ -321,23 +346,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case 'qa_execute_action': {
-        const { action, selector, value, isMutation = false } = args;
-
-        // 1. Evaluate with Mutation Guard (Gate 4)
-        const guardCheck = mutationGuard.evaluateAction(action, selector, value, isMutation);
-        if (guardCheck.blocked) {
-          return {
-            content: [{
-              type: 'text',
-              text: JSON.stringify({
-                status: guardCheck.status,
-                actionBlocked: true,
-                reason: guardCheck.reason,
-                selector
-              }, null, 2)
-            }]
-          };
-        }
+        const { action, selector, isMutation = false, mutationType, tcId, step } = args;
+        const value = withTag(args.value);
 
         if (!browserManager.activePage) {
           return {
@@ -347,6 +357,23 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         }
 
         const page = browserManager.activePage;
+
+        // 1. Evaluate with Mutation Policy (Gate 4) — selector + teks elemen + konteks baris/dialog
+        const el = await elementInfo(page, selector);
+        const needsScreen = !['fill', 'select', 'hover', 'wait_for_selector'].includes(action);
+        const screenText = needsScreen ? await page.evaluate(() => (document.body?.innerText || '').slice(0, 20000)).catch(() => '') : '';
+        const guardCheck = mutationGuard.evaluateAction(action, selector, value, isMutation, el, { mutationType, screenText });
+        const pageDomain = domainGuard.check(page.url());
+        if (!guardCheck.blocked && guardCheck.destructive && !pageDomain.ok) {
+          Object.assign(guardCheck, { blocked: true, status: 'PARTIAL TEST WITH REASON', reason: `Mutasi diblokir: halaman aktif bukan staging. ${pageDomain.reason}` });
+        }
+        if (guardCheck.category) ensureLedger();
+        if (guardCheck.blocked) {
+          let evidence = null;
+          if (tcId) { evidence = await browserManager.captureScreenshot(`${tcId}_${step || 'step'}_partial_mutation`).catch(() => null); }
+          mutationGuard.record({ status: 'BLOCKED', category: guardCheck.category, keyword: guardCheck.keyword, action, target: selector, element: (el.text || '').slice(0, 80), tcId, step, url: page.url(), reason: guardCheck.reason });
+          return json({ status: guardCheck.status, actionBlocked: true, category: guardCheck.category, reason: guardCheck.reason, selector, evidence });
+        }
 
         // 2. Execute via Playwright
         switch (action) {
@@ -372,17 +399,29 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             throw new Error(`Aksi tidak dikenali: ${action}`);
         }
 
-        return {
-          content: [{
-            type: 'text',
-            text: JSON.stringify({
-              status: 'PASSED',
-              action,
-              selector,
-              executed: true
-            }, null, 2)
-          }]
-        };
+        if (guardCheck.destructive) {
+          mutationGuard.record({ status: 'EXECUTED', category: guardCheck.category, keyword: guardCheck.keyword, action, target: selector, element: (el.text || '').slice(0, 80), tcId, step, url: page.url(), recipient: guardCheck.recipient, tagEvidence: guardCheck.tagEvidence });
+        }
+
+        // 3. Post-action domain check: keluar dari staging -> paksa Safe Mode
+        await page.waitForLoadState('domcontentloaded', { timeout: 5000 }).catch(() => {});
+        const after = domainGuard.check(page.url());
+        let domainViolation;
+        if (!after.ok) {
+          const prev = mutationGuard.mode;
+          if (prev !== 'safe') mutationGuard.setMode('safe', { actor: 'domain-guard' });
+          domainViolation = { url: page.url(), reason: after.reason, mutationModeForcedTo: 'safe', previousMode: prev };
+          mutationGuard.record({ status: 'DOMAIN_VIOLATION', category: 'domain', target: page.url(), tcId, step, reason: after.reason });
+        }
+
+        return json({
+          status: domainViolation ? 'PASSED_WITH_DOMAIN_WARNING' : 'PASSED',
+          action,
+          selector,
+          executed: true,
+          mutation: guardCheck.destructive ? { category: guardCheck.category, mode: guardCheck.mode, tag: guardCheck.tag } : undefined,
+          domainViolation,
+        });
       }
 
       case 'qa_assert_element': {
@@ -457,27 +496,29 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
 
+      case 'qa_get_mutation_ledger': {
+        return json(mutationGuard.ledgerSummary());
+      }
+
       case 'qa_reset_session': {
         const result = await browserManager.resetSession();
-        return {
-          content: [{
-            type: 'text',
-            text: JSON.stringify(result, null, 2)
-          }]
-        };
+        // Ganti role dalam run yang sama: mode mutasi & TAG dipertahankan, memori konteks TAG dibersihkan.
+        mutationGuard.tagContextUntil = -1; mutationGuard.tagContextFrom = null;
+        return json({ ...(result || {}), mutationPolicy: mutationGuard.summary().mode, dataTag: mutationGuard.tag });
       }
 
       case 'qa_close_browser': {
         const result = await browserManager.closeBrowser();
-        return {
-          content: [{
-            type: 'text',
-            text: JSON.stringify({
-              status: 'CLOSED',
-              message: 'Browser Chrome berhasil ditutup secara bersih.'
-            }, null, 2)
-          }]
-        };
+        const ledger = mutationGuard.ledgerSummary();
+        reloadPolicy();
+        mutationGuard.resetToDefault();
+        mutationGuard.ledger = []; mutationGuard.setLedgerFile(null); browserManager.evidenceDir = null; browserManager.evidenceFeature = null;
+        return json({
+          status: 'CLOSED',
+          message: 'Browser Chrome berhasil ditutup secara bersih. Izin mutasi di-reset ke default.',
+          mutationLedger: ledger,
+          closeResult: result,
+        });
       }
 
       default:

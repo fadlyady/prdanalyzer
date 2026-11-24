@@ -93,3 +93,40 @@ strukturmenu/**
 .vscode/
 *.swp
 *.swo
+# Mobile Execution (APK besar & hasil probe/run tidak di-commit)
+mobile-execution/build-apk/*
+!mobile-execution/build-apk/.gitkeep
+mobile-execution/probe-result/*
+!mobile-execution/probe-result/.gitkeep
+mobile-execution/automate-result/*
+!mobile-execution/automate-result/.gitkeep
+mobile-execution/automate-support/*
+!mobile-execution/automate-support/.gitkeep
+
+# ==============================================================================
+# Pondasi Workflow (P8): rahasia, profil aplikasi, artefak kerja & evidence TIDAK di-commit
+# ==============================================================================
+# Rahasia per aplikasi + denylist lokal
+.secrets/
+# Backup lokal sebelum restrukturisasi
+.backup/
+# Profil aplikasi berisi data aplikasi (knowledge, data uji) -> lokal; hanya template yang di-commit
+profiles/*
+!profiles/_template/
+!profiles/_template/**
+!profiles/README.md
+# Artefak kerja per fitur (analisa, TC, plan, run, laporan) -> lokal
+work/*
+!work/.gitkeep
+!work/README.md
+# Rencana eksekusi mobile berisi target & data uji aplikasi
+mobile-execution/plans/*
+!mobile-execution/plans/.gitkeep
+# Media & log evidence di mana pun
+*.apk
+*.aab
+*.ipa
+*.mp4
+*.har
+*_logcat.txt
+mutation_ledger.jsonl

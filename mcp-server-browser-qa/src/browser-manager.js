@@ -183,6 +183,13 @@ export class BrowserManager {
   }
 
   setEvidenceDirectory(runFeatureName, projectRoot) {
+    // Satu folder run per fitur selama sesi (sebelumnya setiap capture membuat folder baru per detik).
+    // Folder awal 'browser' (dibuat ledger sebelum featureName diketahui) diadopsi oleh fitur pertama.
+    if (this.evidenceDir && fs.existsSync(this.evidenceDir) && (this.evidenceFeature === runFeatureName || this.evidenceFeature === 'browser' || runFeatureName === 'browser')) {
+      if (this.evidenceFeature === 'browser' && runFeatureName && runFeatureName !== 'browser') this.evidenceFeature = runFeatureName;
+      return this.evidenceDir;
+    }
+    this.evidenceFeature = runFeatureName || 'test';
     const timestamp = new Date().toISOString().replace(/[-:]/g, '').replace('T', '_').split('.')[0];
     const targetBase = path.join(projectRoot, 'browser-execution', 'automate-result');
     const folderName = `run_${runFeatureName || 'test'}_${timestamp}`;

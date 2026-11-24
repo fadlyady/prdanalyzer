@@ -1,0 +1,16 @@
+{
+  "name": "mcp-server-mobile-qa",
+  "version": "1.0.0",
+  "description": "Deterministic Security-Guarded MCP Server for Mobile (Android) QA Execution via Appium UiAutomator2",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "selftest": "node test/selftest.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.1",
+    "webdriverio": "^9.0.0"
+  },
+  "engines": { "node": ">=18" }
+}

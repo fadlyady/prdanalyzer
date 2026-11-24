@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "mobile-qa-guard": {
+      "command": "node",
+      "args": [
+        "mcp-server-mobile-qa/src/index.js"
+      ]
+    }
+  }
+}

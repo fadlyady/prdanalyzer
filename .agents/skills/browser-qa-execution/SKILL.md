@@ -7,7 +7,7 @@ description: >-
   integrates supplementary test data from browser-execution/automate-support/ with mandatory scenario-data mapping gates,
   applies Target URL & Browser State Resolution Gate (if browser is open: verifies active tab title & URL before running to prevent tab hijacking; if browser is closed: asks for target URL variable from .env or auto-discovers it, asks for target user variable, and launches Chrome directly to target URL),
   verifies credentials against .env with 3-tier checks (multi-credential disambiguation gate for duplicate role prefixes, missing credential alert instructing user to update .env, and active session mismatch gate to switch user vs stay on current role), applies 100% domain-agnostic universal step execution,
-  mandates pre-flight confirmation asking user whether CREATE/EDIT/DELETE mutation actions are permitted (if yes, runs all actions without guard; if no, executes in safe mode flagging mutation steps as PARTIAL TEST WITH REASON), handles multi-role RBAC execution,
+  applies a tiered Mutation Policy (QA_MUTATION_MODE safe | full | full_external; asks once only when not configured) where full runs CREATE/UPDATE/DELETE for real on staging with hard rails (TAG-only update/delete, financial blocked, external sends only to allowlisted recipients, staging-only domains) and safe flags mutation steps as PARTIAL TEST WITH REASON, plus a mutation ledger and optional (opt-in) DB validation, handles multi-role RBAC execution,
   applies transparent status flagging (PASSED, FAILED, SKIP WITH REASON, PARTIAL TEST WITH REASON for backend/DB steps and safe-mode skipped mutations),
   executes 5 mandatory exploratory testing charters, archives screenshots into timestamped run directories,
   and compiles executive corporate Word (.docx) audit reports without embedded images into browser-execution/automate-result/.
@@ -46,7 +46,8 @@ Skill ini dirancang bersifat **100% Universal, Domain-Agnostic, & Cross-Device P
     * `qa_check_browser_state`: Memeriksa port CDP 9222 & mendaftar tab terbuka (Gate 2).
     * `qa_init_browser`: Peluncuran Chrome & penegakan Domain Allowlist (Gate 2).
     * `qa_list_available_roles`: Deteksi role dari `.env` dengan password ter-masking (Gate 3).
-    * `qa_set_mutation_permission`: Mengaktifkan/menonaktifkan Safe Mode mutasi (Gate 4).
+    * `qa_set_mutation_permission`: Mengatur mode mutasi `safe | full | full_external` + mengembalikan `dataTag` (Gate 4).
+    * `qa_get_mutation_ledger`: Ringkasan mutasi dijalankan/diblokir + petunjuk teardown data ber-TAG (Gate 5).
     * `qa_login_role`: Injeksi form login DOM langsung tanpa membocorkan password ke prompt AI (Gate 3).
     * `qa_execute_action`: Eksekusi aksi klik/ketik dengan interceptor mutasi otomatis (Gate 4).
     * `qa_assert_element`: Verifikasi UI state visible/contains_text/url_contains (Gate 5).
@@ -138,25 +139,33 @@ Sebelum dan selama menjalankan pengujian, Senior QA **WAJIB** mematuhi 6 gerbang
 │   3. KASUS 3 (Actor KOSONG di Test Case): DILARANG mengasumsikan role  │
 │      sepihak! Mesin WAJIB berhenti dan meminta user memilih role login │
 │      dari daftar kredensial yang tersedia di .env.                     │
-│ - Active Session Mismatch Gate: Jika browser sudah login tetapi role    │
+│ - Active Session Mismatch Gate: Jika browser sudah login tetapi role   │
 │   aktif BERBEDA: Tanya opsi penanganan (Logout & Re-login vs Lanjut).  │
 ├────────────────────────────────────────────────────────────────────────┤
-│ GATE 4: PRE-FLIGHT ACTION PERMISSION GATE (CREATE / EDIT / DELETE)     │
-│ - SEBELUM eksekusi dijalankan, Agent WAJIB BERTANYA kepada user:       │
-│   "Apakah diperbolehkan melakukan aksi create/edit/delete pada proses  │
-│    run testcase ini?"                                                  │
-│ - Jika IYA (Diizinkan): Jalankan SEMUA skenario secara penuh TANPA     │
-│   GUARD (aksi create/edit/delete dieksekusi nyata di staging).         │
-│ - Jika TIDAK (Mode Aman): Aksi mutasi (create/edit/delete) dilewati,   │
-│   dan skenario tersebut WAJIB DITANDAI DENGAN FLAG:                    │
-│   PARTIAL TEST WITH REASON: Aksi mutasi data ("...") dilewati sesuai   │
-│   izin mode aman user. (Seperti kondisi partial passed).               │
+│ GATE 4: MUTATION POLICY GATE (safe | full | full_external)             │
+│ - Mode diambil dari .env QA_MUTATION_MODE. Jika diset, agent TIDAK     │
+│   bertanya ulang: tampilkan banner mutationPolicy (dari                │
+│     qa_init_browser).                                                  │
+│ - Jika belum diset: tanya user sekali (A) full (B) full_external (C)   │
+│   safe.                                                                │
+│ - safe: aksi mutasi diblokir -> PARTIAL TEST WITH REASON.              │
+│ - full: create/update/delete/ubah status dijalankan nyata di staging.  │
+│ - full_external: full + kirim/broadcast HANYA ke                       │
+│   QA_TEST_RECIPIENT_ALLOWLIST                                          │
+│ - ATURAN KERAS (semua mode): finansial diblokir (kecuali sandbox);     │
+│   update/delete hanya pada data ber-TAG run; logout hanya bila         │
+│     eksplisit;                                                         │
+│   host staging dari .env saja, QA_PROD_HOSTS_DENY selalu ditolak;      │
+│   keluar dari staging saat run -> mode dipaksa safe.                   │
+│ - Data baru WAJIB memakai dataTag ({{TAG}}); bersihkan di akhir run.   │
 ├────────────────────────────────────────────────────────────────────────┤
 │ GATE 5: TRANSPARENT STATUS FLAGGING GATE                               │
 │ - PASSED: Skenario UI selesai dan seluruh assertion terpenuhi.         │
 │ - FAILED: Assertion UI gagal atau elemen/opsi tidak ditemukan.         │
 │ - SKIP WITH REASON: Skenario dilewati (misal kredensial belum ada).    │
-│ - PARTIAL TEST WITH REASON: Melibatkan API/DB atau mutasi mode aman.   │
+│ - PARTIAL TEST WITH REASON: Melibatkan API/DB atau mutasi diblokir     │
+│   Mutation Policy (alasan dari server). Validasi DB = OPSIONAL (opt-   │
+│     in).                                                               │
 ├────────────────────────────────────────────────────────────────────────┤
 │ GATE 6: RBAC ROLE BATCHING & CLEAN SESSION RESET GATE                  │
 │ - ROLE BATCHING PROTOCOL: Kelompokkan skenario per role; login hanya   │
@@ -244,16 +253,26 @@ Senior QA wajib menjalankan validasi 3 tingkat (*3-Tier Credential & Session Che
      > *(A) Logout dan login ulang menggunakan kredensial `[Role_Skenario]` dari `.env`.*
      > *(B) Tetap melanjutkan pengujian menggunakan akun `[Role_Aktif]` yang saat ini sedang aktif."*
 
-### Fase 2c: Pre-Flight Action Permission Gate (Izin Mutasi CREATE / EDIT / DELETE - Gate 4)
-SEBELUM runner pengujian dieksekusi, Senior QA / Agent **WAJIB BERTANYA KEPADA USER**:
-> *"Sebelum pengujian dijalankan, apakah Anda memperbolehkan eksekusi aksi mutasi data (**CREATE / EDIT / DELETE**) secara langsung pada staging selama proses run testcase ini?"*
-> *(A) **Ya, Izinkan Semua (Full Execution)**: Jalankan seluruh skenario dan aksi mutasi data secara penuh tanpa guard.*
-> *(B) **Tidak, Mode Aman (Safe Mode)**: Lewati aksi mutasi data, ambil screenshot bukti awal, dan tandai skenario tersebut sebagai `PARTIAL TEST WITH REASON`.*
+### Fase 2c: Mutation Policy Gate (Gate 4 — safe | full | full_external)
+Gate 4 tidak lagi "buka semua tanpa guard". Mode mutasi berlevel dan aturan kerasnya ditegakkan oleh server (`mcp-server-browser-qa/src/policy.js`), sehingga coverage create/update/delete bisa penuh tanpa membahayakan data nyata.
 
-- **Jika User Menjawab Ya (Izinkan)**:
-  Gunakan flag `--allow-mutation` (atau set `ALLOW_MUTATION=true`). Mesin mengeksekusi semua aksi manipulasi data secara nyata di staging tanpa guard.
-- **Jika User Menjawab Tidak (Mode Aman)**:
-  Jalankan default runner tanpa `--allow-mutation`. Saat mendeteksi aksi mutasi data, mesin otomatis melewati klik tombol mutasi, mengambil screenshot evidence kondisi awal (`${tc.id}_partial_mutation.png`), dan menyematkan status **`PARTIAL TEST WITH REASON`** (seperti kondisi partial passed).
+1. **Tentukan mode**:
+   - Jika `.env` berisi `QA_MUTATION_MODE` → **jangan bertanya ulang**. Tampilkan `mutationPolicy` dari respons `qa_init_browser` sebagai banner (mode, dataTag, aturan aktif) lalu lanjut.
+   - Jika belum diset → tanyakan sekali:
+     > *"Mode mutasi untuk run ini? (A) **full** — create/update/delete nyata di staging (update/delete hanya pada data ber-TAG run); (B) **full_external** — full + kirim pesan/broadcast hanya ke penerima di `QA_TEST_RECIPIENT_ALLOWLIST`; (C) **safe** — read-only, langkah mutasi ditandai PARTIAL."*
+   - Panggil `qa_set_mutation_permission({ mode, featureName })`. Respons memuat **`dataTag`** (mis. `QAAUTO-2611201530`) dan lokasi `mutation_ledger.jsonl`.
+2. **Penanda data uji (TAG)**: setiap data yang dibuat WAJIB memuat `dataTag` — gunakan `{{TAG}}` pada `value` aksi `fill` (mis. `"Label {{TAG}}"`). Edit/hapus hanya diizinkan pada baris/dialog/detail yang memuat TAG (atau beberapa langkah setelah membuka data ber-TAG). Data seed tanpa TAG → buat dulu data ber-TAG di TC, atau set `QA_REQUIRE_DATA_TAG` (lihat `.env.example`).
+3. **Aturan keras (semua mode)**: finansial (bayar/top up/checkout/potong kuota) diblokir kecuali `QA_FINANCIAL_SANDBOX=true`; logout hanya bila `mutationType:"session_end"`/`isMutation`; domain hanya host staging dari `.env` (`QA_STAGING_HOSTS`, `*_BASE_URL_STAGING`) dan `QA_PROD_HOSTS_DENY` selalu ditolak; bila halaman berpindah ke luar staging, server memaksa mode `safe`.
+4. **Penandaan langkah**: kirim `isMutation:true` untuk langkah `[MUTATION]`, atau `mutationType` (`create|update|delete|state_change|external|financial|session_end`) bila kategori jelas. `mutationType:"navigation"` hanya boleh untuk tombol create yang sekadar membuka form (mis. "Tambah" → membuka modal). Sertakan `tcId` & `step` agar ledger & evidence tertaut.
+5. **Respons `PARTIAL TEST WITH REASON` dari server** → hentikan langkah itu, salin `reason` apa adanya ke laporan, lanjutkan assertion yang masih bisa.
+6. **Teardown**: di akhir run panggil `qa_get_mutation_ledger`. Bila ada data dibuat (`created`), jalankan TC cleanup yang menghapus data ber-TAG (masih dalam mode full) lalu cantumkan ringkasan ledger (dijalankan/diblokir per kategori + TAG) di laporan.
+7. **Runner `universal_executor.js`**: `--mutation-mode=<safe|full|full_external>` (default `QA_MUTATION_MODE`), `--allow-mutation` = `full` (legacy). Finansial selalu dilewati; kirim/broadcast hanya di `full_external`.
+
+### Fase 2d: Validasi Database (OPSIONAL — opt-in)
+Layer DB **tidak** divalidasi otomatis karena butuh detail tabel/kolom/kondisi yang spesifik. Default: langkah yang bergantung pada DB tetap `PARTIAL TEST WITH REASON (UI PASSED; DB belum divalidasi)`.
+- Jalankan skill `database-qa-validation` **hanya bila** user meminta dan menyediakan (atau TC memuat blok `[DB-CHECK]`) berisi: target DB (`primary`/`external`), tabel, kolom kunci, dan kondisi yang diharapkan (mis. `WHERE name LIKE '%{{TAG}}%'`).
+- Jika detail tidak lengkap → jangan menebak skema; tanyakan sekali atau biarkan status PARTIAL dengan alasan "detail DB tidak tersedia".
+- Hasil DB yang lolos boleh menaikkan status PARTIAL (karena DB) menjadi PASSED; cantumkan query read-only yang dipakai di laporan.
 
 ### Fase 3: Eksekusi Universal & Heuristik Aksi Agnostik
 Jalankan pengujian menggunakan mesin agnostic `scripts/universal_executor.js`. Mesin akan menerjemahkan langkah bahasa alami secara dinamis dan sekuensial:
@@ -263,8 +282,8 @@ Jalankan pengujian menggunakan mesin agnostic `scripts/universal_executor.js`. M
    - Saat berpindah ke batch role baru, runner mengeksekusi reset sesi bersih (`clearCookies` dan clear storage) agar tidak terjadi kontaminasi hak akses antar role.
 1. **Pencegahan / Izin Aksi Mutasi Data (Gate 4 Pre-flight Safety Gate)**:
    - Mesin secara otomatis mendeteksi kata kunci mutasi data pada langkah pengujian (`create`, `edit`, `ubah`, `update`, `tambah data`, `delete`, `hapus`, `aktifkan`, `deaktifkan`, `aksi massal`, `simpan perubahan`, `potong kuota`, `kirim broadcast`).
-   - Mode Aman: Melewati mutasi data, ambil screenshot kondisi awal, tandai `PARTIAL TEST WITH REASON`.
-   - Izin Mutasi: Menjalankan aksi nyata tanpa guard.
+   - Mode `safe`: Melewati mutasi data, ambil screenshot kondisi awal, tandai `PARTIAL TEST WITH REASON`.
+   - Mode `full` / `full_external`: Menjalankan aksi nyata sesuai Mutation Policy (finansial selalu dilewati; kirim/broadcast hanya di `full_external`). Lihat Fase 2c.
 2. **Aksi Navigasi (`Akses menu X > Y` / `Buka halaman /path`) - 100% Agnostik**:
    - Jika teks navigasi memuat relative URL (`/path`) atau absolute URL (`https://...`), lakukan navigasi URL langsung.
    - Jika teks navigasi memuat hierarki menu bahasa alami (misal: `DATA > Pelanggan > Daftar pelanggan`), mesin memecah hierarki dan mengeklik elemen menu bertingkat secara dinamis tanpa mengasumsikan nama modul tertentu.

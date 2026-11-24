@@ -76,3 +76,29 @@ cd mcp-server-browser-qa
 node src/index.js
 ```
 Server akan berjalan di stdio dan siap menerima payload JSON-RPC dari client MCP standar.
+
+---
+
+## Mutation Policy v2 (Gate 4) — safe | full | full_external
+
+Satu modul bersama: `mcp-server-browser-qa/src/policy.js` (dipakai browser-qa-guard & mobile-qa-guard). Konfigurasi di `.env` (lihat `.env.example` bagian MUTATION POLICY).
+
+| Mode | Yang dijalankan nyata |
+|---|---|
+| `safe` | Tidak ada mutasi — langkah mutasi → `PARTIAL TEST WITH REASON` |
+| `full` | create / update / delete / ubah status di staging |
+| `full_external` | `full` + kirim / balas / broadcast, hanya bila penerima di layar cocok `QA_TEST_RECIPIENT_ALLOWLIST` |
+
+Aturan keras di semua mode:
+- **Finansial** (bayar, top up, checkout, potong kuota) diblokir kecuali `QA_FINANCIAL_SANDBOX=true`.
+- **Update/delete hanya data ber-TAG**: `qa_set_mutation_permission` mengembalikan `dataTag` (mis. `QAAUTO-2611201530`); pakai `{{TAG}}` di value saat membuat data. Edit/hapus diizinkan bila elemen/baris/dialog memuat TAG atau ≤ `QA_TAG_CONTEXT_WINDOW` langkah setelah membuka data ber-TAG.
+- **Logout** hanya bila `isMutation:true` / `mutationType:"session_end"`.
+- **Browser**: domain hanya host dari `QA_STAGING_HOSTS` / `*_BASE_URL_STAGING` (target tidak lagi auto-allow); `QA_PROD_HOSTS_DENY` selalu ditolak; halaman berpindah ke luar staging → mode dipaksa `safe`. Klasifikasi memakai selector + teks elemen (bukan nilai `fill`); link `<a href>` = navigasi.
+- **Mobile**: koordinat mentah (`xy`) tidak pernah untuk mutasi; koordinat ber-anchor `{relativeTo:{id|label}, side, offset?}` boleh di mode full dengan screenshot `_anchored_before/after.png` otomatis.
+- Mode di-reset ke default `.env` (atau `safe`) saat `qa_close_browser` / `qa_close_app`; ganti role (`qa_reset_session`) mempertahankan mode & TAG.
+
+Audit & teardown: setiap mutasi dijalankan/diblokir dicatat di `mutation_ledger.jsonl` folder run; `qa_get_mutation_ledger` memberi ringkasan + daftar data yang dibuat. Plan runner mobile menjalankan `plan.teardown[]` di akhir (lewati dengan `--skip-teardown`).
+
+Validasi DB setelah mutasi **opsional** (opt-in lewat skill `database-qa-validation`, butuh detail tabel/kondisi dari user) — tidak dipanggil otomatis.
+
+Self-test tanpa device/Chrome: `npm run selftest`.

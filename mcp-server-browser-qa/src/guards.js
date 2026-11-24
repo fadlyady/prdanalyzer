@@ -1,99 +1,80 @@
 /**
  * Deterministic Hard Guardrails for Browser QA Automation
  * Enforces Gate 2 (Domain/Tab Protection), Gate 3 (Credential Privacy),
- * Gate 4 (Pre-flight Mutation Guard), and Gate 6 (Session Isolation).
+ * Gate 4 (Mutation Policy berlevel — lihat policy.js), and Gate 6 (Session Isolation).
  */
 
 import fs from 'fs';
 import path from 'path';
+import { MutationPolicy, list } from './policy.js';
 
-export class MutationGuard {
-  constructor() {
-    this.mutationAllowed = false;
-    this.permissionGrantedBy = null;
-    this.destructiveKeywords = [
-      'delete', 'hapus', 'destroy', 'remove', 'trash', 'drop', 'purge',
-      'create', 'tambah', 'add', 'new', 'buat',
-      'update', 'edit', 'ubah', 'save', 'simpan',
-      'checkout', 'bayar', 'pay', 'confirm', 'submit'
-    ];
+export { MutationPolicy, classify, MODES } from './policy.js';
+
+/**
+ * Adapter Gate 4 untuk browser: klasifikasi dari selector + teks elemen (bukan nilai input),
+ * link navigasi (<a href>) tidak dianggap mutasi kecuali ditandai eksplisit.
+ */
+export class MutationGuard extends MutationPolicy {
+  setPermission(allowed, actor = 'user', opts = {}) {
+    const mode = opts.mode || (allowed ? (this.defaultMode && this.defaultMode !== 'safe' ? this.defaultMode : 'full') : 'safe');
+    return this.setMode(mode, { actor, tag: opts.tag });
   }
 
-  setPermission(allowed, actor = 'user') {
-    this.mutationAllowed = Boolean(allowed);
-    this.permissionGrantedBy = allowed ? actor : null;
-    return {
-      mutationAllowed: this.mutationAllowed,
-      mode: this.mutationAllowed ? 'LIVE_MUTATION_ENABLED' : 'SAFE_MODE_ACTIVE'
-    };
-  }
-
-  isDestructive(actionType, selector = '', value = '', isMutationExplicit = false) {
-    if (isMutationExplicit) return true;
-
-    const lowerSelector = (selector || '').toLowerCase();
-    const lowerValue = (value || '').toLowerCase();
-    const lowerAction = (actionType || '').toLowerCase();
-
-    // Specific destructive actions
-    if (['delete', 'remove', 'submit'].includes(lowerAction)) return true;
-
-    // Check selectors and text for destructive terms
-    for (const kw of this.destructiveKeywords) {
-      const regex = new RegExp(`\\b${kw}\\b`, 'i');
-      if (regex.test(lowerSelector) || regex.test(lowerValue)) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  evaluateAction(actionType, selector, value, isMutationExplicit) {
-    const destructive = this.isDestructive(actionType, selector, value, isMutationExplicit);
-    if (destructive && !this.mutationAllowed) {
-      return {
-        blocked: true,
-        status: 'PARTIAL TEST WITH REASON',
-        reason: `Aksi [${actionType}] pada selector "${selector}" diidentifikasi sebagai aksi mutasi (CREATE/EDIT/DELETE). Safe Mode AKTIF sehingga eksekusi dibatalkan secara deterministik.`
-      };
-    }
-    return { blocked: false };
+  /**
+   * @param el  info elemen dari halaman: { text, ctx, isLink, inForm }
+   */
+  evaluateAction(actionType, selector = '', value = '', isMutationExplicit = false, el = {}, opts = {}) {
+    const a = (actionType || '').toLowerCase();
+    const evaluated = ['click', 'press', 'dblclick', 'check', 'uncheck'];
+    if (!evaluated.includes(a) && !isMutationExplicit) return { blocked: false, destructive: false };
+    const elText = (el.text || '').length <= 60 ? (el.text || '') : '';
+    let text = `${selector} ${elText}`;
+    // press Enter di dalam form = submit
+    if (a === 'press') { const enter = /^(enter|numpadenter)$/i.test(value || 'Enter'); text = !enter ? '' : el.inForm ? `${text} submit` : text; }
+    return this.evaluate({
+      text, isMutation: isMutationExplicit, mutationType: opts.mutationType,
+      contextText: `${el.text || ''} ${el.ctx || ''}`, screenText: opts.screenText || '',
+      isNavigation: Boolean(el.isLink),
+    });
   }
 }
 
+const hostOf = u => { try { return new URL(u).hostname.toLowerCase(); } catch { return null; } };
+
+/**
+ * Domain guard: allowlist HANYA dari konfigurasi (.env), tidak pernah menambahkan host target secara otomatis.
+ *   QA_STAGING_HOSTS      : daftar host staging (koma). Subdomain ikut diizinkan.
+ *   *_BASE_URL_STAGING    : host-nya otomatis masuk allowlist (mis. E2E_BASE_URL_STAGING).
+ *   QA_PROD_HOSTS_DENY    : host production — exact match, atau "*.domain" untuk semua subdomain. Selalu ditolak.
+ */
 export class DomainGuard {
-  constructor(allowedHostnames = []) {
-    this.allowedHostnames = new Set(allowedHostnames);
-    this.targetUrl = null;
+  constructor(env = {}) { this.reload(env); this.targetUrl = null; }
+
+  reload(env = {}) {
+    const fromUrls = Object.entries(env).filter(([k]) => /_BASE_URL_STAGING$|^BASE_URL_STAGING$/.test(k)).map(([, v]) => hostOf(v)).filter(Boolean);
+    this.allowedHostnames = new Set(['localhost', '127.0.0.1', ...list(env.QA_STAGING_HOSTS).map(h => h.toLowerCase()), ...fromUrls]);
+    this.deny = list(env.QA_PROD_HOSTS_DENY).map(h => h.toLowerCase());
+    return this;
   }
 
-  setTargetUrl(url) {
-    try {
-      const parsed = new URL(url);
-      this.targetUrl = url;
-      this.allowedHostnames.add(parsed.hostname);
-      return true;
-    } catch (e) {
-      return false;
-    }
+  configured() { return this.allowedHostnames.size > 2; }
+
+  isDenied(host) {
+    return this.deny.some(d => d.startsWith('*.') ? (host === d.slice(2) || host.endsWith(d.slice(1))) : host === d);
   }
 
-  isUrlAllowed(targetUrl) {
-    try {
-      const parsed = new URL(targetUrl);
-      // Disallow about:blank / chrome internal URLs if navigating away
-      if (['localhost', '127.0.0.1'].includes(parsed.hostname)) return true;
-
-      for (const allowed of this.allowedHostnames) {
-        if (parsed.hostname === allowed || parsed.hostname.endsWith(`.${allowed}`)) {
-          return true;
-        }
-      }
-      return false;
-    } catch {
-      return false;
-    }
+  check(targetUrl) {
+    const host = hostOf(targetUrl);
+    if (!host) return { ok: false, reason: `URL "${targetUrl}" tidak valid.` };
+    if (this.isDenied(host)) return { ok: false, host, reason: `Host ${host} terdaftar di QA_PROD_HOSTS_DENY (production).` };
+    for (const a of this.allowedHostnames) if (host === a || host.endsWith(`.${a}`)) return { ok: true, host };
+    return { ok: false, host, reason: this.configured()
+      ? `Host ${host} tidak ada di allowlist staging (${[...this.allowedHostnames].join(', ')}).`
+      : `Allowlist staging belum dikonfigurasi. Isi QA_STAGING_HOSTS atau E2E_BASE_URL_STAGING di .env.` };
   }
+
+  setTargetUrl(url) { const r = this.check(url); if (r.ok) this.targetUrl = url; return r.ok; }
+  isUrlAllowed(targetUrl) { return this.check(targetUrl).ok; }
 }
 
 export class CredentialVault {

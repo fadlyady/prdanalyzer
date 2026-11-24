@@ -543,25 +543,36 @@ async function executeUniversalSuite(testcaseMdPath) {
     for (const stepText of steps) {
       console.log(`   - Step: ${stepText.slice(0, 70)}...`);
 
-      // Gate 4: Mutation / Destructive Action Permission Check
-      const isMutationAction = /(?:aksi\s*massal|aktifkan|deaktifkan|hapus|delete|buat\s*baru|create|tambah\s*data|edit|ubah|update|simpan\s*perubahan|potong\s*kuota|kirim\s*broadcast)/i.test(stepText);
-      const isMutationAllowed = process.env.ALLOW_MUTATION === 'true' || 
-                                process.env.ALLOW_DESTRUCTIVE === 'true' || 
-                                process.argv.includes('--allow-mutation') || 
-                                process.argv.includes('--allow-destructive');
+      // Gate 4: Mutation Policy (selaras dengan mcp-server-browser-qa/src/policy.js)
+      //   mode: --mutation-mode=<safe|full|full_external> > --allow-mutation / ALLOW_MUTATION (= full) > .env QA_MUTATION_MODE > safe
+      const envX = loadEnv();
+      const cliMode = ((process.argv.find(a => a.startsWith('--mutation-mode=')) || '').split('=')[1] || '').trim();
+      const legacyAllow = process.env.ALLOW_MUTATION === 'true' || process.env.ALLOW_DESTRUCTIVE === 'true' ||
+                          process.argv.includes('--allow-mutation') || process.argv.includes('--allow-destructive');
+      const mutationMode = ['safe', 'full', 'full_external'].includes(cliMode) ? cliMode
+        : legacyAllow ? 'full' : (['safe', 'full', 'full_external'].includes(envX.QA_MUTATION_MODE) ? envX.QA_MUTATION_MODE : 'safe');
+      const isFinancial = /(?:\bbayar\b|top\s*up|topup|checkout|potong\s*kuota|\bbeli\b|isi\s*saldo)/i.test(stepText);
+      const isExternal = /(?:\bkirim\b|\bbroadcast\b|\bbalas\b|\breply\b|\bsend\b)/i.test(stepText);
+      const isMutationAction = isFinancial || isExternal || /(?:aksi\s*massal|aktifkan|deaktifkan|hapus|delete|buat\s*baru|create|tambah\s*data|edit|ubah|update|simpan\s*perubahan)/i.test(stepText);
+      let mutationBlock = null;
+      if (isMutationAction) {
+        if (mutationMode === 'safe') mutationBlock = 'mode aman (safe) aktif — create/edit/delete tidak diizinkan';
+        else if (isFinancial && envX.QA_FINANCIAL_SANDBOX !== 'true') mutationBlock = 'aksi finansial selalu diblokir (set QA_FINANCIAL_SANDBOX=true hanya untuk payment sandbox)';
+        else if (isExternal && mutationMode !== 'full_external') mutationBlock = 'aksi kirim/broadcast menjangkau pihak luar — butuh mode full_external';
+      }
 
       if (isMutationAction) {
-        if (!isMutationAllowed) {
+        if (mutationBlock) {
           console.log(`     \x1b[33m[PARTIAL TEST - MUTATION SKIPPED] Langkah mutasi data dilewati: "${stepText}"\x1b[0m`);
-          console.log(`     Mode pengujian aman aktif (create/edit/delete tidak diizinkan user). Skenario di-flag sebagai PARTIAL TEST.`);
+          console.log(`     Alasan: ${mutationBlock}. Skenario di-flag sebagai PARTIAL TEST.`);
           isMutationSkipped = true;
-          mutationSkipReason = `Aksi mutasi data ("${stepText}") dilewati sesuai izin mode aman user. Verifikasi create/edit/delete lanjutan perlu dilakukan manual.`;
+          mutationSkipReason = `Aksi mutasi data ("${stepText}") dilewati: ${mutationBlock}. Verifikasi lanjutan perlu dilakukan manual atau ulangi dengan mode yang sesuai.`;
           const sName = `${tc.id}_partial_mutation.png`;
           await page.screenshot({ path: path.join(runDir, sName) }).catch(() => {});
           evidenceFiles.push({ filename: sName, scenario: tc.id, timestamp: new Date().toLocaleTimeString() });
           break;
         } else {
-          console.log(`     \x1b[32m[MUTATION PERMITTED] Izin mutasi aktif: menjalankan aksi tanpa guard: "${stepText}"\x1b[0m`);
+          console.log(`     \x1b[32m[MUTATION PERMITTED] Mode ${mutationMode}: menjalankan aksi mutasi: "${stepText}"\x1b[0m`);
         }
       }
 
@@ -828,7 +839,7 @@ async function executeUniversalSuite(testcaseMdPath) {
     fs.writeFileSync(executionContextPath, JSON.stringify({
       run_id: runId,
       timestamp,
-      target_file: targetFile,
+      target_file: testcaseMdPath,
       total_partial_scenarios: partialContextList.length,
       partial_scenarios: partialContextList
     }, null, 2));
@@ -886,7 +897,8 @@ Options:
   --tab-url=<substring>  Menentukan tab browser berdasarkan pencocokan substring URL
   --new-tab              Membuka tab baru secara eksplisit di browser aktif
   --skip-roles=<R1,R2>   Melewati eksekusi skenario untuk role tertentu (e.g. --skip-roles=CS)
-  --allow-mutation       Mengizinkan eksekusi aksi mutasi data (CREATE/EDIT/DELETE) secara penuh tanpa guard
+  --mutation-mode=<m>    safe | full | full_external (default: QA_MUTATION_MODE di .env, atau safe)
+  --allow-mutation       Legacy: sama dengan --mutation-mode=full (CREATE/EDIT/DELETE; finansial tetap diblokir)
   --allow-destructive    Alias dari --allow-mutation
   --help, -h             Menampilkan panduan ini
 `);
