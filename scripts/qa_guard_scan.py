@@ -124,7 +124,7 @@ def main(args):
                     findings.append((rel, i, name, mask(rx.search(line).group(0))))
             for m in (EMAIL.finditer(line) if not rel.endswith(('package-lock.json', 'yarn.lock', 'go.sum')) else []):
                 dom = m.group(0).split('@', 1)[1].lower()
-                if dom not in ALLOWED_EMAIL_DOMAINS:
+                if dom not in ALLOWED_EMAIL_DOMAINS and not re.search(r'(^|\.)example\.(com|org|net|internal)$|\.example$|\.invalid$|\.test$', dom):
                     findings.append((rel, i, 'email', mask(m.group(0))))
     if findings:
         print(f'[QA GUARD] DITOLAK: {len(findings)} temuan pada {len({x[0] for x in findings})} file.')
