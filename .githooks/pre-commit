@@ -1,0 +1,3 @@
+#!/bin/sh
+# Pre-commit: tolak commit yang memuat rahasia, data aplikasi, atau hasil test.
+python3 "$(git rev-parse --show-toplevel)/scripts/qa_guard_scan.py" --staged || exit 1

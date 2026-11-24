@@ -1,0 +1,11 @@
+{
+  "name": "mcp-server-database-qa",
+  "version": "1.0.0",
+  "description": "Deterministic 4-Tier Security-Guarded PostgreSQL MCP Server for QA Testing",
+  "main": "runner.js",
+  "type": "module",
+  "scripts": {
+    "start": "node runner.js",
+    "build": "go build -o bin/postgres-mcp-go ./cmd/postgres-mcp-go"
+  }
+}

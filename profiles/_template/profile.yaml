@@ -1,0 +1,24 @@
+# Profil aplikasi — TANPA rahasia. Nilai sensitif hanya rujukan "secret:<KEY>" ke .secrets/<alias>.env
+alias: APP_X                      # ganti dengan alias folder ini
+category: <kategori-umum>         # mis. chat-crm, e-commerce, payment (bukan nama produk)
+platforms: [web]                  # web | android | ios | api | db
+environments:
+  staging:
+    web_base_url: secret:E2E_BASE_URL_STAGING
+    hosts_allow: secret:QA_STAGING_HOSTS
+    hosts_deny: secret:QA_PROD_HOSTS_DENY
+    mobile_package: secret:MOBILE_APP_PACKAGE_STAGING
+roles:                            # akun = suffix USER_<ROLE>_<n> / PASS_<ROLE>_<n> di .secrets
+  owner: { accounts: [OWNER_1], synonyms: [pemilik, owner] }
+databases:                        # alias db:<fungsi> -> prefix DB_<FUNGSI>_* di .secrets
+  main: { prefix: DB_MAIN, mcp_target: primary, schema: public }
+mutation_policy: { default_mode: safe, financial_sandbox: false, tag_prefix: QAAUTO }
+evidence: { classification: internal, redact: [email, phone, person_name, app_name] }
+knowledge:
+  web: knowledge/web/             # live-analyzer/<slug>/<ts>/ + screenshot manual per permukaan
+  mobile: knowledge/mobile/       # <package>/ui-knowledge.md, _system/, live-analyzer/, smoke.json
+  api: knowledge/api/             # OpenAPI / Postman / catatan kontrak
+  db: knowledge/db/               # db-validation-cheatsheet.md, catatan skema
+glossary: glossary.md
+rbac: rbac/
+data: data/

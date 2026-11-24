@@ -127,7 +127,7 @@ def create_table_from_parsed(doc, headers, rows_data):
             cell = row.cells[c_idx]
             cell.text = str(val).strip()
             txt = str(val).strip()
-            if txt in ["✅", "❌", "Pending", "Success", "Delivered", "-", "TRUE", "FALSE", "P1", "P2", "P3", "GO", "CONDITIONAL GO", "NO-GO", "Met", "Not Met"]:
+            if txt in ["✅", "❌", "Pending", "Success", "Delivered", "-", "TRUE", "FALSE", "P1", "P2", "P3", "GO", "CONDITIONAL GO", "NO-GO", "Met", "Not Met", "READY", "READY WITH GAPS", "NOT READY", "INSUFFICIENT DATA"]:
                 cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
             else:
                 cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.LEFT
@@ -142,7 +142,7 @@ def convert_md_to_docx(md_path, docx_path, contributor=None, approver=None, info
         lines = full_text.splitlines()
 
     # Calculate metrics
-    metrics = parse_markdown_metrics(full_text)
+    metrics = parse_markdown_metrics(full_text, md_path)
 
     doc = docx.Document()
     for s in doc.sections:
@@ -216,29 +216,32 @@ def convert_md_to_docx(md_path, docx_path, contributor=None, approver=None, info
     create_table_from_parsed(doc, approval_data[0], approval_data[1:])
 
     # Executive Calculated Quality Gate Scorecard
-    add_heading_styled(doc, "Executive Quality Gate & Release Scorecard (Calculated)", level=2)
-    
-    scorecard_data = [
-        ["Quality Gate Metric", "Measured Value", "Target Standard", "Compliance Status"],
-        ["Requirements Coverage (Happy Path)", f"{metrics['req_coverage']}%", "100%", "Met" if metrics['req_coverage']>=100 else "Not Met"],
-        ["Critical & High Risk Coverage", f"{metrics['crit_high_coverage']}%", "100%", "Met" if metrics['crit_high_coverage']>=100 else "Not Met"],
-        ["Basic Risk Coverage", f"{metrics['basic_risk_coverage']}% ({metrics['covered_risks']}/{metrics['total_risks']} Risks)", "≥ 80%", "Met" if metrics['basic_risk_coverage']>=80 else "Not Met"],
-        ["Weighted Risk Coverage (Bobot 4/3/2/1)", f"{metrics['weighted_risk_coverage']}% ({metrics['covered_weight']}/{metrics['total_weight']} Pts)", "≥ 90% (Min 85%)", "Met" if metrics['weighted_risk_coverage']>=85 else "Not Met"],
-        ["Release Recommendation Verdict", f"[{metrics['verdict']}]", "GO / CONDITIONAL GO", metrics['verdict']]
-    ]
+    add_heading_styled(doc, "Test Design Readiness Scorecard (Calculated)", level=2)
+    # Semua angka dihitung dari dokumen ini + 02-testcases.md di folder yang sama (tanpa nilai default).
+    scorecard_data = [["Quality Gate Metric", "Measured Value", "Target Standard", "Compliance Status"]] + metrics['scorecard_rows']
     create_table_from_parsed(doc, scorecard_data[0], scorecard_data[1:])
 
-    # Verdict Statement Paragraph
     p_verdict = doc.add_paragraph()
     p_verdict.paragraph_format.space_before = Pt(2)
-    p_verdict.paragraph_format.space_after = Pt(8)
-    r_v1 = p_verdict.add_run("Release Verdict Summary: ")
+    p_verdict.paragraph_format.space_after = Pt(4)
+    r_v1 = p_verdict.add_run("Ringkasan: ")
     r_v1.font.bold = True
     r_v1.font.name = 'Arial'
     r_v1.font.size = Pt(9.5)
-    r_v2 = p_verdict.add_run(f"{metrics['verdict']} — {metrics['verdict_desc']}")
+    r_v2 = p_verdict.add_run(f"[{metrics['verdict']}] — {metrics['verdict_desc']}")
     r_v2.font.name = 'Arial'
     r_v2.font.size = Pt(9.5)
+    note = doc.add_paragraph()
+    r_n = note.add_run("Catatan: Test Design Readiness menilai kesiapan analisa & test case, BUKAN verdict rilis. "
+                       "Verdict rilis (GO / CONDITIONAL GO / NO-GO) hanya dari hasil eksekusi yang sudah direview.")
+    r_n.font.name = 'Arial'
+    r_n.font.size = Pt(8.5)
+    r_n.font.italic = True
+    for w in (metrics.get('warnings') or [])[:15]:
+        pw = doc.add_paragraph()
+        rw = pw.add_run(f"⚠ {w}")
+        rw.font.name = 'Arial'
+        rw.font.size = Pt(8.5)
 
     # Parse Markdown Body Content
     in_table = False

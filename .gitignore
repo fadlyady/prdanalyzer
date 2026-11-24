@@ -31,6 +31,7 @@ scratch/
 .env
 .env.*
 !.env.example
+!.env.docker.example
 
 # Node Dependencies
 node_modules/
@@ -46,28 +47,89 @@ playwright/.cache/
 otherTasks/*
 !otherTasks/.gitkeep
 
+# Sensitive internal documents in Testcase-support
+Testcase-support/\[SSOT\]*
+Testcase-support/*SSOT*
+
+# Document Analyzer Folders (ignore contents, preserve folder structure)
+doc-analyzer/adhoc-document/*
+!doc-analyzer/adhoc-document/.gitkeep
+
+doc-analyzer/result-testcase/*
+!doc-analyzer/result-testcase/.gitkeep
+
+doc-analyzer/strukturmenu/**
+!doc-analyzer/strukturmenu/**/
+!doc-analyzer/strukturmenu/.gitkeep
+
+# Browser Automation & Testing Folders
+browser-execution/automate-result/*
+!browser-execution/automate-result/.gitkeep
+
+browser-execution/automate-support/*
+!browser-execution/automate-support/.gitkeep
+!browser-execution/automate-support/README.md
+
+# Legacy paths (backward compatibility)
 adhoc-document/*
 !adhoc-document/.gitkeep
 
 result-testcase/*
 !result-testcase/.gitkeep
 
-# Browser Automation Results & Evidence
 automate-result/*
 !automate-result/.gitkeep
 
-# Supplementary Test Data (ignore local datasets, preserve README and gitkeep)
 automate-support/*
 !automate-support/.gitkeep
 !automate-support/README.md
 
-# Ignore all files in strukturmenu and its subfolders, but keep structure & .gitkeep
 strukturmenu/**
 !strukturmenu/**/
-!strukturmenu/**/.gitkeep
+!strukturmenu/.gitkeep
 
 # IDE & Editors
 .idea/
 .vscode/
 *.swp
 *.swo
+# Mobile Execution (APK besar & hasil probe/run tidak di-commit)
+mobile-execution/build-apk/*
+!mobile-execution/build-apk/.gitkeep
+mobile-execution/probe-result/*
+!mobile-execution/probe-result/.gitkeep
+mobile-execution/automate-result/*
+!mobile-execution/automate-result/.gitkeep
+mobile-execution/automate-support/*
+!mobile-execution/automate-support/.gitkeep
+
+# ==============================================================================
+# Pondasi Workflow (P8): rahasia, profil aplikasi, artefak kerja & evidence TIDAK di-commit
+# ==============================================================================
+# Rahasia per aplikasi + denylist lokal
+.secrets/
+# Backup lokal sebelum restrukturisasi
+.backup/
+# Profil aplikasi berisi data aplikasi (knowledge, data uji) -> lokal; hanya template yang di-commit
+profiles/*
+!profiles/_template/
+!profiles/_template/**
+!profiles/README.md
+# Artefak kerja per fitur (analisa, TC, plan, run, laporan) -> lokal
+work/*
+!work/.gitkeep
+!work/README.md
+# Rencana eksekusi mobile berisi target & data uji aplikasi
+mobile-execution/plans/*
+!mobile-execution/plans/.gitkeep
+# Media & log evidence di mana pun
+*.apk
+*.aab
+*.ipa
+*.mp4
+*.har
+*_logcat.txt
+mutation_ledger.jsonl
+
+# Dokumen hasil generate (biner, tidak bisa dipindai guard) -> buat ulang lokal dari .md
+PANDUAN_PENGGUNAAN_QA_SKILLS.docx
