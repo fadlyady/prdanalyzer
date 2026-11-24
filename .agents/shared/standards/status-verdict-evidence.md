@@ -39,6 +39,10 @@ menulis aturan verdict sendiri.
 `failure_category`, opsional `decision` + `decision_reason`) → `python3 scripts/qa_review.py <folder-run>` menghitung ulang
 verdict, menulis `report_data.json`, laporan `reports/Report_<run>_REVIEWED.docx`, dan `runs/index.json`.
 
+**Audit laporan lama:** `python3 scripts/qa_audit_reports.py` menandai run/laporan yang dibuat sebelum perbaikan P0
+(charter bawaan, verdict tidak sesuai hitung ulang) di `runs/index.json` (`audit.tainted`) dan menulis ringkasan ke
+`work/<ALIAS>/_audit/` (lokal). Laporan bertanda tidak dipakai untuk keputusan sebelum di-review ulang.
+
 ## 4. Evidence minimum per run (`runs/<run-id>/`)
 
 | File | Isi |

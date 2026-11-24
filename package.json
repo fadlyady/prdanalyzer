@@ -25,7 +25,8 @@
     "qa:guard": "python3 scripts/qa_guard_scan.py --all",
     "qa:where": "python3 scripts/qa_feature.py where",
     "qa:selftest": "node scripts/lib/verdict_selftest.mjs && python3 .agents/skills/convert-with-calculation/test/calc_selftest.py && cd mcp-server-browser-qa && node test/selftest.mjs && cd ../mcp-server-mobile-qa && node test/selftest.mjs",
-    "qa:review": "python3 scripts/qa_review.py"
+    "qa:review": "python3 scripts/qa_review.py",
+    "qa:audit": "python3 scripts/qa_audit_reports.py"
   },
   "repository": {
     "type": "git",

@@ -58,7 +58,7 @@ function featureSlug(name) {
 function featureFromPath(root, file) {
   if (!file) return null;
   const rel = path.relative(path.join(root, 'work'), path.resolve(root, file)).split(path.sep);
-  return rel.length >= 3 && !rel[0].startsWith('..') ? rel[1] : null;
+  return rel.length >= 3 && !rel[0].startsWith('..') && !rel[1].startsWith('_') ? rel[1] : null; // folder _xxx (mis. _audit) bukan fitur
 }
 
 /**

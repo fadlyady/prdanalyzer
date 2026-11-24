@@ -43,7 +43,7 @@ def main(argv):
         print(json.dumps({'alias': alias, 'profile': os.path.relpath(prof, ROOT), 'profile_exists': os.path.isdir(prof),
                           'secrets_file_exists': os.path.isfile(sec), 'work': os.path.relpath(work, ROOT)}, indent=2)); return 0
     if cmd == 'list':
-        feats = sorted(d for d in os.listdir(work) if os.path.isdir(os.path.join(work, d))) if os.path.isdir(work) else []
+        feats = sorted(d for d in os.listdir(work) if os.path.isdir(os.path.join(work, d)) and not d.startswith(('_', '.'))) if os.path.isdir(work) else []  # _audit dll. bukan fitur
         for f in feats:
             print(f'{f}\t' + ' '.join(x for x in ('00-scope.md', '01-analysis.md', '02-testcases.md', '03-plan.md') if os.path.exists(os.path.join(work, f, x))))
         return 0
