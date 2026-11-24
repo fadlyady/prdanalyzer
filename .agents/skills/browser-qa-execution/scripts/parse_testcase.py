@@ -63,6 +63,8 @@ def parse_markdown(md_path):
             raw_splits = re.split(r'(?:^|\n)\s*(?:\d+[\.\)]|[-*])\s*', steps_raw)
             clean_steps = [s.strip() for s in raw_splits if s.strip()]
 
+            plat_match = re.search(r'\*{0,2}Platforms?\*{0,2}\s*[:\-]\s*([^\n]+)', body, re.IGNORECASE)
+
             testcases.append({
                 "id": tc_id,
                 "title": title,
@@ -70,7 +72,8 @@ def parse_markdown(md_path):
                 "target_url": target_url,
                 "priority": priority,
                 "steps": clean_steps,
-                "expected": expected
+                "expected": expected,
+                "platforms_raw": plat_match.group(1).replace('*', '').strip() if plat_match else ""
             })
 
     # 2. If no ### blocks, check for markdown tables (| ID | Title | Role | ...)
@@ -249,6 +252,21 @@ def validate_testcase_contract(tc, index=1):
     is_valid = len(errors) == 0
     return is_valid, errors, normalized
 
+NON_WEB_PREFIX = re.compile(r'^(MOB|MOBILE|AND|ANDROID|IOS|API|DB|BE|SVC)[-_]', re.IGNORECASE)
+
+
+def web_scope(tc):
+    """Apakah TC untuk eksekutor web. Urutan: field Platforms > prefix ID > (lama) dianggap web.
+    Kembalikan (True, '') atau (False, alasan) -> NOT IN SCOPE untuk browser."""
+    raw = (tc.get("platforms_raw") or "").lower()
+    if raw:
+        return ("web" in raw or "browser" in raw), f"Bukan TC web (Platforms: {tc.get('platforms_raw')})."
+    tc_id = str(tc.get("id") or "")
+    if NON_WEB_PREFIX.match(tc_id):
+        return False, f"Bukan TC web (prefix ID {re.split(r'[-_]', tc_id, maxsplit=1)[0]}-)."
+    return True, ""
+
+
 def parse_file(file_path):
     ext = os.path.splitext(file_path)[1].lower()
     if ext == ".md":
@@ -262,7 +280,12 @@ def parse_file(file_path):
     valid_testcases = []
     invalid_testcases = []
 
+    not_web = []
     for idx, tc in enumerate(raw_testcases, start=1):
+        in_scope, why = web_scope(tc)
+        if not in_scope:  # TC mobile/API/DB: NOT IN SCOPE untuk eksekutor browser (standar testcase)
+            not_web.append({"index": idx, "id": tc.get("id"), "title": tc.get("title"), "status": "NOT IN SCOPE", "reason": why})
+            continue
         is_valid, errors, normalized_tc = validate_testcase_contract(tc, index=idx)
         if is_valid:
             valid_testcases.append(normalized_tc)
@@ -276,7 +299,11 @@ def parse_file(file_path):
             })
 
     total = len(raw_testcases)
-    if len(invalid_testcases) == 0:
+    if total == 0:
+        contract_status = "NO_TESTCASE"
+    elif not valid_testcases and not invalid_testcases:
+        contract_status = "NO_WEB_TESTCASE"
+    elif len(invalid_testcases) == 0:
         contract_status = "PASSED"
     elif len(valid_testcases) > 0:
         contract_status = "PARTIAL_VALID"
@@ -290,8 +317,10 @@ def parse_file(file_path):
         "total_testcases": total,
         "valid_count": len(valid_testcases),
         "invalid_count": len(invalid_testcases),
+        "not_web_count": len(not_web),
         "testcases": valid_testcases,
-        "invalid_testcases": invalid_testcases
+        "invalid_testcases": invalid_testcases,
+        "not_web": not_web
     }
 
 if __name__ == "__main__":

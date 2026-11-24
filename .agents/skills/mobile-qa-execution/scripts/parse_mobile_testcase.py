@@ -50,6 +50,33 @@ def parse_inline(text, tc):
             elif k in ('tipe', 'type'): tc['type'] = v
             elif k == 'status': tc['status'] = v
 
+NON_MOBILE_PREFIX = re.compile(r'^(WEB|API|DB|BE|SVC)[-_]', re.I)
+MOBILE_PREFIX = {'AND': ['android'], 'ANDROID': ['android'], 'IOS': ['ios'], 'MOB': ['android', 'ios'], 'MOBILE': ['android', 'ios'], 'ALL': ['android', 'ios']}
+
+
+def mobile_platforms(tc_id, platform_raw, tags):
+    """Platform mobile sebuah TC. Urutan: field Platforms > prefix ID > tags > (lama) semua mobile.
+    Kembalikan ([], alasan) bila TC bukan untuk mobile (mis. Platforms: web, db atau ID API-*)."""
+    raw = (platform_raw or '').lower()
+    if raw.strip():
+        if 'mobile' in raw:
+            return ['android', 'ios'], ''
+        plats = [p for p in ('android', 'ios') if p in raw]
+        return (plats, '') if plats else ([], f'Bukan TC mobile (Platforms: {platform_raw.strip()}).')
+    pre = re.split(r'[-_]', tc_id or '', maxsplit=1)[0].upper()
+    if NON_MOBILE_PREFIX.match(tc_id or ''):
+        return [], f'Bukan TC mobile (prefix ID {pre}-).'
+    if pre in MOBILE_PREFIX:
+        return MOBILE_PREFIX[pre], ''
+    t = (tags or '').lower()
+    plats = [p for p in ('android', 'ios') if p in t]
+    if plats:
+        return plats, ''
+    if re.search(r'\b(web|api|backend|database)\b', t) and not re.search(r'\bmobile\b', t):
+        return [], f'Bukan TC mobile (tags: {tags}).'
+    return ['android', 'ios'], 'default'  # format lama tanpa info platform: dianggap berlaku di mobile (lint)
+
+
 def derive_role(texts):
     for t in texts:
         m = re.search(r'\b(?:log\s?in|masuk)\s+sebagai\s+([A-Za-z][\w /-]*?)(?=\s+(?:pada|di|dan|yang|untuk|dengan)\b|[,.;(]|$)', t, re.I) or \
@@ -91,7 +118,7 @@ def parse(md_path, platform=None):
             cur['expected_raw'].append(raw.strip())  # expected ditulis sebagai paragraf berindentasi (bukan list) -> tetap dibaca
     close()
 
-    valid, invalid, skipped = [], [], []
+    valid, invalid, skipped, not_mobile = [], [], [], []
     for i, tc in enumerate(tcs, 1):
         layers = {'ui': [], 'network': [], 'db': [], 'other': []}
         for e in tc.pop('expected_raw'):
@@ -99,9 +126,11 @@ def parse(md_path, platform=None):
             lay = 'ui' if tag.startswith('ui') else 'network' if re.search(r'network|api|payload|contract', tag) else 'db' if re.search(r'db|persist|database|cache', tag) else 'other'
             layers[lay].append(text.strip())
         tc['expected'] = layers
-        ptxt = (tc.pop('platform_raw') or tc['tags']).lower()
-        plats = [p for p in ('android', 'ios') if p in ptxt] or ['android', 'ios']
+        plats, why = mobile_platforms(tc['id'], tc.pop('platform_raw'), tc['tags'])
+        if not plats:  # TC web/API/DB: bukan untuk eksekutor mobile (standar testcase §eksekutor)
+            not_mobile.append({'id': tc['id'], 'title': tc['title'], 'status': 'NOT IN SCOPE', 'reason': why}); continue
         tc['platforms'] = plats
+        tc['platform_unspecified'] = why == 'default'
         tc['role'] = re.sub(r'^\{\{\s*role\s*:\s*([^}]+?)\s*\}\}$', r'\1', (tc['role'] or '').strip())  # kontrak TC: {{role:<alias>}}
         if not tc['role']: tc['role'] = derive_role(tc['precondition'] + tc['steps'])
         tc['mutation_steps'] = [n for n, s in enumerate(tc['steps'], 1) if '[MUTATION]' in s.upper()]
@@ -123,12 +152,16 @@ def parse(md_path, platform=None):
         'suspected_mutation_without_marker': [t['id'] for t in valid if t['suspected_mutation_steps']],
         'needs_manual_data': [t['id'] for t in valid if t['needs_manual_data']],
         'with_deeplink': [t['id'] for t in valid if t['deeplink']],
+        'platform_unspecified': [t['id'] for t in valid if t.get('platform_unspecified')],  # isi field Platforms (standar testcase)
     }
     return {
         'source_type': 'markdown', 'file_path': md_path, 'platform_filter': platform,
-        'contract_status': ('NO_TESTCASE' if not tcs else 'PASSED' if not invalid else ('PARTIAL' if valid else 'FAILED')),  # 0 TC terbaca (mis. format tabel lama) bukan PASSED
+        # 0 TC terbaca (mis. format tabel lama) atau tidak ada TC mobile sama sekali bukan PASSED
+        'contract_status': ('NO_TESTCASE' if not tcs else 'NO_MOBILE_TESTCASE' if not (valid or invalid or skipped)
+                            else 'PASSED' if not invalid else ('PARTIAL' if valid else 'FAILED')),
         'total_testcases': len(tcs), 'valid_count': len(valid), 'invalid_count': len(invalid), 'skipped_platform_count': len(skipped),
-        'testcases': valid, 'invalid_testcases': invalid, 'skipped_platform': skipped, 'lint': lint,
+        'not_mobile_count': len(not_mobile),
+        'testcases': valid, 'invalid_testcases': invalid, 'skipped_platform': skipped, 'not_mobile': not_mobile, 'lint': lint,
     }
 
 if __name__ == '__main__':

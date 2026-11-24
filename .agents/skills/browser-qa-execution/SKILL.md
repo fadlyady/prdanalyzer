@@ -202,9 +202,11 @@ Sebelum dan selama menjalankan pengujian, Senior QA **WAJIB** mematuhi 6 gerbang
    * *Kasus 1: Ditemukan file `.xlsx` tetapi tidak ada `.md`*:
      Panggil gerbang konfirmasi:
      > *"Format file saat ini adalah Excel (.xlsx). Sesuai SOP, pengujian wajib menggunakan format Markdown (.md). Apakah Anda ingin saya bantu konversi ke format `.md` standar sekarang?"*
-     Jika disetujui, jalankan `python3 convert_to_md_testcase.py <file.xlsx>`.
+     Jika disetujui, jalankan `python3 .agents/skills/browser-qa-execution/scripts/convert_to_md_testcase.py <file.xlsx> [work/<ALIAS>/<fitur>/02-testcases.md]`.
+     Konverter membaca kolom lewat header (15 kolom lama + 6 kolom baru), tidak mengarang isi, dan menandai TC tidak lengkap `[PERLU DILENGKAPI]` — sampaikan daftar itu ke user sebelum eksekusi.
    * *Kasus 2: Ditemukan lebih dari 1 file `.md`*:
      Tanyakan kepada user file `.md` mana yang ingin dieksekusi.
+   * *Kasus 3: Lingkup platform*: parser hanya mengambil TC web (`Platforms` memuat `web`, atau ID `WEB-`/`ALL-`/tanpa info platform). TC mobile/API/DB masuk `not_web` = NOT IN SCOPE dan disebut di pernyataan scope. `NO_WEB_TESTCASE` / `NO_TESTCASE` → hentikan run dan jelaskan ke user.
 2. **Pemeriksaan Test Data di `browser-execution/automate-support/`**:
    Jika langkah uji membutuhkan data eksternal (misal: *"upload data produk"*, *"isi form dengan data pelanggan baru"*):
    * Periksa isi `./browser-execution/automate-support/` (atau `./automate-support/`).

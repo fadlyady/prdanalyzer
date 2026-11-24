@@ -168,6 +168,7 @@ Field plan tambahan: `targets` (coba beberapa target berurutan — wajib untuk U
 ### Fase 1 — Test case (Gate 1)
 1. Cari `.md` di `work/<ALIAS>/<fitur>/`. Lebih dari 1 → tanya file mana. Hanya `.xlsx` → tawarkan konversi.
 2. Jalankan parser mobile dengan `--platform android`. Tampilkan rekap: valid / invalid (alasan) / skip platform / lint.
+   TC dengan `Platforms` tanpa android/ios atau ber-ID `WEB-`/`API-`/`DB-` masuk `not_mobile` (NOT IN SCOPE), bukan dieksekusi; `NO_MOBILE_TESTCASE` = file tidak berisi TC mobile. Lint `platform_unspecified` = TC lama tanpa info platform (dianggap mobile) — sarankan isi field `Platforms`.
    `contract_status: NO_TESTCASE` = tidak ada heading TC yang terbaca (mis. format tabel lama) → minta TC dikonversi ke format heading (standar testcase) sebelum lanjut; jangan dianggap lulus.
 3. Tanyakan pemetaan file `automate-support/` jika ada langkah upload.
 

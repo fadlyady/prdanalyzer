@@ -84,6 +84,14 @@ function parseTestcaseFile(filePath) {
     throw new Error(`[CONTRACT ERROR] Seluruh skenario dalam file (${filePath}) gagal validasi kontrak wajib (id/title/steps/expected). Rincian: ${JSON.stringify(parsed.invalid_testcases, null, 2)}`);
   }
 
+  if (parsed.contract_status === 'NO_TESTCASE' || parsed.contract_status === 'NO_WEB_TESTCASE') {
+    throw new Error(`[CONTRACT ERROR] ${parsed.contract_status}: tidak ada test case web yang bisa dijalankan dari ${filePath}` +
+      (parsed.not_web_count ? ` (${parsed.not_web_count} TC untuk platform lain: NOT IN SCOPE).` : ' (format heading TC tidak terbaca).'));
+  }
+  if (parsed.not_web_count) {
+    console.warn(`\x1b[33m[SCOPE] ${parsed.not_web_count} TC bukan untuk web (mobile/API/DB) -> NOT IN SCOPE run ini.\x1b[0m`);
+  }
+
   if (parsed.contract_status === 'PARTIAL_VALID') {
     console.warn(`\x1b[33m[CONTRACT WARNING] Ditemukan ${parsed.invalid_count} test case yang tidak memenuhi kontrak wajib dari total ${parsed.total_testcases} skenario:\x1b[0m`);
     parsed.invalid_testcases.forEach(inv => {
