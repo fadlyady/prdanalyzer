@@ -9,6 +9,14 @@ description: >-
 
 # Universal Document Conversion Skill (`convert-document`)
 
+> [!IMPORTANT]
+> **Kepatuhan Pondasi (wajib dibaca sebelum menjalankan skill ini):** `.agents/shared/FOUNDATION.md` adalah acuan tertinggi; bila ada aturan di bawah yang bertentangan, Pondasi yang berlaku.
+> - **Profil aktif:** jalankan `python3 scripts/qa_feature.py where` untuk mengetahui alias `<ALIAS>`; artefak fitur ada di `work/<ALIAS>/<fitur>/` (buat dengan `python3 scripts/qa_feature.py init <fitur>` bila belum ada). Bila fitur sudah punya `00-scope.md`, alias di file itu yang dipakai.
+> - **Kerahasiaan:** nilai asli (URL, package, akun, DSN) hanya dibaca server/runner dari `.secrets/<ALIAS>.env`; AI tidak membuka file itu dan tidak menulis nama aplikasi, host, package, atau akun asli di artefak — pakai alias (`<ALIAS>`, `{{role:owner}}`, `db:main`).
+> - **Klasifikasi:** hanya artefak berlabel `shareable` yang boleh dikonversi untuk dibagikan; isi tetap memakai alias.
+> - **Verdict:** bila dokumen memuat keputusan rilis, ikuti `.agents/shared/standards/status-verdict-evidence.md` (verdict per scope).
+
+
 Skill ini digunakan untuk mengonversi dokumen hasil analisa PRD, Test Matrix, dan Test Execution Walkthrough (`.md`) menjadi format dokumen korporat profesional (**Word `.docx` / `.doc`** dan **PDF `.pdf`**) yang siap disajikan untuk Product Managers, Engineering Leads, dan Audit Reviewers berstandar **TIW (Test Idea & Walkthrough)**.
 
 ---
@@ -16,13 +24,13 @@ Skill ini digunakan untuk mengonversi dokumen hasil analisa PRD, Test Matrix, da
 ## 1. Lokasi Berkas & Skrip Pendukung Dinamis
 
 - **Dokumen Sumber (Markdown)**: 
-  - `./doc-analyzer/result-testcase/PRD_Analysis_<Feature_Name>.md` (atau path berkas `.md` kustom, dengan fallback ke `./result-testcase/`).
+  - `work/<ALIAS>/<fitur>/01-analysis.md` (atau path berkas `.md` kustom).
 - **Skrip Konverter**:
   - Word Converter: `.agents/skills/convert-document/scripts/md_to_docx.py`
   - PDF Converter: `.agents/skills/convert-document/scripts/md_to_pdf.py`
 - **Target Output**:
-  - `./doc-analyzer/result-testcase/PRD_Analysis_<Feature_Name>.docx`
-  - `./doc-analyzer/result-testcase/PRD_Analysis_<Feature_Name>.pdf`
+  - `work/<ALIAS>/<fitur>/01-analysis.docx`
+  - `work/<ALIAS>/<fitur>/01-analysis.pdf`
 
 ---
 
@@ -61,16 +69,16 @@ Dokumen Word dan PDF yang dihasilkan secara otomatis menyertakan:
 Jalankan skrip Python:
 ```bash
 python3 .agents/skills/convert-document/scripts/md_to_docx.py \
-  doc-analyzer/result-testcase/PRD_Analysis_<Feature_Name>.md \
-  doc-analyzer/result-testcase/PRD_Analysis_<Feature_Name>.docx
+  `work/<ALIAS>/<fitur>/01-analysis.md` \
+  `work/<ALIAS>/<fitur>/01-analysis.docx`
 ```
 
 ### B. Konversi ke PDF
 Jalankan skrip Python:
 ```bash
 python3 .agents/skills/convert-document/scripts/md_to_pdf.py \
-  doc-analyzer/result-testcase/PRD_Analysis_<Feature_Name>.md \
-  doc-analyzer/result-testcase/PRD_Analysis_<Feature_Name>.pdf
+  `work/<ALIAS>/<fitur>/01-analysis.md` \
+  `work/<ALIAS>/<fitur>/01-analysis.pdf`
 ```
 
 ---
@@ -79,12 +87,12 @@ python3 .agents/skills/convert-document/scripts/md_to_pdf.py \
 
 ```mermaid
 graph TD
-    A["1. Terima permintaan format ekspor dari User (docx / pdf / all)"] --> B["2. Identifikasi file input .md di doc-analyzer/result-testcase/"]
+    A["1. Terima permintaan format ekspor dari User (docx / pdf / all)"] --> B["2. Identifikasi file input .md di `work/<ALIAS>/<fitur>/`"]
     B --> C{"3. Format Tujuan?"}
     C -- "docx / doc" --> D["Eksekusi md_to_docx.py"]
     C -- "pdf" --> E["Eksekusi md_to_pdf.py"]
     C -- "Keduanya" --> F["Eksekusi md_to_docx.py & md_to_pdf.py"]
-    D --> G["4. Verifikasi file hasil di doc-analyzer/result-testcase/"]
+    D --> G["4. Verifikasi file hasil di `work/<ALIAS>/<fitur>/`"]
     E --> G
     F --> G
     G --> H["5. Berikan tautan berkas yang dapat diakses langsung ke User"]

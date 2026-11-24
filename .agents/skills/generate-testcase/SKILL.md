@@ -11,7 +11,15 @@ description: >-
 
 # Universal Master Test Case Suite Skill (`generate-testcase`)
 
-Skill ini digunakan untuk mentransformasikan hasil analisis PRD (`PRD_Analysis_<Feature_Name>.md`) menjadi **Master Test Case Suite Berstandar Industri** yang komprehensif, terukur, siap eksekusi manual/evidence development, dan siap diotomasi oleh automation framework (Playwright, Cypress, Appium, Pytest, Robot Framework).
+> [!IMPORTANT]
+> **Kepatuhan Pondasi (wajib dibaca sebelum menjalankan skill ini):** `.agents/shared/FOUNDATION.md` adalah acuan tertinggi; bila ada aturan di bawah yang bertentangan, Pondasi yang berlaku.
+> - **Profil aktif:** jalankan `python3 scripts/qa_feature.py where` untuk mengetahui alias `<ALIAS>`; artefak fitur ada di `work/<ALIAS>/<fitur>/` (buat dengan `python3 scripts/qa_feature.py init <fitur>` bila belum ada). Bila fitur sudah punya `00-scope.md`, alias di file itu yang dipakai.
+> - **Kerahasiaan:** nilai asli (URL, package, akun, DSN) hanya dibaca server/runner dari `.secrets/<ALIAS>.env`; AI tidak membuka file itu dan tidak menulis nama aplikasi, host, package, atau akun asli di artefak — pakai alias (`<ALIAS>`, `{{role:owner}}`, `db:main`).
+> - **Kontrak TC:** `.agents/shared/standards/testcase.md` — field `Covers`, `Platforms`, `Layers`, `Role` (`{{role:x}}`), `Blocked by`, `Test data` (`{{data.x}}`), `Capture`, langkah `[MUTATION:<jenis>]`, expected per layer berlabel sumber. Prioritas P1–P4 dari matriks risiko.
+> - **Excel:** jangan menulis skrip ad-hoc; jalankan `python3 scripts/tc_export_xlsx.py work/<ALIAS>/<fitur>/02-testcases.md` (15 kolom lama + 6 kolom baru) lalu `--verify`.
+
+
+Skill ini digunakan untuk mentransformasikan hasil analisis PRD (`01-analysis.md`) menjadi **Master Test Case Suite Berstandar Industri** yang komprehensif, terukur, siap eksekusi manual/evidence development, dan siap diotomasi oleh automation framework (Playwright, Cypress, Appium, Pytest, Robot Framework).
 
 Tujuan utama: Menghasilkan test case dengan **Coverage 3-Dimensi**, **Mandatory Adversarial Edge-Case Review**, **Risk-Driven BVA Depth & Redundancy Prevention**, dan **Triple-Layer Assertions (UI + API Contract + Data Persistence)** yang bersifat universal untuk platform Web, Mobile Native, Backend API, maupun Microservices.
 
@@ -19,17 +27,17 @@ Tujuan utama: Menghasilkan test case dengan **Coverage 3-Dimensi**, **Mandatory 
 
 ## 1. Direktori & Lokasi Berkas Dinamis (*File Architecture*)
 
-- **Input Analisis PRD (SSOT)**: `./doc-analyzer/result-testcase/PRD_Analysis_<Feature_Name>.md` (dihasilkan dari skill `prd-analyzer-business`, dengan fallback ke `./result-testcase/`).
-- **Support & Knowledge Base**: `./Testcase-support/`
+- **Input Analisis PRD (SSOT)**: `work/<ALIAS>/<fitur>/01-analysis.md` (dihasilkan dari skill `prd-analyzer-business`).
+- **Support & Knowledge Base**: `profiles/<ALIAS>/` (glossary, rbac) + `Testcase-support/qa-learnings.md`
   - Template spreadsheet Excel acuan (15 kolom standar), template Markdown otomasi, dan `qa-learnings.md`.
 - **UI & Interface Knowledge (Parallel 3-Tier Grounding)**:
-  - **Tier 1 (Staging Live Reality)**: `./doc-analyzer/strukturmenu/live-analyzer/<app-slug>/<timestamp>/` (mengacu pada app yang sesuai dan tanggal/timestamp terbaru).
-  - **Tier 2 (Manual Screencaptures & Offline Knowledge)**: `./doc-analyzer/strukturmenu/<app-name>/` (tangkapan layar manual `.png`, `.jpg`, atau mockup offline).
+  - **Tier 1 (Staging Live Reality)**: `profiles/<ALIAS>/knowledge/web/live-analyzer/<app-slug>/<timestamp>/` (mengacu pada app yang sesuai dan tanggal/timestamp terbaru).
+  - **Tier 2 (Manual Screencaptures & Offline Knowledge)**: `profiles/<ALIAS>/knowledge/web/<surface>/` (tangkapan layar manual `.png`, `.jpg`, atau mockup offline).
   - **Tier 3 (PRD & TRD Text Grounding)**: Dokumen spesifikasi tertulis PRD/TRD.
-- **Technical & API Contracts**: `./doc-analyzer/adhoc-document/` (OpenAPI, Postman, DB schema, dengan fallback ke `./adhoc-document/`).
+- **Technical & API Contracts**: `profiles/<ALIAS>/knowledge/api/` (kontrak) / `knowledge/db/` (skema) (OpenAPI, Postman, DB schema).
 - **Target Output Test Cases**:
-  1. **Master Spreadsheet Excel (Tahap 1)**: `./doc-analyzer/result-testcase/Test_Cases_<Feature_Name>.xlsx`
-  2. **Automation-Ready Markdown (Tahap 2)**: `./doc-analyzer/result-testcase/test-cases-<feature-name>.md`
+  1. **Master Spreadsheet Excel (Tahap 1)**: `work/<ALIAS>/<fitur>/02-testcases.xlsx`
+  2. **Automation-Ready Markdown (Tahap 2)**: `work/<ALIAS>/<fitur>/02-testcases.md`
 
 ---
 
@@ -79,10 +87,9 @@ Kedalaman pengujian nilai batas (BVA) ditentukan secara langsung oleh tingkat ri
 ### 2. Aturan Pencegahan Redundansi (Redundancy Prevention Rules)
 1. **BVA adalah bagian dari Partisi EP**: Nilai valid pada BVA (misal: $\text{Min}$ dan $\text{Max}$) sudah mencakup valid equivalence partition. Jangan membuat test case "Happy Path" terpisah jika nilai BVA valid sudah mengujinya.
 2. **Kombinasi Validasi Multi-Field**: Gabungkan validasi form standar dalam 1 test case terstruktur jika logis, alih-alih membuat 10 test case terpisah untuk field kosong pada form yang sama.
-3. **Pemberian Skor Prioritas**:
-   - Critical Path / Critical Risk $\longrightarrow$ `Critical` (P1) / `High` (P2)
-   - Medium Risk Happy Path $\longrightarrow$ `Normal` (P2)
-   - Low Risk / Cosmetic / Rare Edge $\longrightarrow$ `Low` (P3)
+3. **Pemberian Skor Prioritas (dari matriks risiko D5)**:
+   - Risiko Critical $\longrightarrow$ `P1` · High $\longrightarrow$ `P2` · Medium $\longrightarrow$ `P3` · Low $\longrightarrow$ `P4`.
+   - Di Excel kolom lama `priority` diisi otomatis: P1=Critical, P2=High, P3=Normal, P4=Low.
 
 ---
 
@@ -111,12 +118,12 @@ Langkah pengetesan (`step_desc`) dan ekspektasi hasil (`expected_desc`) **WAJIB*
 | Layer Verifikasi | Target Verifikasi | Contoh Penulisan pada `expected_desc` |
 | :--- | :--- | :--- |
 | **Layer 1: Client / UI State** | Visual components, button states, toasts, modals, badges, responsive. | 1. Button CTA berubah menjadi `Disabled (Loading Spinner)`.<br>2. Modal form tertutup otomatis.<br>3. Muncul toast alert hijau: `"Data berhasil disimpan"`.<br>4. Status badge berubah menjadi `"Active"`. |
-| **Layer 2: Network / API Contract** | HTTP status codes, payload contract schema, response time SLA. | 5. API request / Contract Service merespons dengan HTTP `201 Created` (atau jika endpoint belum ada spesifikasi resmi di `./doc-analyzer/adhoc-document/`, gunakan **narasi pendekatan fungsional kontrak service**: `[Service/Contract] Pricing Engine memproses parameter user_id, category, country...`). |
+| **Layer 2: Network / API Contract** | HTTP status codes, payload contract schema, response time SLA. | 5. API request / Contract Service merespons dengan HTTP `201 Created` (atau jika endpoint belum ada spesifikasi resmi di `profiles/<ALIAS>/knowledge/api/` (kontrak) / `knowledge/db/` (skema), gunakan **narasi pendekatan fungsional kontrak service**: `[Service/Contract] Pricing Engine memproses parameter user_id, category, country...`). |
 | **Layer 3: DB / State Persistence** | Database tables, timestamps, audit logs, event bus triggers. | 7. Data tersimpan di tabel persistensi data dengan kolom `status = 'ACTIVE'` dan `created_at` berformat UTC.<br>8. Record baru terbentuk di log audit transaksi. |
 
 > ⚠️ **STRICT ZERO-WILD-GUESS POLICY (API & UI/MENU)**:
-> 1. **Dilarang Mengarang Endpoint API**: Dilarang mengarang/mengasumsikan path URL endpoint API (misal mengarang `GET /api/v1/pricing/resolve` atau `/api/v1/sessions/...` jika tidak ada file OpenAPI/TRD resmi di `./doc-analyzer/adhoc-document/`). Gunakan **narasi pendekatan fungsional** yang netral dan deskriptif.
-> 2. **Dilarang Mengarang Hierarki Menu UI**: Dilarang mengarang pohon hierarki menu (misal mengarang `Admin > Pricing Management > Meta Base Price` jika tidak ada bukti visual di `./doc-analyzer/strukturmenu/` atau teks PRD).
+> 1. **Dilarang Mengarang Endpoint API**: Dilarang mengarang/mengasumsikan path URL endpoint API (misal mengarang `GET /api/v1/pricing/resolve` atau `/api/v1/sessions/...` jika tidak ada file OpenAPI/TRD resmi di `profiles/<ALIAS>/knowledge/api/` (kontrak) / `knowledge/db/` (skema)). Gunakan **narasi pendekatan fungsional** yang netral dan deskriptif.
+> 2. **Dilarang Mengarang Hierarki Menu UI**: Dilarang mengarang pohon hierarki menu (misal mengarang `Admin > Pengaturan Harga > Harga Dasar` jika tidak ada bukti visual di `profiles/<ALIAS>/knowledge/` atau teks PRD).
 
 ---
 
@@ -126,12 +133,12 @@ Untuk memastikan penulisan prasyarat (`precondition`) dan langkah pengetesan (`s
 
 1. **Parallel 3-Tier UI Grounding (Wajib Dijalankan Serentak)**:
    - **Tier 1 (Staging Live Reality)**:
-     - Cari folder aplikasi yang sesuai di `./doc-analyzer/strukturmenu/live-analyzer/<app-slug>/`.
+     - Cari folder aplikasi yang sesuai di `profiles/<ALIAS>/knowledge/web/live-analyzer/<app-slug>/`.
      - Ambil folder run dengan **tanggal & timestamp terbaru** (atau baca `latest.json` / `latest.md` di level app).
      - Dapatkan bukti nyata hierarki menu aktif, tombol CTA riil, input form, dan rute URL di staging saat ini.
    - **Tier 2 (Manual Screencaptures & Offline Grounding)**:
      - **TETAP DIJALANKAN PARALEL**: Jangan abaikan Tier 2 meskipun Tier 1 sudah ada!
-     - Periksa folder tangkapan layar manual di `./doc-analyzer/strukturmenu/<app-name>/` (seperti `dashboard-crm/`, `chatroom-web/`, `customer-dashboard/`).
+     - Periksa folder tangkapan layar manual di `profiles/<ALIAS>/knowledge/web/<surface>/` (satu folder per surface aplikasi).
      - Ini sangat esensial untuk mendeteksi fitur atau menu baru yang **tertulis di PRD tetapi belum dideploy ke staging**.
    - **Tier 3 (PRD & TRD Text Grounding)**:
      - **TETAP DIJALANKAN PARALEL**: Periksa informasi tertulis, alur modul, dan mockups yang tertulis dalam dokumen PRD/TRD.
@@ -151,119 +158,107 @@ Untuk memastikan penulisan prasyarat (`precondition`) dan langkah pengetesan (`s
      * Berikan opsi jawaban jelas kepada user.
    - Pilihan User:
      - **User Menentukan Acuan Valid**: Terapkan informasi valid yang dipilih user sebagai SSOT ke langkah pengujian.
-     - **User Memilih Skip / Belum Menjawab**: Simpan pertanyaan ke berkas `./doc-analyzer/result-testcase/questions-for-pm-<feature_name>.md`.
+     - **User Memilih Skip / Belum Menjawab**: Simpan pertanyaan ke berkas `work/<ALIAS>/<fitur>/01-questions.md`.
      - **User Meminta Default / Data Belum Ada**: Gunakan penamaan modul fungsional netral `[Nama Modul - Role]` tanpa mengarang hierarki menu fiktif.
 
 3. **Penyusunan Alur Navigasi Eksak (Exact Navigation Flow)**:
    - Susun urutan aksi klik yang presisi dan realistis berdasarkan data yang telah tervalidasi:
      - *Format*: `1. Buka menu [Menu Utama] > [Submenu]. 2. Klik tombol CTA [Nama Tombol]. 3. Pada modal [Nama Modal], pilih/isi [Data] lalu klik [Submit].`
-     - *Contoh Nyata*: `1. User membuka menu Dashboard CRM > WhatsApp Credit.` atau `1. User membuka Chatroom > Klik ikon 'Setting Panel' di pojok kanan atas > Aktifkan toggle 'Service Message Cost Limit'.`
+     - *Contoh*: `1. User membuka menu Pengaturan > Tagihan.` atau `1. User membuka halaman Detail Pesanan > Klik ikon 'Opsi' di pojok kanan atas > Aktifkan toggle 'Notifikasi'.` (nama menu wajib berasal dari knowledge profil/dokumen sumber)
 
 4. **Penanganan Modul Non-Terdokumentasi (Internal / Backend / Non-Mockup)**:
-   - Jika suatu modul (misal modul internal Biz Ops Admin) **tidak memiliki data di Tier 1, 2, maupun 3**, gunakan penamaan modul fungsional resmi PRD secara netral:
-     - *Contoh*: `1. Login sebagai user internal role 'Biz Ops Admin'. 2. Akses modul fungsional [Credit Management - Admin].`
-     - *Dilarang*: Mengarang struktur menu fiktif seperti `Admin > Pricing Management > Meta Base Price`.
+   - Jika suatu modul (misal modul internal back-office) **tidak memiliki data di Tier 1, 2, maupun 3**, gunakan penamaan modul fungsional resmi PRD secara netral:
+     - *Contoh*: `1. Login sebagai {{role:internal_admin}}. 2. Akses modul fungsional [Manajemen Kredit - Admin].`
+     - *Dilarang*: Mengarang struktur menu fiktif seperti `Admin > Pengaturan Harga > Harga Dasar`.
 
 ---
 
 ## 7. Format Penomoran ID Universal (`unique_id`)
 
-Format penomoran `unique_id` disusun secara modular, konsisten, dan **immutable** (tidak boleh diubah nomornya saat iterasi revisi):
+Format immutable (tidak diubah saat revisi): `<PLATFORM>-<MODULE>-<SUBMODULE>-<TYPE>-<SEQ>`
 
-$$\mathbf{\langle PLATFORM\rangle\text{-}\langle MODULE\rangle\text{-}\langle SUBMODULE\rangle\text{-}\langle TYPE\rangle\text{-}\langle SEQ\rangle}$$
-
-- **`<PLATFORM>`**: `WEB`, `MOB`, `API`, `JOB`, `CLI`.
-- **`<MODULE>`**: Kode Modul Utama (misal: `AUTH`, `BILL`, `CHAT`, `CUST`, `PROD`, `SETT`).
-- **`<SUBMODULE>`**: Kode Sub-modul (misal: `PRIC`, `FLOW`, `NOTF`, `USER`, `IMPT`).
-- **`<TYPE>`**: `POS` (Positive), `NEG` (Negative), `BVA` (Boundary), `SEC` (Security/RBAC), `CON` (Concurrency), `EXP` (Exploratory).
-- **`<SEQ>`**: Nomor urut sekuensial 3 digit (`001`, `002`, `003`, dst.).
+- **`<PLATFORM>`**: `WEB`, `MOB`, `API`, `DB`, `JOB`, `CLI`, atau `ALL` untuk TC lintas platform (eksekutor dipilih dari field `Platforms`).
+- **`<MODULE>` / `<SUBMODULE>`**: kode modul fungsional dari analisa (bukan nama produk/aplikasi).
+- **`<TYPE>`**: `POS`, `NEG`, `BVA`, `SEC`, `CON`, `EXP`.
+- **`<SEQ>`**: 3 digit (`001`, `002`, ...).
 
 ---
 
-## 8. Spesifikasi Master Test Case Excel (`doc-analyzer/result-testcase/Test_Cases_<Feature_Name>.xlsx`)
+## 8. Spesifikasi Excel (`work/<ALIAS>/<fitur>/02-testcases.xlsx`) — D6
 
-File Excel dibuat menggunakan script Python (`openpyxl`) dengan spesifikasi 15 kolom standar:
+Excel adalah **hasil ekspor** dari Markdown, dibuat dengan `python3 scripts/tc_export_xlsx.py work/<ALIAS>/<fitur>/02-testcases.md`
+(jangan menulis skrip openpyxl ad-hoc). Sheet `Test Cases`, header navy `#1F4E78` putih bold, wrap text & border abu-abu.
 
-- **Sheet Name**: `Test Cases`
-- **15 Kolom Standar & Lebar Kolom (Column Width)**:
-  1. `project_id` (12) — Kode proyek sistem (misal: `FINTECH_CORE`, `CHAT_PLATFORM`).
-  2. `suite_id` (12) — Kode modul/suite (misal: `BILLING`, `CHAT_FLOW`).
-  3. `unique_id` (22) — Format: `<PLATFORM>-<MODULE>-<SUBMODULE>-<TYPE>-<SEQ>`.
-  4. `title` (45) — Judul spesifik skenario pengujian.
-  5. `decription` (45) — Deskripsi tujuan dan cakupan uji.
-  6. `precondition` (45) — Prasyarat akun, token, environment flag, dan state awal data bernomor (1. ..., 2. ...).
-  7. `priority` (15) — `Critical` (P1), `High` (P2), `Normal` (P2), `Low` (P3).
-  8. `type` (15) — `Functional`, `Negative`, `Boundary`, `Security`, `Concurrency`, `Exploratory`, `Regression`.
-  9. `status` (12) — `Draft` / `Ready`.
-  10. `tags` (15) — `Smoke`, `Regression`, `RBAC`, `Integration`, `E2E`, `P1-Core`.
-  11. `steps` (10) — Total langkah (integer).
-  12. `step_desc` (50) — Langkah tindakan terinci bernomor (1. ..., 2. ...) dengan data uji konkret.
-  13. `expected_desc` (50) — Ekspektasi hasil terukur bernomor mengacu pada *Triple-Layer Assertions*.
-  14. `is_automated` (14) — `TRUE` / `FALSE`.
-  15. `user_story` (45) — Format: `[Priority: Critical/High/Normal/Low] US-xx: <Judul Story> (Covers: AC-1, AC-2)`.
-
-- **Styling Header (Row 1)**:
-  - Background Fill: Navy Solid (`#1F4E78`)
-  - Font: Putih (`#FFFFFF`), Bold, Ukuran 11pt, Font Family Arial/Calibri
-  - Alignment: Horizontal Center, Vertical Center
-- **Styling Data Rows**:
-  - `wrap_text = True` untuk kolom `title`, `decription`, `precondition`, `step_desc`, `expected_desc`, dan `user_story`.
-  - Alignment Vertical: `top`.
-  - Border: Thin Border abu-abu (`#D3D3D3`) pada setiap cell.
+- **15 kolom lama tidak diubah** (urutan & nama, termasuk `decription`): `project_id`, `suite_id`, `unique_id`, `title`, `decription`,
+  `precondition`, `priority` (Critical/High/Normal/Low dari P1–P4), `type`, `status`, `tags`, `steps`, `step_desc`, `expected_desc`,
+  `is_automated`, `user_story`.
+- **6 kolom baru di kanan**: `platforms`, `layers`, `role`, `covers`, `blocked_by`, `test_data`. Untuk tools internal yang hanya
+  menerima 15 kolom, user cukup menghapus kolom 16–21.
+- Setelah ekspor wajib `--verify` (Excel vs Markdown 1-ke-1, tanpa orphan).
 
 ---
 
-## 9. Format Markdown Automation-Ready (`doc-analyzer/result-testcase/test-cases-<feature-name>.md`)
+## 9. Format Markdown (`work/<ALIAS>/<fitur>/02-testcases.md`) — sumber kebenaran
+
+Ikuti `.agents/shared/standards/testcase.md`. Header file wajib memuat versi & rujukan analisa:
 
 ```markdown
-# Automation & QA Test Case Suite: [Nama Fitur]
+# Test Case Suite: [Nama Fitur]
+> Versi: 1.0 | Analisa: 01-analysis.md v1.0 | Alias: <ALIAS> | Penulis: <runner> | Tanggal: YYYY-MM-DD
 
 ## Modul: [Nama Modul / User Story]
 
-### WEB-BILL-PRIC-POS-001: [Judul Skenario Nominal] `[Auto-Critical]` `[Low-Complexity]`
-- **User Story**: [Priority: Critical] US-01: Pembelian Paket Berlangganan (Covers: AC-01, AC-02)
-- **Tipe**: Functional / Positive
+### ALL-ORD-CHKO-POS-001: Checkout dengan saldo cukup menghasilkan order lunas
+- **Covers**: AC-03, RSK-002
+- **Priority**: P1 | **Type**: Functional | **Status**: Ready
+- **Platforms**: web, android, db
+- **Layers**: UI, API, DB
+- **Role**: {{role:buyer}}
+- **Blocked by**: —
+- **Test data**: {{data.buyer_balance_ok}}, {{data.product_a}}
 - **Precondition**:
-  1. User login dengan akun role `Merchant Admin`.
-  2. Saldo akun mencukupi (Rp 500.000).
-- **Test Steps**:
-  1. User membuka menu `/billing/packages`.
-  2. User memilih paket `"Pro Enterprise 1 Bulan"` seharga `Rp 350.000`.
-  3. User klik tombol CTA `[Beli Sekarang]`.
-  4. User memilih metode pembayaran `"Saldo Akun"`.
-  5. User klik `[Konfirmasi Pembayaran]`.
-- **Expected Results (Triple-Layer Assertions)**:
-  1. [UI] Button CTA berubah menjadi `Loading Spinner` lalu modal tertutup.
-  2. [UI] Muncul toast alert hijau: `"Pembayaran Berhasil. Paket Pro Enterprise aktif"`.
-  3. [API] Request `POST /api/v1/billing/checkout` merespons HTTP `200 OK` dengan payload `{ "status": "SUCCESS", "package_id": "PRO-ENT" }`.
-  4. [DB] Saldo user berkurang menjadi `Rp 150.000` dan record baru tercatat di tabel `subscriptions` dengan `status = 'ACTIVE'`.
+  1. Saldo akun {{data.buyer_balance_ok}} lebih besar dari harga {{data.product_a}}.
+- **Steps**:
+  1. Buka detail produk {{data.product_a.name}}.
+  2. Pilih Beli.
+  3. Konfirmasi pembayaran. [MUTATION:financial]
+- **Expected**:
+  - [UI] Tampil status pembayaran berhasil beserta nomor order baru. [PRD §4.2]
+  - [API] Permintaan pembayaran berhasil (2xx) dan mengembalikan nomor order. [API checkout#create]
+  - [DB] Order {{capture.order_id}} berstatus lunas; saldo berkurang sebesar harga. [DB orders]
+- **Capture**: order_id ← nomor order pada [UI]
 ```
+
+Aturan tambahan:
+- Header field selalu `- **Nama**:` tanpa sufiks dalam kurung (parser browser & mobile membacanya sama).
+- Layer `[API]`/`[DB]` hanya memakai nama operasi/tabel yang ada di `profiles/<ALIAS>/knowledge/api|db` atau dokumen sumber; selain itu
+  narasi fungsional `[Service/Contract] ...`.
+- TC turunan AC berlabel `[ASUMSI]` / `[PENDING Q-xx]` wajib `Blocked by` yang sesuai.
+- Data asli (email, nomor telepon, nama pelanggan, ID produksi) dilarang — pakai variabel `{{data.x}}` / `{{TAG}}`.
 
 ---
 
 ## 10. Urutan Proses Eksekusi Wajib (*Execution SOP*)
 
 1. **Baca dan Validasi Input (Exhaustive Source Parsing)**:
-   - Baca dokumen `./doc-analyzer/result-testcase/PRD_Analysis_<Feature_Name>.md` (atau `./result-testcase/`) dan dokumen PRD/TRD sumber dari awal hingga akhir.
+   - Baca dokumen `work/<ALIAS>/<fitur>/01-analysis.md` dan dokumen PRD/TRD sumber dari awal hingga akhir.
    - **Ekstraksi Skenario Eksplisit Sumber**: Jika dokumen sumber (PRD/TRD) memuat tabel skenario/sampel uji resmi, seluruh skenario tersebut **WAJIB dimasukkan 100%** ke dalam Master Test Suite sebagai baseline pengujian (Tier 1).
    - **Proactive Combinatorial Extension**: Kembangkan skenario dasar tersebut secara proaktif ke permutasi kondisi batas (*in-transit rate changes*, *downgrades*, *out-of-order webhooks*, *debt accumulation*).
-2. **Review Knowledge UI & Screen Captures (`./doc-analyzer/strukturmenu/`) & Technical Specs (`./doc-analyzer/adhoc-document/`)**:
-   - Periksa seluruh berkas tangkapan layar di `./doc-analyzer/strukturmenu/` (contoh: `chatroom-web/`, `dashboard-crm/`, `customer-dashboard/`) serta teks tertulis PRD untuk memverifikasi keberadaan menu, tombol CTA, modal dialog, dan alur antarmuka nyata.
+2. **Review Knowledge UI & Screen Captures (`profiles/<ALIAS>/knowledge/`) & Technical Specs (`profiles/<ALIAS>/knowledge/api/` (kontrak) / `knowledge/db/` (skema))**:
+   - Periksa seluruh berkas tangkapan layar di `profiles/<ALIAS>/knowledge/` (satu folder per surface aplikasi) serta teks tertulis PRD untuk memverifikasi keberadaan menu, tombol CTA, modal dialog, dan alur antarmuka nyata.
    - **Tentukan Alur Navigasi Nyata**: Susun alur klik Menu A $\rightarrow$ Submenu B $\rightarrow$ CTA C yang 100% grounded pada tangkapan layar.
-   - **Menu Non-Terdokumentasi**: Jika suatu modul tidak ada di `./doc-analyzer/strukturmenu/` dan tidak memiliki mockup di PRD, gunakan penamaan modul fungsional resmi PRD (misal `[Credit Management - Admin]`) tanpa mengarang hierarki menu fiktif.
+   - **Menu Non-Terdokumentasi**: Jika suatu modul tidak ada di `profiles/<ALIAS>/knowledge/` dan tidak memiliki mockup di PRD, gunakan penamaan modul fungsional resmi PRD (misal `[Manajemen Kredit - Admin]`) tanpa mengarang hierarki menu fiktif.
 3. **Adversarial Edge-Case Review (Mandatory Gate)**:
    - Rumuskan minimal **5 kandidat edge case ekstrim**.
    - Ajukan ke User di chat dan tunggu pilihan skenario yang disetujui.
 4. **Terapkan Risk-Driven BVA & Redundancy Prevention**:
    - Susun data uji BVA (3-value untuk Critical/High, 2-value untuk Medium, EP untuk Low).
    - Pastikan partisi valid BVA melebur ke dalam Happy Path.
-5. **Eksekusi Tahap 1 (Master Excel Spreadsheet)**:
-   - Buat script Python `openpyxl` untuk menghasilkan `./doc-analyzer/result-testcase/Test_Cases_<Feature_Name>.xlsx`.
-   - Jalankan script dan pastikan file Excel dibuat dengan styling 15 kolom rapi dan valid.
-6. **Eksekusi Tahap 2 (Automation-Ready Markdown)**:
-   - Buat file `./doc-analyzer/result-testcase/test-cases-<feature-name>.md` dengan struktur 3-Tier Coverage, Triple-Layer Assertions, dan tagging prioritas + kompleksitas automasi.
+5. **Tulis Markdown (sumber kebenaran)**: `work/<ALIAS>/<fitur>/02-testcases.md` sesuai bagian 9 dan standar testcase.
+6. **Ekspor Excel**: `python3 scripts/tc_export_xlsx.py work/<ALIAS>/<fitur>/02-testcases.md` lalu `--verify`.
 7. **🛑 Cross-File Consistency Verification Gate & Pelaporan**:
-   - **Verifikasi Integritas 1-ke-1**: Jalankan skrip audit untuk memastikan bahwa seluruh baris di Excel (`Test_Cases_*.xlsx`) memiliki ID, Title, Priority, Type, dan Step yang identik 100% dengan heading dan konten di file Markdown (`test-cases-*.md`).
+   - **Verifikasi Integritas 1-ke-1**: `python3 scripts/tc_export_xlsx.py work/<ALIAS>/<fitur>/02-testcases.md --verify` wajib `VERIFY OK`.
+   - **Uji parser**: `python3 .agents/skills/mobile-qa-execution/scripts/parse_mobile_testcase.py <file> --platform android` dan/atau `python3 .agents/skills/browser-qa-execution/scripts/parse_testcase.py <file>` harus `PASSED` untuk TC platform terkait.
    - **Strict Grep-Before-Answer**: Dilarang menyebutkan kode Test Case ID, nomor baris, atau nama tabel dalam percakapan tanpa melakukan pencarian eksak (`grep_search` / `view_file`) ke file fisik terlebih dahulu untuk mencegah halusinasi kode ID.
    - Pastikan tidak ada orphan test cases (semua test case memiliki referensi AC/Story yang sah).
    - Hitung distribusi prioritas (P1/P2/P3), breakdown tipe test, dan laporkan ringkasan ke user.
@@ -275,5 +270,5 @@ File Excel dibuat menggunakan script Python (`openpyxl`) dengan spesifikasi 15 k
 > [!CAUTION]
 > **PRINSIP KEKEBALAN DAN KONSISTENSI SKILL (ANTI-REGRESSION POLICY):**
 > 1. **Dilarang Mengubah/Menghapus Rule Tanpa Persetujuan**: Seluruh aturan fundamental yang sudah stabil pada skill ini **TIDAK BOLEH diubah, diganti, atau dihapus sepihak oleh AI**, kecuali penambahan aturan baru tersebut terbukti objektif lebih baik dan telah disetujui oleh User.
-> 2. **Pre-Calibration Sanity & Conflict Check**: Setiap pembaruan atau penambahan aturan baru harus dipastikan **TIDAK BERTENTANGAN** dengan guardrail fundamental (*Triple-Layer Assertions*, *3-Tier Coverage Matrix*, grounding visual `./doc-analyzer/strukturmenu/`, *Adversarial Edge-Case Review*, *Risk-Driven BVA*). Aturan baru harus bersifat memperketat / melengkapi (*additive/enriching*), bukan membatalkan aturan dasar.
+> 2. **Pre-Calibration Sanity & Conflict Check**: Setiap pembaruan atau penambahan aturan baru harus dipastikan **TIDAK BERTENTANGAN** dengan guardrail fundamental (*Triple-Layer Assertions*, *3-Tier Coverage Matrix*, grounding visual `profiles/<ALIAS>/knowledge/`, *Adversarial Edge-Case Review*, *Risk-Driven BVA*). Aturan baru harus bersifat memperketat / melengkapi (*additive/enriching*), bukan membatalkan aturan dasar.
 

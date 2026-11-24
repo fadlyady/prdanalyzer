@@ -15,6 +15,14 @@ description: >-
 
 # Senior QA Database Validation Skill (`database-qa-validation`)
 
+> [!IMPORTANT]
+> **Kepatuhan Pondasi (wajib dibaca sebelum menjalankan skill ini):** `.agents/shared/FOUNDATION.md` adalah acuan tertinggi; bila ada aturan di bawah yang bertentangan, Pondasi yang berlaku.
+> - **Profil aktif:** jalankan `python3 scripts/qa_feature.py where` untuk mengetahui alias `<ALIAS>`; artefak fitur ada di `work/<ALIAS>/<fitur>/` (buat dengan `python3 scripts/qa_feature.py init <fitur>` bila belum ada). Bila fitur sudah punya `00-scope.md`, alias di file itu yang dipakai.
+> - **Kerahasiaan:** nilai asli (URL, package, akun, DSN) hanya dibaca server/runner dari `.secrets/<ALIAS>.env`; AI tidak membuka file itu dan tidak menulis nama aplikasi, host, package, atau akun asli di artefak — pakai alias (`<ALIAS>`, `{{role:owner}}`, `db:main`).
+> - **Target DB:** pakai alias `db:main` (MCP target `primary`, prefix `DB_MAIN_*`) atau `db:external` (`DB_EXTERNAL_DEV_*`); kredensial disuntikkan runner dari `.secrets/<ALIAS>.env`. Resep di `profiles/<ALIAS>/knowledge/db/db-validation-cheatsheet.md`.
+> - **Evidence:** bila dipanggil dalam konteks run/TC, simpan query read-only, parameter, waktu, hasil termasking, dan expected vs actual ke folder run fitur (standar `status-verdict-evidence.md`). Jangan menampilkan email, nomor telepon, atau nama orang di chat.
+
+
 Skill ini mendefinisikan Standar Operasional Prosedur (SOP) bagi seorang **Senior QA Engineer & Test Tooling Architect** dalam melakukan verifikasi persistensi data (*Layer 3: DB State Persistence Assertion*) serta inspeksi data pada basis data PostgreSQL domain apapun secara **100% Agnostik dan Universal**.
 
 Skill ini dirancang dengan prinsip **Zero-Mutation (100% Read-Only Guard)**, **Zero Context-Explosion (Anti Full Table Scan)**, dan **Zero Wild Assumptions (Dynamic Target DB Resolution Gate)**.
@@ -27,16 +35,16 @@ Skill ini dirancang dengan prinsip **Zero-Mutation (100% Read-Only Guard)**, **Z
   `./knowledge-review/db-validation-cheatsheet.md`
   - Memuat panduan langkah penelusuran data berulang yang melibatkan kombinasi banyak tabel dalam format narasi teks non-query yang mudah dipahami.
   - 🛑 **STRICT MANDATE**: AI **DILARANG KERAS** menambahkan, mengubah, atau mengarang *recipe* ke dalam berkas ini secara otomatis. Berkas ini adalah **100% Manual Input dari User**.
-- **Konteks Handoff Eksekusi Browser (*Optional Continuation*)**:
-  `./browser-execution/automate-result/run_<FeatureName>_<Timestamp>/execution_context.json`
-  - Berkas dinamis yang dihasilkan oleh `browser-qa-execution` saat ada skenario berstatus `PARTIAL TEST WITH REASON`.
-  - Berisi daftar test case partial, nilai input runtime (ID order, email, kode unik), serta petunjuk tabel dari kolom `expected`.
+- **Konteks Handoff dari Eksekutor UI (*Optional Continuation*)**:
+  - Sumber utama: field `Capture` & `DB check` pada test case (kontrak `.agents/shared/standards/testcase.md`) dan nilai capture di `run_results.json` run UI.
+  - Kompatibilitas: `work/<ALIAS>/<fitur>/runs/run_<...>/execution_context.json` dari `browser-qa-execution` (runner lama).
+  - Berisi TC yang butuh layer DB, nilai input runtime (ID order, kode unik), serta petunjuk tabel dari expected `[DB]`.
 - **Konfigurasi Environment & Kredensial DB Dinamis**:
-  `./.env` atau `./mcp-server-database-qa/.env.docker`
+  `.secrets/<ALIAS>.env` (profil aktif dari `.env` → `QA_ACTIVE_PROFILE`; disuntikkan oleh runner/`db_validator.js`) — `./mcp-server-database-qa/.env.docker` hanya untuk mode Docker
   - Memuat variabel koneksi apapun dengan pola `DB_<TARGET>_URL` atau `DB_<TARGET>_HOST`, `DB_<TARGET>_PORT`, `DB_<TARGET>_NAME`, `DB_<TARGET>_USER`, `DB_<TARGET>_PASS`, atau generic `DATABASE_URL`.
   - Sistem **tidak mengunci** nama database tertentu (contoh: mendukung `DB_PAYMENT_*`, `DB_ECOMMERCE_*`, `DB_AUTH_*`, `DB_CORE_*`, `DB_EXTERNAL_*`, dll).
 - **Bukti Validasi Database (*Test Evidence Logging*)**:
-  `./browser-execution/automate-result/run_<FeatureName>_<Timestamp>/db_validation_evidence.json` *(jika dijalankan sebagai kelanjutan test run)*.
+  `work/<ALIAS>/<fitur>/runs/run_<fitur>_<YYYYMMDD_HHMMSS>/`db_validation_evidence.json` *(jika dijalankan sebagai kelanjutan test run)*.
 
 ---
 
@@ -68,16 +76,22 @@ Skill ini dirancang dengan prinsip **Zero-Mutation (100% Read-Only Guard)**, **Z
 │   hanya query tabel kandidat dengan LIMIT 5. DILARANG SELECT * buta.   │
 ├────────────────────────────────────────────────────────────────────────┤
 │ GATE 4: NON-DESTRUCTIVE TESTCASE CONTRACT & SELECTIVE EXECUTION        │
-│ - Skema testcase (.md / .xlsx) TIDAK DIRUBAH (tidak ada kolom baru).   │
-│ - Info tabel/DB diekstrak secara alami dari kolom 'expected'.          │
+│ - Mengikuti kontrak TC bersama: baca expected [DB] + field opsional    │
+│   `DB check` (target, tabel, kunci, kondisi, timeout); tanpa itu, info │
+│   tabel diekstrak dari expected. Detail kurang -> status BLOCKED.      │
 │ - Hanya menjalankan baris yang membutuhkan verifikasi DB; skenario UI  │
 │   murni otomatis diabaikan (skipped).                                  │
 ├────────────────────────────────────────────────────────────────────────┤
 │ GATE 5: ZERO PII LEAKAGE & TERMINAL PREVIEW MANDATE                    │
 │ - Kolom kredensial/sensitif (password, password_hash, token, secret,   │
 │   otp, credit_card) otomatis di-mask menjadi [REDACTED_PII].           │
-│ - Hasil inspeksi disajikan di Terminal/Chat Preview secara rapi.       │
-│   Tidak membuat file baru kecuali diminta secara eksplisit oleh user.  │
+│ - Email, nomor telepon, nama orang: jangan ditampilkan utuh di chat    │
+│   (samarkan) meski engine belum memasking otomatis.                    │
+│ - Mode inspeksi ad-hoc: preview di chat. Dalam konteks run/TC: WAJIB   │
+│   simpan bukti ke folder run (db_evidence.json: query, parameter,      │
+│   waktu, hasil termasking, expected vs actual).                        │
+│ - Sistem async (queue/webhook): ulangi pengecekan sampai timeout di    │
+│   `DB check` (default 60s, interval 5s) sebelum menyatakan FAILED.     │
 └────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -176,7 +190,7 @@ Ketika `browser-qa-execution` selesai dan mendapati skenario yang berstatus `PAR
    > *(B) Tidak, cukupkan sampai verifikasi UI saja."*
 
 2. **Membaca `execution_context.json`**:
-   Jika user memilih (A), AI membuka folder run terbaru di `./browser-execution/automate-result/run_<Feature>_<Timestamp>/execution_context.json`.
+   Jika user memilih (A), AI membuka folder run terbaru di `work/<ALIAS>/<fitur>/runs/run_<...>/execution_context.json`.
 3. **Ekstraksi Data Otomatis**:
    - Membaca test case id dan keyword/input runtime yang digunakan browser (misal email baru yang diinput, invoice ID yang muncul di toast).
    - Membaca petunjuk database dan tabel dari teks kolom `expected`.

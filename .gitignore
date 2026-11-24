@@ -130,3 +130,6 @@ mobile-execution/plans/*
 *.har
 *_logcat.txt
 mutation_ledger.jsonl
+
+# Dokumen hasil generate (biner, tidak bisa dipindai guard) -> buat ulang lokal dari .md
+PANDUAN_PENGGUNAAN_QA_SKILLS.docx

@@ -16,6 +16,15 @@ description: >-
 
 # Senior QA Browser Execution Skill (`browser-qa-execution`)
 
+> [!IMPORTANT]
+> **Kepatuhan Pondasi (wajib dibaca sebelum menjalankan skill ini):** `.agents/shared/FOUNDATION.md` adalah acuan tertinggi; bila ada aturan di bawah yang bertentangan, Pondasi yang berlaku.
+> - **Profil aktif:** jalankan `python3 scripts/qa_feature.py where` untuk mengetahui alias `<ALIAS>`; artefak fitur ada di `work/<ALIAS>/<fitur>/` (buat dengan `python3 scripts/qa_feature.py init <fitur>` bila belum ada). Bila fitur sudah punya `00-scope.md`, alias di file itu yang dipakai.
+> - **Kerahasiaan:** nilai asli (URL, package, akun, DSN) hanya dibaca server/runner dari `.secrets/<ALIAS>.env`; AI tidak membuka file itu dan tidak menulis nama aplikasi, host, package, atau akun asli di artefak — pakai alias (`<ALIAS>`, `{{role:owner}}`, `db:main`).
+> - **Status, scope & verdict:** `.agents/shared/standards/status-verdict-evidence.md` — 7 status (termasuk `BLOCKED` dan `NOT IN SCOPE`), `failure_category` wajib untuk FAILED, pernyataan scope wajib di laporan, charter yang tidak dijalankan ditulis "tidak dijalankan".
+> - **Evidence:** fitur yang terdaftar di `work/<ALIAS>/<fitur>/` otomatis menyimpan run ke `runs/` dan laporan ke `reports/` (tercatat di `runs/index.json`); fitur belum terdaftar memakai folder lama.
+> - **Reviewer & verdict (D7):** user yang menjalankan workflow; laporan tanpa review berlabel `DRAFT`.
+
+
 Skill ini mendefinisikan Standar Operasional Prosedur (SOP) bagi seorang **Senior QA Engineer** dalam menjalankan pengujian fitur secara langsung pada **browser Google Chrome (Staging Environment)** yang terhubung via Chrome DevTools Protocol (CDP port 9222).
 
 Skill ini dilengkapi **Manajemen Siklus Hidup Browser Otomatis (Browser Lifecycle Management)**:
@@ -29,23 +38,23 @@ Skill ini dirancang bersifat **100% Universal, Domain-Agnostic, & Cross-Device P
 ## 1. Lokasi Berkas & Arsitektur Direktori (*File Architecture*)
 
 - **Sumber Test Case (Wajib Berformat `.md`)**:
-  `./doc-analyzer/result-testcase/` (atau direktori kustom yang diberikan oleh user, dengan fallback ke `./result-testcase/`).
+  `work/<ALIAS>/<fitur>/` (atau direktori kustom yang diberikan oleh user).
   - 🛑 **STRICT MANDATE**: File test case **WAJIB** berformat Markdown (`.md`).
   - Jika berkas yang tersedia berformat Excel (`.xlsx`) atau format non-MD lainnya, **WAJIB melalui Gerbang Konversi/Konfirmasi** sebelum dapat dieksekusi.
 - **Penyimpanan Data Pendukung Uji (*Supplementary Test Data*)**:
   `./browser-execution/automate-support/` (dengan fallback ke `./automate-support/`).
   - Menyimpan berkas data pengujian beragam: data katalog produk, daftar kontak CSV upload, template caption, file DOCX/PDF sampel, payload JSON.
 - **UI & Navigation Knowledge (Parallel 3-Tier Grounding)**:
-  - `./doc-analyzer/strukturmenu/live-analyzer/<app-slug>/<timestamp>/` (hasil live inspection run terbaru berbasis app/host).
-  - `./doc-analyzer/strukturmenu/<app-name>/` (tangkapan layar manual offline).
+  - `profiles/<ALIAS>/knowledge/web/live-analyzer/<app-slug>/<timestamp>/` (hasil live inspection run terbaru berbasis app/host).
+  - `profiles/<ALIAS>/knowledge/web/<surface>/` (tangkapan layar manual offline).
   - Digunakan sebagai referensi letak tombol, selector, atau navigasi menu jika skenario memerlukan klarifikasi visual.
 - **Konfigurasi Environment & Kredensial Role**:
-  `./.env` (memuat variabel target URL seperti `BASE_URL`, `STAGING_URL`, atau `E2E_BASE_URL_STAGING`, serta kredensial `USER_<ROLE>_<NAME>`, `PASS_<ROLE>_<NAME>`).
+  `.secrets/<ALIAS>.env` (profil aktif dari `.secrets/<ALIAS>.env` → `QA_ACTIVE_PROFILE`) (memuat variabel target URL seperti `BASE_URL`, `STAGING_URL`, atau `E2E_BASE_URL_STAGING`, serta kredensial `USER_<ROLE>_<n>`, `PASS_<ROLE>_<n>`).
 - **Mesin Eksekusi & Guard (Dual Engine)**:
   - **Primary Engine (Hard Guardrail via MCP)**: `browser-qa-guard` MCP Server (`mcp-server-browser-qa/src/index.js`)
     * `qa_check_browser_state`: Memeriksa port CDP 9222 & mendaftar tab terbuka (Gate 2).
     * `qa_init_browser`: Peluncuran Chrome & penegakan Domain Allowlist (Gate 2).
-    * `qa_list_available_roles`: Deteksi role dari `.env` dengan password ter-masking (Gate 3).
+    * `qa_list_available_roles`: Deteksi role dari `.secrets/<ALIAS>.env` dengan password ter-masking (Gate 3).
     * `qa_set_mutation_permission`: Mengatur mode mutasi `safe | full | full_external` + mengembalikan `dataTag` (Gate 4).
     * `qa_get_mutation_ledger`: Ringkasan mutasi dijalankan/diblokir + petunjuk teardown data ber-TAG (Gate 5).
     * `qa_login_role`: Injeksi form login DOM langsung tanpa membocorkan password ke prompt AI (Gate 3).
@@ -62,10 +71,10 @@ Skill ini dirancang bersifat **100% Universal, Domain-Agnostic, & Cross-Device P
     * Generator Laporan Word DOCX: `./.agents/skills/browser-qa-execution/scripts/generate_docx_report.py`
 - **Target Output Hasil Uji**:
   - **Laporan Dokumen Word (Executive DOCX)**:
-    `./browser-execution/automate-result/Report_<FeatureName>_<YYYYMMDD_HHMMSS>.docx`
+    `work/<ALIAS>/<fitur>/reports/Report_<fitur>_<YYYYMMDD_HHMMSS>.docx`
     *(Tanpa embedded screenshot agar ringan, profesional, dan mudah dibaca stakeholder).*
   - **Arsip Screenshot Evidence (Folder per Run)**:
-    `./browser-execution/automate-result/run_<FeatureName>_<YYYYMMDD_HHMMSS>/`
+    `work/<ALIAS>/<fitur>/runs/run_<fitur>_<YYYYMMDD_HHMMSS>/`
     *(Setiap screenshot diberi nama unik: `<TC_ID>_<step>_<status>.png`).*
 
 ---
@@ -119,7 +128,7 @@ Sebelum dan selama menjalankan pengujian, Senior QA **WAJIB** mematuhi 6 gerbang
 │     kandidat jika ada. Jika belum ada di .env, minta user melengkapi.  │
 │   * Langkah 2 (Resolusi Variabel Kredensial User):                     │
 │     Agent bertanya variabel kredensial apa yang digunakan untuk role   │
-│     skenario (cek USER_<ROLE>_<NAME> di .env, minta update jika tiada).│
+│     skenario (cek USER_<ROLE>_<n> di .env, minta update jika tiada).│
 │   * Langkah 3 (Peluncuran Chrome Agnostik):                            │
 │     Auto-discovery Chrome binary (Mac/Windows/Linux), luncurkan dengan │
 │     --start-maximized dan arahkan langsung ke target URL.              │
@@ -134,7 +143,7 @@ Sebelum dan selama menjalankan pengujian, Senior QA **WAJIB** mematuhi 6 gerbang
 │   1. KASUS 1 (Actor Cocok di .env): Jika tunggal langsung auto-select; │
 │      jika >1 user ber-prefix sama, WAJIB bertanya akun mana dipilih.   │
 │   2. KASUS 2 (Actor Disebut tapi TIDAK ADA di .env): Berhenti dan beri │
-│      alert ke user: (A) Lengkapi .env (USER_<ROLE>_<NAME>), atau       │
+│      alert ke user: (A) Lengkapi .env (USER_<ROLE>_<n>), atau       │
 │      (B) Pilih dari role kredensial yang sudah tersedia di .env.       │
 │   3. KASUS 3 (Actor KOSONG di Test Case): DILARANG mengasumsikan role  │
 │      sepihak! Mesin WAJIB berhenti dan meminta user memilih role login │
@@ -160,12 +169,19 @@ Sebelum dan selama menjalankan pengujian, Senior QA **WAJIB** mematuhi 6 gerbang
 │ - Data baru WAJIB memakai dataTag ({{TAG}}); bersihkan di akhir run.   │
 ├────────────────────────────────────────────────────────────────────────┤
 │ GATE 5: TRANSPARENT STATUS FLAGGING GATE                               │
-│ - PASSED: Skenario UI selesai dan seluruh assertion terpenuhi.         │
-│ - FAILED: Assertion UI gagal atau elemen/opsi tidak ditemukan.         │
-│ - SKIP WITH REASON: Skenario dilewati (misal kredensial belum ada).    │
-│ - PARTIAL TEST WITH REASON: Melibatkan API/DB atau mutasi diblokir     │
-│   Mutation Policy (alasan dari server). Validasi DB = OPSIONAL (opt-   │
-│     in).                                                               │
+│ Standar: .agents/shared/standards/status-verdict-evidence.md           │
+│ - PASSED: semua layer dalam scope run tervalidasi.                     │
+│ - FAILED: expected tidak terpenuhi; WAJIB failure_category             │
+│   (product / script / environment / data).                             │
+│ - PARTIAL TEST WITH REASON: layer dalam scope dicoba tapi tidak tuntas │
+│   (mutasi diblokir Mutation Policy, locator ambigu).                   │
+│ - BLOCKED: Q-PM terbuka, asumsi, akun/data belum siap, binding belum   │
+│   ada, environment down.                                               │
+│ - NOT IN SCOPE: layer TC yang tidak dipilih di run ini (mis. [DB] saat │
+│   run hanya UI) -> bukan PARTIAL.                                      │
+│ - SKIP WITH REASON: dikeluarkan atas keputusan user.                   │
+│ Runner lama masih menulis PARTIAL untuk layer API/DB: koreksi menjadi  │
+│ NOT IN SCOPE saat review (M5) sampai runner diperbarui.                │
 ├────────────────────────────────────────────────────────────────────────┤
 │ GATE 6: RBAC ROLE BATCHING & CLEAN SESSION RESET GATE                  │
 │ - ROLE BATCHING PROTOCOL: Kelompokkan skenario per role; login hanya   │
@@ -182,7 +198,7 @@ Sebelum dan selama menjalankan pengujian, Senior QA **WAJIB** mematuhi 6 gerbang
 
 ### Fase 1: Validasi Input, Format, & Resolusi File (Gate 1)
 1. **Pemeriksaan Keberadaan File `.md`**:
-   Cari file test case di `./doc-analyzer/result-testcase/` (dengan fallback ke `./result-testcase/`) atau path yang diberikan user.
+   Cari file test case di `work/<ALIAS>/<fitur>/` atau path yang diberikan user.
    * *Kasus 1: Ditemukan file `.xlsx` tetapi tidak ada `.md`*:
      Panggil gerbang konfirmasi:
      > *"Format file saat ini adalah Excel (.xlsx). Sesuai SOP, pengujian wajib menggunakan format Markdown (.md). Apakah Anda ingin saya bantu konversi ke format `.md` standar sekarang?"*
@@ -211,16 +227,16 @@ Sebelum runner Playwright mengeksekusi langkah pengujian, Senior QA wajib menyel
 
 2. **Kasus 2: Browser Google Chrome BELUM Dibuka**:
    - **Langkah 1 (Resolusi Variabel URL)**:
-     - Mesin memindai file `.env` mencari kandidat variabel URL (`URL`, `HOST`, `DOMAIN`, `BASE_URL`, `STAGING_URL`, `APP_URL`).
+     - Mesin (runner/MCP, bukan AI) memindai file rahasia profil `.secrets/<ALIAS>.env` mencari kandidat **nama** variabel URL — nilai tidak ditampilkan utuh di chat (`URL`, `HOST`, `DOMAIN`, `BASE_URL`, `STAGING_URL`, `APP_URL`).
      - Jika ditemukan kandidat:
-       > *"Ditemukan variabel URL pada file `.env`:*
-       > *1. `[KEY_1]` = `[VALUE_1]`*
-       > *2. `[KEY_2]` = `[VALUE_2]`*
+       > *"Ditemukan variabel URL pada file rahasia profil `.secrets/<ALIAS>.env`:*
+       > *1. `[KEY_1]` (host disamarkan, mis. `stag***.***`)*
+       > *2. `[KEY_2]` (host disamarkan)*
        > *Variabel mana yang ingin digunakan sebagai target URL pengujian ini?"*
-     - Jika file `.env` belum memuat URL atau belum ada `.env`:
-       > *"⚠️ **Target URL Belum Ditentukan**: Mohon masukkan nama variabel dan URL target staging aplikasi Anda untuk disimpan ke `.env` (contoh: `BASE_URL=https://staging.myapp.com`)."*
+     - Jika file rahasia profil `.secrets/<ALIAS>.env` belum memuat URL atau belum ada `.secrets/<ALIAS>.env`:
+       > *"⚠️ **Target URL Belum Ditentukan**: Mohon masukkan nama variabel dan URL target staging aplikasi Anda untuk disimpan ke `.secrets/<ALIAS>.env` (contoh: `BASE_URL=https://staging.myapp.com`)."*
    - **Langkah 2 (Resolusi Variabel Kredensial User)**:
-     - Tanyakan variabel kredensial apa di `.env` yang digunakan untuk role pengujian yang disyaratkan skenario.
+     - Tanyakan variabel kredensial apa di `.secrets/<ALIAS>.env` yang digunakan untuk role pengujian yang disyaratkan skenario.
    - **Langkah 3 (Peluncuran Chrome Lintas-Platform)**:
      - Mesin mencari binary Google Chrome menggunakan mekanisme *Multi-Path Auto-Discovery* (mendukung macOS, Windows Program Files / LocalAppData, dan Linux).
      - Membuka Chrome secara otomatis dengan port remote debugging 9222, profile dedicated, `--start-maximized`, dan mengarahkan langsung ke target URL.
@@ -229,21 +245,21 @@ Sebelum runner Playwright mengeksekusi langkah pengujian, Senior QA wajib menyel
 
 Senior QA wajib menjalankan validasi 3 tingkat (*3-Tier Credential & Session Check*) terhadap kredensial pengujian guna mengeliminasi potensi kesalahan akun:
 
-1. **Pemetaan Role Skenario terhadap `.env`**:
+1. **Pemetaan Role Skenario terhadap `.secrets/<ALIAS>.env`**:
    - Ekstrak role yang disyaratkan oleh test case (misal: `Owner`, `Admin`, `CS`, `Agent`, `Finance`).
-   - Cari kredensial relevan di file `./.env` dengan format `USER_<ROLE>_<IDENTIFIER>` dan `PASS_<ROLE>_<IDENTIFIER>`.
+   - Cari kredensial relevan di file rahasia profil `.secrets/<ALIAS>.env` (profil aktif dari `.secrets/<ALIAS>.env` → `QA_ACTIVE_PROFILE`) dengan format `USER_<ROLE>_<IDENTIFIER>` dan `PASS_<ROLE>_<IDENTIFIER>`.
 
 2. **Aturan 1: Multi-Credential Disambiguation Gate (Wajib Bertanya)**:
-   - Jika pada file `.env` ditemukan **lebih dari 1 kredensial** dengan prefix serupa (contoh: terdapat `USER_OWNER_MAIN` dan `USER_OWNER_SECONDARY`):
+   - Jika pada file rahasia profil `.secrets/<ALIAS>.env` ditemukan **lebih dari 1 kredensial** dengan prefix serupa (contoh: terdapat `USER_OWNER_MAIN` dan `USER_OWNER_SECONDARY`):
    - **WAJIB BERHENTI & BERTANYA KEPADA USER**:
-     > *"Pada file `.env` ditemukan lebih dari 1 kredensial untuk role **[ROLE]**:*
-     > *1. `[KEY_1]` ([username_1])*
-     > *2. `[KEY_2]` ([username_2])*
+     > *"Pada file rahasia profil `.secrets/<ALIAS>.env` ditemukan lebih dari 1 kredensial untuk role **[ROLE]**:*
+     > *1. `[KEY_1]` ([username ter-masking])*
+     > *2. `[KEY_2]` ([username ter-masking])*
      > *Mohon konfirmasi, akun/kredensial mana yang akan digunakan untuk menjalankan skenario ini?"*
 
-3. **Aturan 2: Missing Credential Gate (Info & Panduan Update `.env`)**:
-   - Jika kredensial untuk role tertentu **TIDAK DITEMUKAN** di `.env`:
-   - **WAJIB MEMBERI TAHU USER** untuk memperbarui file `.env` terlebih dahulu atau menanyakan apakah skenario tersebut ingin dilewati (`SKIP WITH REASON`).
+3. **Aturan 2: Missing Credential Gate (Info & Panduan Update `.secrets/<ALIAS>.env`)**:
+   - Jika kredensial untuk role tertentu **TIDAK DITEMUKAN** di `.secrets/<ALIAS>.env`:
+   - **WAJIB MEMBERI TAHU USER** untuk memperbarui file rahasia profil `.secrets/<ALIAS>.env` terlebih dahulu atau menanyakan apakah skenario tersebut ingin dilewati (`SKIP WITH REASON`).
 
 4. **Aturan 3: Active Session Mismatch Gate (Deteksi Perbedaan Role Aktif)**:
    - Jika browser **sudah dalam kondisi login**, namun user/role yang aktif **BERBEDA** dengan role skenario test case:
@@ -257,12 +273,12 @@ Senior QA wajib menjalankan validasi 3 tingkat (*3-Tier Credential & Session Che
 Gate 4 tidak lagi "buka semua tanpa guard". Mode mutasi berlevel dan aturan kerasnya ditegakkan oleh server (`mcp-server-browser-qa/src/policy.js`), sehingga coverage create/update/delete bisa penuh tanpa membahayakan data nyata.
 
 1. **Tentukan mode**:
-   - Jika `.env` berisi `QA_MUTATION_MODE` → **jangan bertanya ulang**. Tampilkan `mutationPolicy` dari respons `qa_init_browser` sebagai banner (mode, dataTag, aturan aktif) lalu lanjut.
+   - Jika `.secrets/<ALIAS>.env` berisi `QA_MUTATION_MODE` → **jangan bertanya ulang**. Tampilkan `mutationPolicy` dari respons `qa_init_browser` sebagai banner (mode, dataTag, aturan aktif) lalu lanjut.
    - Jika belum diset → tanyakan sekali:
      > *"Mode mutasi untuk run ini? (A) **full** — create/update/delete nyata di staging (update/delete hanya pada data ber-TAG run); (B) **full_external** — full + kirim pesan/broadcast hanya ke penerima di `QA_TEST_RECIPIENT_ALLOWLIST`; (C) **safe** — read-only, langkah mutasi ditandai PARTIAL."*
    - Panggil `qa_set_mutation_permission({ mode, featureName })`. Respons memuat **`dataTag`** (mis. `QAAUTO-2611201530`) dan lokasi `mutation_ledger.jsonl`.
 2. **Penanda data uji (TAG)**: setiap data yang dibuat WAJIB memuat `dataTag` — gunakan `{{TAG}}` pada `value` aksi `fill` (mis. `"Label {{TAG}}"`). Edit/hapus hanya diizinkan pada baris/dialog/detail yang memuat TAG (atau beberapa langkah setelah membuka data ber-TAG). Data seed tanpa TAG → buat dulu data ber-TAG di TC, atau set `QA_REQUIRE_DATA_TAG` (lihat `.env.example`).
-3. **Aturan keras (semua mode)**: finansial (bayar/top up/checkout/potong kuota) diblokir kecuali `QA_FINANCIAL_SANDBOX=true`; logout hanya bila `mutationType:"session_end"`/`isMutation`; domain hanya host staging dari `.env` (`QA_STAGING_HOSTS`, `*_BASE_URL_STAGING`) dan `QA_PROD_HOSTS_DENY` selalu ditolak; bila halaman berpindah ke luar staging, server memaksa mode `safe`.
+3. **Aturan keras (semua mode)**: finansial (bayar/top up/checkout/potong kuota) diblokir kecuali `QA_FINANCIAL_SANDBOX=true`; logout hanya bila `mutationType:"session_end"`/`isMutation`; domain hanya host staging dari `.secrets/<ALIAS>.env` (`QA_STAGING_HOSTS`, `*_BASE_URL_STAGING`) dan `QA_PROD_HOSTS_DENY` selalu ditolak; bila halaman berpindah ke luar staging, server memaksa mode `safe`.
 4. **Penandaan langkah**: kirim `isMutation:true` untuk langkah `[MUTATION]`, atau `mutationType` (`create|update|delete|state_change|external|financial|session_end`) bila kategori jelas. `mutationType:"navigation"` hanya boleh untuk tombol create yang sekadar membuka form (mis. "Tambah" → membuka modal). Sertakan `tcId` & `step` agar ledger & evidence tertaut.
 5. **Respons `PARTIAL TEST WITH REASON` dari server** → hentikan langkah itu, salin `reason` apa adanya ke laporan, lanjutkan assertion yang masih bisa.
 6. **Teardown**: di akhir run panggil `qa_get_mutation_ledger`. Bila ada data dibuat (`created`), jalankan TC cleanup yang menghapus data ber-TAG (masih dalam mode full) lalu cantumkan ringkasan ledger (dijalankan/diblokir per kategori + TAG) di laporan.
@@ -319,7 +335,7 @@ Di akhir setiap test suite, Senior QA **WAJIB** mengeksekusi 5 skenario explorat
 1. Ekspor seluruh ringkasan uji, metrik pass/fail, catatan defek, dan daftar bukti screenshot ke format JSON.
 2. Jalankan konverter laporan:
    ```bash
-   python3 .agents/skills/browser-qa-execution/scripts/generate_docx_report.py <data.json> ./browser-execution/automate-result/Report_<FeatureName>_<Timestamp>.docx
+   python3 .agents/skills/browser-qa-execution/scripts/generate_docx_report.py <data.json> `work/<ALIAS>/<fitur>/reports/Report_<fitur>_<YYYYMMDD_HHMMSS>.docx`
    ```
 3. Laporan Word berstandar TIW korporat memuat:
    - Metadata Box lengkap.
@@ -327,7 +343,11 @@ Di akhir setiap test suite, Senior QA **WAJIB** mengeksekusi 5 skenario explorat
    - Tabel Hasil Pengujian per Role.
    - Tabel 5 Skenario Exploratory.
    - Index Direktori Bukti Screenshot (path folder run).
-   - Release Verdict ([GO] / [CONDITIONAL GO] / [NO-GO]).
+   - Pernyataan scope run (layer & TC yang diuji; layer lain NOT IN SCOPE).
+   - Release Verdict ([GO] / [CONDITIONAL GO] / [NO-GO]) **dihitung ulang oleh reviewer** sesuai standar verdict bersama
+     (FAILED product pada P1/P2 = NO-GO). Charter yang tidak benar-benar dijalankan ditulis "tidak dijalankan".
+4. **Review (M5) oleh user yang menjalankan workflow (D7)**: buka screenshot semua FAILED, koreksi status bila perlu, isi
+   `failure_category`, catat koreksi di `review.json` folder run. Tanpa review, laporan berlabel `DRAFT`.
 
 ### Fase 6: Post-Flight Cleanup & Auto-Close Browser (Mandatory Lifecycle)
 Setiap kali pengujian selesai dieksekusi (baik pengujian sukses, conditional go, maupun terjadi penghentian):
@@ -342,7 +362,7 @@ Setiap kali pengujian selesai dieksekusi (baik pengujian sukses, conditional go,
 
 Laporan hasil pengujian dibuat dalam format Microsoft Word (`.docx`) dengan prinsip:
 - **Clean & Lightweight**: Tidak membenamkan puluhan gambar screenshot ke dalam file agar ukuran file tetap kecil (<50 KB), tidak membuat lemot pembaca dokumen, dan mudah dikirim melalui email/Slack.
-- **Auditable Evidence Index**: Semua screenshot disimpan terorganisir di subfolder `./browser-execution/automate-result/run_<FeatureName>_<Timestamp>/` dan diindeks dalam tabel referensi pada laporan Word.
+- **Auditable Evidence Index**: Semua screenshot disimpan terorganisir di subfolder `work/<ALIAS>/<fitur>/runs/run_<fitur>_<YYYYMMDD_HHMMSS>/` dan diindeks dalam tabel referensi pada laporan Word.
 - **Strong Technical Metrics**: Menampilkan metrik kelulusan, rincian per role, catatan teknis, dan alasan conditional go/no-go secara lugas.
 
 ---

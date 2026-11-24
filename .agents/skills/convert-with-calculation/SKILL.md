@@ -11,6 +11,14 @@ description: >-
 
 # Universal Document Conversion with Calculation Skill (`convert-with-calculation`)
 
+> [!IMPORTANT]
+> **Kepatuhan Pondasi (wajib dibaca sebelum menjalankan skill ini):** `.agents/shared/FOUNDATION.md` adalah acuan tertinggi; bila ada aturan di bawah yang bertentangan, Pondasi yang berlaku.
+> - **Profil aktif:** jalankan `python3 scripts/qa_feature.py where` untuk mengetahui alias `<ALIAS>`; artefak fitur ada di `work/<ALIAS>/<fitur>/` (buat dengan `python3 scripts/qa_feature.py init <fitur>` bila belum ada). Bila fitur sudah punya `00-scope.md`, alias di file itu yang dipakai.
+> - **Kerahasiaan:** nilai asli (URL, package, akun, DSN) hanya dibaca server/runner dari `.secrets/<ALIAS>.env`; AI tidak membuka file itu dan tidak menulis nama aplikasi, host, package, atau akun asli di artefak — pakai alias (`<ALIAS>`, `{{role:owner}}`, `db:main`).
+> - **Verdict & metrik:** `.agents/shared/standards/status-verdict-evidence.md` dan matriks risiko di `.agents/shared/standards/analysis.md`. Metrik dihitung dari TC yang dijalankan & lulus dalam scope; data kurang → `INSUFFICIENT DATA`.
+> - **Status engine:** `calc_engine.py` dijadwalkan diperbaiki pada fase P0 (lihat analisa workflow). Sampai saat itu, scorecard wajib dicek manual terhadap risk register sebelum dibagikan; jangan menyatakan GO hanya dari angka engine.
+
+
 Skill ini digunakan untuk mengonversi dokumen hasil analisa PRD, Test Matrix, dan Test Execution Walkthrough (`.md`) menjadi format dokumen korporat profesional (**Word `.docx` / `.doc`** dan **PDF `.pdf`**) yang dilengkapi dengan **Perhitungan Kuantitatif Otomatis (Weighted Risk Coverage Math Engine)** dan **Rekomendasi Keputusan Rilis Objektif (Go / Conditional Go / No-Go Decision Logic)** berstandar **TIW (Test Idea & Walkthrough)**.
 
 ---
@@ -18,14 +26,14 @@ Skill ini digunakan untuk mengonversi dokumen hasil analisa PRD, Test Matrix, da
 ## 1. Lokasi Berkas & Skrip Pendukung Dinamis
 
 - **Dokumen Sumber (Markdown)**: 
-  - `./doc-analyzer/result-testcase/PRD_Analysis_<Feature_Name>.md` (atau path berkas `.md` kustom, dengan fallback ke `./result-testcase/`).
+  - `work/<ALIAS>/<fitur>/01-analysis.md` (atau path berkas `.md` kustom).
 - **Skrip Konverter & Engine Perhitungan**:
   - Calculation Engine: `.agents/skills/convert-with-calculation/scripts/calc_engine.py`
   - Word Converter: `.agents/skills/convert-with-calculation/scripts/md_to_docx.py`
   - PDF Converter: `.agents/skills/convert-with-calculation/scripts/md_to_pdf.py`
 - **Target Output**:
-  - `./doc-analyzer/result-testcase/PRD_Analysis_<Feature_Name>.docx`
-  - `./doc-analyzer/result-testcase/PRD_Analysis_<Feature_Name>.pdf`
+  - `work/<ALIAS>/<fitur>/01-analysis.docx`
+  - `work/<ALIAS>/<fitur>/01-analysis.pdf`
 
 ---
 
@@ -83,21 +91,21 @@ Dokumen Word dan PDF yang dihasilkan secara otomatis menyertakan:
 ### A. Konversi ke DOCX / DOC
 ```bash
 python3 .agents/skills/convert-with-calculation/scripts/md_to_docx.py \
-  doc-analyzer/result-testcase/PRD_Analysis_<Feature_Name>.md \
-  doc-analyzer/result-testcase/PRD_Analysis_<Feature_Name>.docx
+  `work/<ALIAS>/<fitur>/01-analysis.md` \
+  `work/<ALIAS>/<fitur>/01-analysis.docx`
 ```
 
 ### B. Konversi ke PDF
 ```bash
 python3 .agents/skills/convert-with-calculation/scripts/md_to_pdf.py \
-  doc-analyzer/result-testcase/PRD_Analysis_<Feature_Name>.md \
-  doc-analyzer/result-testcase/PRD_Analysis_<Feature_Name>.pdf
+  `work/<ALIAS>/<fitur>/01-analysis.md` \
+  `work/<ALIAS>/<fitur>/01-analysis.pdf`
 ```
 
 ### C. Eksekusi Engine Perhitungan Mandiri (JSON Output)
 ```bash
 python3 .agents/skills/convert-with-calculation/scripts/calc_engine.py \
-  doc-analyzer/result-testcase/PRD_Analysis_<Feature_Name>.md
+  `work/<ALIAS>/<fitur>/01-analysis.md`
 ```
 
 ---
@@ -106,13 +114,13 @@ python3 .agents/skills/convert-with-calculation/scripts/calc_engine.py \
 
 ```mermaid
 graph TD
-    A["1. Terima permintaan ekspor dari User (docx / pdf / all)"] --> B["2. Identifikasi file input .md di doc-analyzer/result-testcase/"]
+    A["1. Terima permintaan ekspor dari User (docx / pdf / all)"] --> B["2. Identifikasi file input .md di `work/<ALIAS>/<fitur>/`"]
     B --> C["3. Eksekusi calc_engine.py (Hitung Basic & Weighted Coverage + Go/No-Go)"]
     C --> D{"4. Format Tujuan?"}
     D -- "docx / doc" --> E["Eksekusi md_to_docx.py dengan Embedded Scorecard"]
     D -- "pdf" --> F["Eksekusi md_to_pdf.py dengan Embedded Scorecard"]
     D -- "Keduanya" --> G["Eksekusi md_to_docx.py & md_to_pdf.py"]
-    E --> H["5. Verifikasi file hasil di doc-analyzer/result-testcase/"]
+    E --> H["5. Verifikasi file hasil di `work/<ALIAS>/<fitur>/`"]
     F --> H
     G --> H
     H --> I["6. Berikan link berkas terhitung langsung ke User"]

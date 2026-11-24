@@ -36,6 +36,7 @@ def parse_markdown(md_path):
             role_match = re.search(r'\*{0,2}(?:Role|Actor|Aktor)\*{0,2}\s*[:\-]\s*([^\n]+)', body, re.IGNORECASE)
             if role_match:
                 role = role_match.group(1).replace('*', '').strip()
+                role = re.sub(r'^\{\{\s*role\s*:\s*([^}]+?)\s*\}\}$', r'\1', role)  # kontrak TC: {{role:<alias>}}
             else:
                 title_role = re.search(r'\b(?:sebagai|as)\s+([A-Za-z0-9_-]+)', title, re.IGNORECASE)
                 role = title_role.group(1).strip() if title_role else ""

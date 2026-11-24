@@ -5,7 +5,7 @@ File ini dapat digunakan sebagai acuan pengisian masukan (review feedback) dalam
 ---
 
 ## 1. Metadata Sesi Review
-- **Nama Fitur / Modul**: [Contoh: CRM Chat - Meta New Pricing 2026]
+- **Nama Fitur / Modul**: [Contoh: Modul Pembayaran - Paket Harga Baru]
 - **Tanggal Sesi Review**: YYYY-MM-DD
 - **Daftar Reviewer & Role**:
   - [Nama PM] - Product Manager
@@ -17,7 +17,7 @@ File ini dapat digunakan sebagai acuan pengisian masukan (review feedback) dalam
 ## 2. Rincian Temuan Review / Missed Coverage (Daftar Poin Masukan)
 
 ### Poin 1: [Judul Temuan / Missed Case]
-- **Modul / Submodul**: [Contoh: WhatsApp Credit / Top-Up Modal]
+- **Modul / Submodul**: [Contoh: Saldo / Modal Top-Up]
 - **Sumber Feedback**: [Tech Lead / PM / QA Lead / Bug Escape Incident]
 - **Severity**: `CRITICAL (Weight 4)` / `HIGH (Weight 3)` / `MEDIUM (Weight 2)` / `LOW (Weight 1)`
 - **Uraian Masalah / Celah yang Terlewat**:
@@ -32,7 +32,7 @@ File ini dapat digunakan sebagai acuan pengisian masukan (review feedback) dalam
 ---
 
 ### Poin 2: [Judul Temuan / Missed Case]
-- **Modul / Submodul**: [Contoh: Dashboard CRM / Filter Dropdown]
+- **Modul / Submodul**: [Contoh: Dashboard / Filter Dropdown]
 - **Sumber Feedback**: [Product Manager]
 - **Severity**: `MEDIUM (Weight 2)`
 - **Uraian Masalah / Celah yang Terlewat**:
@@ -47,5 +47,5 @@ File ini dapat digunakan sebagai acuan pengisian masukan (review feedback) dalam
 
 ## 3. Catatan Tambahan & Dokumen Pendukung Baru (Jika Ada)
 - Lampiran PRD Revisi: `./[PRD] Feature_Name_v2.docx`
-- Lampiran OpenAPI / TRD Baru: `./adhoc-document/openapi_v2.json`
-- Screenshot UI Tambahan: `./strukturmenu/new-modal/`
+- Lampiran OpenAPI / TRD Baru: `profiles/<ALIAS>/knowledge/api/openapi_v2.json`
+- Screenshot UI Tambahan: `profiles/<ALIAS>/knowledge/web/<surface>/`

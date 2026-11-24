@@ -100,6 +100,7 @@ def parse(md_path, platform=None):
         ptxt = (tc.pop('platform_raw') or tc['tags']).lower()
         plats = [p for p in ('android', 'ios') if p in ptxt] or ['android', 'ios']
         tc['platforms'] = plats
+        tc['role'] = re.sub(r'^\{\{\s*role\s*:\s*([^}]+?)\s*\}\}$', r'\1', (tc['role'] or '').strip())  # kontrak TC: {{role:<alias>}}
         if not tc['role']: tc['role'] = derive_role(tc['precondition'] + tc['steps'])
         tc['mutation_steps'] = [n for n, s in enumerate(tc['steps'], 1) if '[MUTATION]' in s.upper()]
         tc['suspected_mutation_steps'] = [n for n, s in enumerate(tc['steps'], 1) if n not in tc['mutation_steps'] and MUT_KW.search(s)]

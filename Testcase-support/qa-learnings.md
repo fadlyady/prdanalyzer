@@ -1,84 +1,96 @@
-# Continuous QA Learnings & Knowledge Base (`qa-learnings.md`)
+# Continuous QA Learnings — Generik (`qa-learnings.md`)
 
-File ini berfungsi sebagai **Single Source of Truth (SSOT) untuk Continuous Learning & Retrospective Review**. Setiap kali dokumen analisis atau test case selesai dievaluasi oleh tim (PO, Dev, QA Lead) atau terjadi bug escape di staging/production, temuan dan pelajaran baru dicatat di sini agar seluruh skill AI selalu ter-update dan semakin tajam.
-
----
-
-## 📚 Daftar Pola Pembelajaran & Guardrails Baru
-
-### [2026-09-09] - Framework Upgrade: Universal Multi-Platform & 3-Tier Coverage
-- **Kategori Gap**: Architecture & Methodology Standardization
-- **Temuan / Feedback**: Skill awal terlalu terikat pada satu domain aplikasi web, minim NFR/Idempotency, dan assertion hanya berfokus pada UI visual.
-- **Root Cause**: Keterbatasan heuristik awal yang belum mengintegrasikan standar pengujian enterprise (SFDIPOT, Triple-Layer Assertions, Exploratory Charters).
-- **Action Item & Guardrail Baru**:
-  - Mewajibkan *Interactive Clarification Gate* dengan 7 Dimensi Checklist sebelum analisis difinalisasi (zero-assumption).
-  - Menerapkan *Triple-Layer Assertions* (UI State + API Contract + DB Persistence).
-  - Menyediakan *3-Tier Coverage Matrix* (Happy Path, Boundary/Systemic Edge Cases, Heuristic Exploratory Charters).
-  - Mengabstraksi format ID menjadi `<PLATFORM>-<MODULE>-<SUBMODULE>-<TYPE>-<SEQ>`.
+SSOT pembelajaran **lintas aplikasi** untuk semua skill. Tidak boleh memuat nama aplikasi, menu spesifik, host, akun,
+atau data uji; pelajaran yang khusus satu aplikasi dicatat di `profiles/<ALIAS>/learnings.md` (lokal). Format entri baru
+mengikuti `qa-review-learning` (Before vs After + guardrail + target skill).
 
 ---
 
-### [2026-09-16] - Strict Zero-Wild-Guess: Larangan Asumsi Rute Endpoint API & Penegakan Narasi Fungsional
-- **Kategori Gap**: Technical Accuracy & Zero-Hallucination Guardrails
-- **Temuan / Feedback**: Terdapat penulisan path endpoint API tiruan (misal: `GET /api/v1/pricing/resolve`, `/api/v1/sessions/...`) yang tidak ada di dokumen PRD maupun file OpenAPI/TRD resmi.
-- **Root Cause**: Upaya memodelkan layer API Contract pada Triple-Layer Assertions secara berlebihan (over-specification) tanpa dasar dokumen resmi di `./adhoc-document/`.
-- **Action Item & Guardrail Baru**:
-  - **Dilarang Keras Mengarang Endpoint/Schema**: Hanya gunakan path URL / endpoint API jika tercantum secara eksplisit pada berkas OpenAPI / TRD resmi di `./adhoc-document/` (seperti `POST /v1/chat/webhook/process/dropped-message`).
-  - **Penegakan Narasi Pendekatan Fungsional**: Jika spesifikasi teknis API belum dirilis, deskripsikan layer API/Service menggunakan **narasi pendekatan kontrak fungsional** yang netral (misal: `[Service/Contract] Pricing Engine Service memvalidasi parameter...`).
-  - Dokumen analisis dan test case harus bersih dari asumsi liar agar tidak menyesatkan tim Dev dan Manual/Automation QA.
+### [2026-09-09] Standarisasi multi-platform & 3-Tier Coverage
+- **Kategori**: Metodologi.
+- **Pelajaran**: skill awal terlalu terikat satu domain dan hanya memeriksa UI.
+- **Guardrail**: gerbang klarifikasi 7 dimensi; triple-layer assertion (UI, API/kontrak, DB); 3-tier coverage
+  (happy path, boundary/systemic, exploratory); format ID `<PLATFORM>-<MODULE>-<SUBMODULE>-<TYPE>-<SEQ>`.
+- **Target**: `prd-analyzer-business`, `generate-testcase`.
 
----
+### [2026-09-16] Larangan mengarang endpoint API
+- **Kategori**: Akurasi teknis.
+- **Before**: TC memuat path endpoint tiruan yang tidak ada di dokumen/kontrak resmi.
+- **After**: endpoint hanya dari `profiles/<ALIAS>/knowledge/api/` atau dokumen sumber; selain itu narasi fungsional
+  `[Service/Contract] <service> memvalidasi ...`.
+- **Target**: `generate-testcase`, `prd-analyzer-business`.
 
-### [2026-09-16] - Grounding Alur UI & Navigasi Menu Berbasis Berkas `./strukturmenu/`
-- **Kategori Gap**: UI Navigation & Test Step Precision
-- **Temuan / Feedback**: Penulisan alur navigasi menu pada precondition dan step harus diverifikasi terhadap screen capture di `./strukturmenu/` dan teks PRD.
-- **Root Cause**: Pembuatan hierarki menu yang tidak grounded pada bukti visual antarmuka yang sudah disediakan.
-- **Action Item & Guardrail Baru**:
-  - **Wajib Validasi `./strukturmenu/`**: Sebelum menyusun langkah UI (*steps*), periksa seluruh gambar tangkapan layar di `./strukturmenu/` (seperti `chatroom-web/`, `dashboard-crm/`, `customer-dashboard/`).
-  - **Alur Menu Terbukti Ada**: Jika menu/elemen UI ada di `./strukturmenu/` (contoh: menu `WhatsApp Credit`, icon `Setting Panel` chatroom, modal `Pop up limit chatroom`, modal `Pop up top up chatroom limit`), gunakan penamaan menu, tombol CTA, dan urutan klik (Klik Menu A $\rightarrow$ Submenu B $\rightarrow$ CTA C) persis sesuai bukti visual.
-  - **Menu Internal / Non-Terdokumentasi**: Jika modul UI tidak terdapat di `./strukturmenu/` dan PRD tidak melampirkan mockup (misal portal internal Biz Ops Admin), gunakan penamaan modul fungsional resmi PRD (misal `[Credit Management - Admin]`) tanpa mengarang pohon hierarki menu fiktif.
+### [2026-09-16] Navigasi UI wajib grounded
+- **Kategori**: Presisi langkah UI.
+- **Before**: hierarki menu ditulis tanpa bukti visual.
+- **After**: nama menu/CTA/urutan klik diambil persis dari knowledge web/mobile profil atau teks sumber; modul tanpa
+  bukti ditulis sebagai modul fungsional netral `[Nama Modul - Role]`.
+- **Target**: `generate-testcase`, `prd-analyzer-business`.
 
----
+### [2026-09-16] Area abu-abu: bertanya, bukan berasumsi
+- **Kategori**: Manajemen ambiguitas.
+- **After**: pertanyaan terstruktur ke user; bila ditunda → `01-questions.md` dengan status `Open` dan nilai default netral;
+  TC turunannya `Blocked by: Q-xx`.
+- **Target**: semua skill analisa & desain.
 
-### [2026-09-16] - Preventative Ambiguity Clarification Gate & Default Fallback Handling
-- **Kategori Gap**: Ambiguity Management & User Decision Control
-- **Temuan / Feedback**: Jika informasi masih abu-abu (requirement bisnis atau keberadaan menu UI), Agent harus proaktif bertanya. Jika user menunda/skip, pertanyaan dicatat terpisah dan sistem menerapkan standar default netral.
-- **Root Cause**: Ketiadaan opsi terstruktur saat menghadapi gap data antara langsung mengasumsikan atau memblokir eksekusi.
-- **Action Item & Guardrail Baru**:
-  - **Wajib Bertanya pada Area Abu-Abu**: Identifikasi area yang ambigu (aturan kalkulasi, limit, atau keberadaan menu UI) dan ajukan ke user secara terstruktur sebelum eksekusi.
-  - **Opsi User**:
-    1. *Melengkapi Data*: Digunakan langsung pada analisis dan test case.
-    2. *Skip / Ditunda*: Disimpan ke berkas terpisah `./doc-analyzer/result-testcase/questions-for-pm-<feature_name>.md` dan ditandai `[PENDING PM CLARIFICATION]`.
-    3. *Gunakan Default*: Terapkan format netral `[Nama Modul - Role]` untuk UI dan `[Service/Contract] <Service>...` untuk API tanpa mengarang entitas fiktif.
+### [2026-09-18] Bedah dokumen menyeluruh
+- **Kategori**: Kedalaman parsing.
+- **Before**: tabel skenario & sampel kasus di dokumen teknis terlewat karena skimming.
+- **After**: traversal awal-akhir; seluruh tabel/sampel diinventarisasi sebagai baseline lalu diperluas; grep-before-answer
+  sebelum menyebut ID/tabel; pertanyaan PM yang belum dijawab tidak dijawab sepihak.
+- **Target**: `prd-analyzer-business`, `generate-testcase`.
 
+### [2026-10-19] Role batching & clean session (anti RBAC contamination)
+- **Kategori**: Eksekusi multi-role.
+- **Before**: skenario role berbeda dijalankan berurutan pada sesi yang sama; tab menumpuk.
+- **After**: satu tab kerja; TC dikelompokkan per role, login sekali per batch, reset cookies/storage (web) atau data app
+  (mobile) saat ganti role; laporan dipisah per role.
+- **Target**: `browser-qa-execution`, `mobile-qa-execution`.
 
----
+### [2026-11-19] Prasyarat device mobile memengaruhi validitas run
+- **Kategori**: Environment (Phase 0).
+- **Before**: seluruh TC FAILED karena pop-up notifikasi/overlay membuat UI tree kosong; hasil sempat dianggap defect.
+- **After**: pre-flight wajib — layar tidak terkunci, heads-up off + DND selama sesi; status `READY_WITH_WARNING`
+  menghentikan run; FAILED karena device dicatat `failure_category: environment`.
+- **Target**: `mobile-qa-execution`.
 
-### [2026-09-18] - Exhaustive Document Ingestion & Zero-Omission Dissection Protocol
-- **Kategori Gap**: Document Parsing Depth & Complete Coverage Ingestion
-- **Temuan / Feedback**: Informasi penting di dalam dokumen teknis (seperti tabel skenario pengujian, sampel kasus transisi status, dan detail arsitektural) sempat terlewat pada iterasi awal analisis. Ini bukan tentang membuat aturan kaku pada judul section tertentu, melainkan keharusan untuk membedah dokumen input secara mendalam dan menyeluruh (*exhaustive*) agar tidak ada informasi berharga yang terabaikan.
-- **Root Cause**: Pola pemrosesan dokumen yang masih bersifat selektif (*skimming* / *surface-level parsing*), di mana agen terlalu cepat menarik kesimpulan konseptual tingkat tinggi tanpa menginventarisasi seluruh tabel teknis dan sampel kasus yang sudah disediakan di dokumen sumber.
-- **Action Item & Guardrail Baru**:
-  1. **Exhaustive Document Traversal (Bedah Total)**: Sebelum menyusun analisis, agen wajib membaca dan memetakan seluruh isi dokumen dari awal hingga akhir tanpa melewatkan tabel data, diagram, sampel skenario teknis, atau lampiran.
-  2. **Inventory & Anchor of Source Scenarios**: Jika dokumen input sudah memuat contoh skenario atau tabel transisi status, seluruh butir tersebut wajib diinventarisasi sebagai baseline pengujian, kemudian dikembangkan secara proaktif ke skenario kombinatorial yang lebih luas (*extended permutations*, *race conditions*, *rate changes*, dan *error boundaries*).
-  3. **Strict Grep-Before-Answer Communication**: Dilarang menyebutkan kode Test Case ID, nomor baris, atau nama tabel dalam percakapan tanpa melakukan pencarian eksak (`grep_search` / `view_file`) ke file fisik terlebih dahulu untuk mencegah halusinasi penamaan.
-  4. **Strict Isolation of Pending PM Questions**: Pertanyaan klarifikasi yang belum dijawab resmi oleh Product Manager dilarang keras dijawab secara sepihak; wajib dipertahankan dengan label `[PENDING PM CLARIFICATION]`.
+### [2026-11-19] Error state bukan empty state
+- **Kategori**: Assertion.
+- **Before**: layar error generik terbaca sebagai "data kosong" sehingga TC lolos.
+- **After**: setiap halaman data wajib assertion eksplisit "tidak ada error state" (teks/ikon error dari knowledge profil),
+  timeout halaman data memadai; error state selalu FAILED.
+- **Target**: `mobile-qa-execution`, `browser-qa-execution`, `generate-testcase`.
 
----
+### [2026-11-19] Runner dapat salah menilai — review wajib sebelum melapor
+- **Kategori**: Review & verdict (Phase 8).
+- **Before**: soft-fail/guard event diturunkan menjadi OBSERVATION; charter gagal tidak terlihat.
+- **After**: reviewer membuka screenshot semua FAILED, LOW CONFIDENCE, dan charter; koreksi dicatat di `review.json`;
+  laporan final `_REVIEWED`; temuan tidak konsisten antar run → intermiten, jalankan ulang.
+- **Target**: `mobile-qa-execution`, `browser-qa-execution`, `qa-review-learning`.
 
-### [2026-10-19] - Tab Cleanup, Role Batching & Clean Session Reset (Anti-RBAC Contamination)
-- **Kategori Gap**: Multi-Role Test Execution, Browser State Hygiene & RBAC Integrity
-- **Temuan / Feedback**: Ketika menjalankan test case yang memiliki berbagai role berbeda di tiap baris (misal Owner, CS, Admin), eksekusi tanpa manajemen sesi menimbulkan *Role Bleed / RBAC Contamination* (skenario CS dijalankan dengan akun Owner). Selain itu, tab browser bertumpuk jika dibuka tanpa penutupan tab sisa sebelumnya.
-- **Root Cause**:
-  1. Flat sequential execution loop pada satu tab tanpa deteksi perubahan role antar baris.
-  2. Ketiadaan mekanisme *Tab Cleanup* pada inisialisasi browser sehingga tab pengujian lama menumpuk.
-  3. Ketiadaan *Clean Session Reset* (`clearCookies`, clear `localStorage`/`sessionStorage`) sebelum berpindah ke role lain.
-- **Action Item & Guardrail Baru**:
-  1. **Tab Cleanup & Single Work Tab Mandate**: Saat menghubungkan runner ke Chrome CDP, runner mendeteksi seluruh tab terbuka dan secara otomatis menutup tab-tab sisa pengujian sebelumnya, menyisakan tepat **1 tab kerja aktif**. Seluruh skenario dalam suite dieksekusi pada tab tersebut tanpa membuka tab baru sembarangan.
-  2. **Role Batching Protocol (Zero-Repeated Login)**:
-     - Skenario pengujian dikelompokkan secara otomatis berdasarkan Role (`groupedByRole`).
-     - Login hanya dieksekusi **satu kali per batch role** (mengeliminasi overhead waktu login-logout bolak-balik di setiap baris).
-  3. **Clean Session Reset on Role Switch**: Saat runner berpindah dari satu role batch ke role batch berikutnya, runner secara otomatis membersihkan seluruh cookies dan storage sesi (`await context.clearCookies()`, `localStorage.clear()`, `sessionStorage.clear()`), lalu melakukan login dengan kredensial role baru dari `.env`.
-  4. **Multi-Role RBAC Report Isolation**: Laporan Word (`.docx`) otomatis memisahkan tabel pengujian ke dalam sub-bagian masing-masing role secara terisolasi dan rapi.
+### [2026-11-19] Bedakan kegagalan skrip dari defect produk
+- **Kategori**: Triage (Phase 6/8).
+- **Before**: plan menekan elemen yang salah di picker sistem → TC FAILED dan dilaporkan seperti defect.
+- **After**: setiap FAILED wajib `failure_category` (product/script/environment/data); hanya `product` yang dihitung defect;
+  pelajaran locator dicatat di knowledge profil (`seed.json`) agar tidak berulang.
+- **Target**: `mobile-qa-execution`, `qa-review-learning`.
 
+### [2026-11-20] Mutasi via koordinat & elemen tanpa identifier
+- **Kategori**: Keamanan eksekusi & testability.
+- **After**: mutasi tidak pernah lewat koordinat mentah; koordinat ber-anchor (relatif ke elemen ber-ID) hanya di mode full
+  dengan evidence sebelum/sesudah; elemen penting tanpa label/ID dilaporkan sebagai temuan testability ke dev.
+- **Target**: `mobile-qa-execution`.
 
+### [2026-11-20] Verifikasi visual/fisik butuh langkah manual terstruktur
+- **Kategori**: Eksekusi mobile.
+- **After**: aspek yang bergantung posisi fisik device atau media diverifikasi dengan langkah `manual` di plan dan bukti
+  frame/metadata; status maksimal `PASSED (LOW CONFIDENCE)` sampai direview.
+- **Target**: `mobile-qa-execution`.
+
+### [2026-11-23] Evidence harus jujur & verdict dibatasi scope
+- **Kategori**: Integritas evidence (Phase 8).
+- **Before**: generator laporan mengisi hasil exploratory default; verdict tidak pernah NO-GO walau ada FAILED; scorecard
+  menganggap semua risiko tercover.
+- **After**: tidak ada nilai default yang menyerupai hasil; status & verdict mengikuti
+  `.agents/shared/standards/status-verdict-evidence.md`; setiap laporan memuat pernyataan scope.
+- **Target**: semua skill eksekusi & konversi.
