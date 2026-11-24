@@ -247,7 +247,7 @@ Fitur dokumen yang dihasilkan:
 > **Target Pengguna**: QA Lead, Engineering Manager, Product Director.
 
 #### A. Apa itu Skill Ini? (Analogi Sederhana)
-Mirip dengan `convert-document`, namun dilengkapi dengan **kalkulator matematis otomatis**. Skill ini membaca seluruh skenario tes, menghitung persentase risiko yang ter-cover, dan secara matematis memberikan rekomendasi rilis produk: **GO**, **CONDITIONAL GO**, atau **NO-GO**.
+Mirip dengan `convert-document`, namun dilengkapi dengan **kalkulator otomatis**. Skill ini membaca risk register analisa dan `02-testcases.md` di folder fitur yang sama, menghitung risiko yang benar-benar dirujuk test case, lalu memberi **Test Design Readiness**: **READY**, **READY WITH GAPS**, **NOT READY**, atau **INSUFFICIENT DATA** (bila belum ada test case). Ini kesiapan desain uji, bukan verdict rilis; verdict rilis hanya dari hasil eksekusi yang direview.
 
 Formula Matematis yang Dihitung:
 1. **Basic Risk Coverage (%)**: Rasio jumlah risiko yang teruji dibandingkan total risiko yang teridentifikasi.
@@ -256,19 +256,20 @@ Formula Matematis yang Dihitung:
    - *High* (Bobot 3)
    - *Medium* (Bobot 2)
    - *Low* (Bobot 1)
-3. **Logika Release Recommendation**:
-   - **GO**: Weighted Coverage $\ge 90\%$ dan TIDAK ADA risiko Critical/High yang gagal.
-   - **CONDITIONAL GO**: Weighted Coverage $75\% - 89\%$ dengan mitigasi risiko terdokumentasi.
-   - **NO-GO**: Weighted Coverage $< 75\%$ atau ada defect pada fungsi Critical.
+3. **Test Design Readiness**:
+   - **READY**: Critical/High 100% tercakup TC, requirement 100%, weighted $\ge 90\%$.
+   - **READY WITH GAPS**: Critical/High 100%, requirement $\ge 80\%$, weighted $\ge 85\%$, masih ada celah.
+   - **NOT READY**: ada risiko Critical/High tanpa TC, requirement $< 80\%$, atau weighted $< 85\%$.
+   - **INSUFFICIENT DATA**: risk register tidak terbaca atau belum ada test case. Tidak ada angka default.
 
 #### B. Kapan Harus Digunakan?
-- Sebelum pertemuan keputusan rilis ke production (*Release Go/No-Go Meeting*).
-- Ketika manajemen membutuhkan metrik numerik nyata mengenai kesiapan rilis produk, bukan sekadar opini subjektif.
+- Setelah test case dibuat, untuk memastikan semua risiko Critical/High dan requirement sudah punya TC sebelum eksekusi.
+- Menjelang Go/No-Go meeting bersama hasil eksekusi yang sudah direview (tambahkan `--results`), agar verdict rilis dan cakupan risiko tampil di satu dokumen.
 
 #### C. Panduan Penggunaan
 ```text
 Gunakan skill /convert-with-calculation untuk mengonversi hasil analisis dan walkthrough 
-menjadi laporan Word lengkap dengan Quality Scorecard dan Release Gate Recommendation.
+menjadi laporan Word lengkap dengan Test Design Readiness Scorecard.
 ```
 *Atau via terminal*:
 ```bash

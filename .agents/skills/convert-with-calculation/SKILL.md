@@ -16,10 +16,10 @@ description: >-
 > - **Profil aktif:** jalankan `python3 scripts/qa_feature.py where` untuk mengetahui alias `<ALIAS>`; artefak fitur ada di `work/<ALIAS>/<fitur>/` (buat dengan `python3 scripts/qa_feature.py init <fitur>` bila belum ada). Bila fitur sudah punya `00-scope.md`, alias di file itu yang dipakai.
 > - **Kerahasiaan:** nilai asli (URL, package, akun, DSN) hanya dibaca server/runner dari `.secrets/<ALIAS>.env`; AI tidak membuka file itu dan tidak menulis nama aplikasi, host, package, atau akun asli di artefak — pakai alias (`<ALIAS>`, `{{role:owner}}`, `db:main`).
 > - **Verdict & metrik:** `.agents/shared/standards/status-verdict-evidence.md` dan matriks risiko di `.agents/shared/standards/analysis.md`. Metrik dihitung dari TC yang dijalankan & lulus dalam scope; data kurang → `INSUFFICIENT DATA`.
-> - **Status engine:** `calc_engine.py` dijadwalkan diperbaiki pada fase P0 (lihat analisa workflow). Sampai saat itu, scorecard wajib dicek manual terhadap risk register sebelum dibagikan; jangan menyatakan GO hanya dari angka engine.
+> - **Engine:** `calc_engine.py` (P0, diperbaiki) membaca risk register lewat header, menghitung ulang level dengan matriks D5, dan menghitung cakupan dari `02-testcases.md` di folder yang sama. Tanpa test case → `INSUFFICIENT DATA`; tidak ada angka default. Peringatan (level/bobot tidak sesuai matriks, risiko Critical/High tanpa AC) ikut dicetak di dokumen.
 
 
-Skill ini digunakan untuk mengonversi dokumen hasil analisa PRD, Test Matrix, dan Test Execution Walkthrough (`.md`) menjadi format dokumen korporat profesional (**Word `.docx` / `.doc`** dan **PDF `.pdf`**) yang dilengkapi dengan **Perhitungan Kuantitatif Otomatis (Weighted Risk Coverage Math Engine)** dan **Rekomendasi Keputusan Rilis Objektif (Go / Conditional Go / No-Go Decision Logic)** berstandar **TIW (Test Idea & Walkthrough)**.
+Skill ini digunakan untuk mengonversi dokumen hasil analisa PRD, Test Matrix, dan Test Execution Walkthrough (`.md`) menjadi format dokumen korporat profesional (**Word `.docx` / `.doc`** dan **PDF `.pdf`**) yang dilengkapi dengan **Perhitungan Kuantitatif Otomatis (Weighted Risk Coverage Math Engine)** dan **Test Design Readiness** (kesiapan analisa & test case) berstandar **TIW (Test Idea & Walkthrough)**. Verdict rilis GO / CONDITIONAL GO / NO-GO hanya muncul bila hasil eksekusi diberikan (`--results`) dan dihitung modul tunggal `scripts/lib/verdict.py`.
 
 ---
 
@@ -54,13 +54,29 @@ $$\text{Weighted Coverage} = \frac{\sum (\text{Bobot Risiko Tercover})}{\sum (\t
 | **Medium** | **2** | Reporting minor, sorting/filter lambat, terdapat workaround. |
 | **Low** | **1** | Isu visual/kosmetik, alignment UI, tooltip hilang. |
 
-### 2. Logika Keputusan Rilis Objektif (Go / No-Go Gate)
+### 2. Sumber data (tanpa nilai default)
 
-| Keputusan Rilis | Kriteria Logis Kuantitatif |
+| Metrik | Sumber | Bila datanya tidak ada |
+| :--- | :--- | :--- |
+| Risiko & level | Tabel ber-header `Risk ID` (kolom Impact, Likelihood, Risk Level, Weight, Pillar, Covered by (AC)) | Risk register dianggap tidak ada → `INSUFFICIENT DATA` |
+| Level | Kolom Risk Level; dibandingkan dengan matriks D5 (Impact × Likelihood, pilar ketat) | Dihitung dari matriks; selisih dicetak sebagai peringatan |
+| Requirement (AC) | Tabel ber-header `AC-ID` (kolom Risiko = relasi AC → risiko); fallback ID `AC-xx` di dokumen | Requirement coverage `N/A` |
+| Risiko tercakup | TC di `02-testcases.md` yang merujuk ID risiko, AC terkait risiko, atau TC yang disebut di kolom Mitigation | Cakupan `N/A`, readiness `INSUFFICIENT DATA` |
+
+CLI: `python3 calc_engine.py <01-analysis.md> [--tc <02-testcases.md>] [--results <report_data.json>]`.
+
+### 3. Test Design Readiness (bukan verdict rilis)
+
+| Readiness | Kriteria |
 | :--- | :--- |
-| **GO** | • Critical & High Risk Coverage = **100%**<br>• Requirements (Happy Path) Coverage = **100%**<br>• Weighted Risk Coverage $\ge$ **90%** |
-| **CONDITIONAL GO** | • Critical & High Risk Coverage = **100%**<br>• Requirements Coverage $\ge$ **80%**<br>• Weighted Risk Coverage $\ge$ **85%**<br>• Seluruh celah terbuka hanya pada level Medium / Low |
-| **NO-GO** | • Terdapat risiko Critical / High yang belum tercover (**< 100%**), ATAU<br>• Requirements Coverage **< 80%**, ATAU<br>• Weighted Risk Coverage **< 85%** |
+| **READY** | Critical & High Risk Coverage = **100%**, Requirements Coverage = **100%**, Weighted Risk Coverage $\ge$ **90%**, gate analisa lengkap |
+| **READY WITH GAPS** | Critical & High = 100%, Requirements $\ge$ 80%, Weighted $\ge$ 85%, tetapi masih ada celah (requirement < 100%, weighted < 90%, AC tidak terbaca, atau risiko Critical/High tanpa AC) |
+| **NOT READY** | Ada risiko Critical/High tanpa TC, ATAU Requirements < 80%, ATAU Weighted < 85% |
+| **INSUFFICIENT DATA** | Risk register tidak terbaca atau belum ada `02-testcases.md` |
+
+Verdict rilis (GO / CONDITIONAL GO / NO-GO / INSUFFICIENT DATA) hanya dari hasil eksekusi yang direview — lihat
+`.agents/shared/standards/status-verdict-evidence.md` §3. Bila `--results` diberikan, baris "Verdict Eksekusi" ditambahkan
+dan risiko Critical/High tanpa TC PASSED otomatis membuat NO-GO.
 
 ---
 
@@ -73,9 +89,9 @@ Dokumen Word dan PDF yang dihasilkan secara otomatis menyertakan:
    - Tabel Atribut (Product Name, Supporting Docs, Contributor, Approver, Informed).
 2. **Changelog & Approval Table**:
    - Status reviewer (`Pending`, `Approved`, `Changes Requested`), tanggal review, dan catatan approval.
-3. **Executive Quality Gate & Scorecard Table (Calculated)**:
-   - Tabel ringkasan metrik kuantitatif terukur (Requirements Coverage, Critical/High Risk Coverage, Basic Coverage, Weighted Coverage).
-   - Badge dan paragraf ringkasan status keputusan rilis: `[GO]`, `[CONDITIONAL GO]`, atau `[NO-GO]`.
+3. **Test Design Readiness Scorecard (Calculated)**:
+   - Risk register, gate analisa, Requirements Coverage, Critical/High Risk Coverage, Basic & Weighted Coverage (N/A bila datanya tidak ada).
+   - Badge readiness `[READY]` / `[READY WITH GAPS]` / `[NOT READY]` / `[INSUFFICIENT DATA]` + daftar peringatan; verdict eksekusi bila `--results` diberikan.
 4. **Isi Analisis Terstruktur**:
    - Heading hierarkis dengan typography bersih (Arial / Helvetica).
    - Bullet points & penomoran terstruktur.

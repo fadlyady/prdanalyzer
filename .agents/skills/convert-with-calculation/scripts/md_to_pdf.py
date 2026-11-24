@@ -25,11 +25,21 @@ def clean_for_reportlab(text):
     # Math symbols cleanup
     t = t.replace(r'\longrightarrow', ' &rarr; ').replace(r'\ge', ' &ge; ').replace(r'\le', ' &le; ')
     t = t.replace('$', '')
-    # Markdown formatting
+    # Inline code dilindungi dulu: isinya di-escape dan tidak diproses sebagai bold/italic (mis. `FREE_REDEDUCT`, `<prefix>`)
+    codes = []
+    def _code(m):
+        c = m.group(1).replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+        codes.append(f'<font face="Courier">{c}</font>')
+        return f'\x00{len(codes) - 1}\x00'
+    t = re.sub(r'`([^`]+)`', _code, t)
+    # '<' yang bukan tag yang dikenal reportlab di-escape
+    t = re.sub(r'<(?!/?(b|i|u|br|font|super|sub|strike)\b)', '&lt;', t)
+    # Markdown formatting (italic hanya bila _ di batas kata, bukan snake_case)
     t = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', t)
-    t = re.sub(r'_(.*?)_', r'<i>\1</i>', t)
+    t = re.sub(r'(?<![\w])_(?!\s)(.+?)(?<!\s)_(?![\w])', r'<i>\1</i>', t)
     # Escape naked &
     t = re.sub(r'&(?!(amp|lt|gt|quot|apos|bull|rarr|ge|le|#\d+);)', '&amp;', t)
+    t = re.sub(r'\x00(\d+)\x00', lambda m: codes[int(m.group(1))], t)
     return t
 
 def convert_md_to_pdf(md_path, pdf_path, contributor=None, approver=None, informed=None):
@@ -38,7 +48,7 @@ def convert_md_to_pdf(md_path, pdf_path, contributor=None, approver=None, inform
         lines = full_text.splitlines()
 
     # Calculate metrics
-    metrics = parse_markdown_metrics(full_text)
+    metrics = parse_markdown_metrics(full_text, md_path)
 
     doc = SimpleDocTemplate(
         pdf_path,
@@ -192,15 +202,11 @@ def convert_md_to_pdf(md_path, pdf_path, contributor=None, approver=None, inform
     story.append(Spacer(1, 10))
 
     # Executive Calculated Quality Gate Scorecard
-    story.append(Paragraph("Executive Quality Gate & Release Scorecard (Calculated)", h2_style))
-    scorecard_data = [
-        [Paragraph("<b>Quality Gate Metric</b>", table_header_style), Paragraph("<b>Measured Value</b>", table_header_style), Paragraph("<b>Target Standard</b>", table_header_style), Paragraph("<b>Compliance Status</b>", table_header_style)],
-        [Paragraph("Requirements Coverage (Happy Path)", table_cell_style), Paragraph(f"{metrics['req_coverage']}%", table_cell_style), Paragraph("100%", table_cell_style), Paragraph("Met" if metrics['req_coverage']>=100 else "Not Met", table_cell_style)],
-        [Paragraph("Critical & High Risk Coverage", table_cell_style), Paragraph(f"{metrics['crit_high_coverage']}%", table_cell_style), Paragraph("100%", table_cell_style), Paragraph("Met" if metrics['crit_high_coverage']>=100 else "Not Met", table_cell_style)],
-        [Paragraph("Basic Risk Coverage", table_cell_style), Paragraph(f"{metrics['basic_risk_coverage']}% ({metrics['covered_risks']}/{metrics['total_risks']} Risks)", table_cell_style), Paragraph("≥ 80%", table_cell_style), Paragraph("Met" if metrics['basic_risk_coverage']>=80 else "Not Met", table_cell_style)],
-        [Paragraph("Weighted Risk Coverage (Bobot 4/3/2/1)", table_cell_style), Paragraph(f"{metrics['weighted_risk_coverage']}% ({metrics['covered_weight']}/{metrics['total_weight']} Pts)", table_cell_style), Paragraph("≥ 90% (Min 85%)", table_cell_style), Paragraph("Met" if metrics['weighted_risk_coverage']>=85 else "Not Met", table_cell_style)],
-        [Paragraph("<b>Release Recommendation Verdict</b>", table_header_style), Paragraph(f"<b>[{metrics['verdict']}]</b>", table_header_style), Paragraph("<b>GO / CONDITIONAL GO</b>", table_header_style), Paragraph(f"<b>{metrics['verdict']}</b>", table_header_style)]
-    ]
+    story.append(Paragraph("Test Design Readiness Scorecard (Calculated)", h2_style))
+    scorecard_data = [[Paragraph(f"<b>{h}</b>", table_header_style) for h in ["Quality Gate Metric", "Measured Value", "Target Standard", "Compliance Status"]]]
+    for i, row in enumerate(metrics['scorecard_rows']):
+        sty = table_header_style if i == len(metrics['scorecard_rows']) - 1 else table_cell_style
+        scorecard_data.append([Paragraph(clean_for_reportlab(str(c)), sty) for c in row])
     sc_tbl = Table(scorecard_data, colWidths=[180, 140, 110, 85])
     sc_tbl.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#00FFFF')),
@@ -213,8 +219,13 @@ def convert_md_to_pdf(md_path, pdf_path, contributor=None, approver=None, inform
     story.append(sc_tbl)
     story.append(Spacer(1, 6))
 
-    verdict_text = f"<b>Release Verdict Summary:</b> <font color='{metrics['verdict_color']}'><b>[{metrics['verdict']}]</b></font> — {metrics['verdict_desc']}"
+    esc = lambda t: str(t).replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+    verdict_text = f"<b>Ringkasan:</b> <font color='{metrics['verdict_color']}'><b>[{metrics['verdict']}]</b></font> — {esc(metrics['verdict_desc'])}"
     story.append(Paragraph(verdict_text, body_style))
+    story.append(Paragraph("<i>Catatan: Test Design Readiness menilai kesiapan analisa &amp; test case, BUKAN verdict rilis. "
+                           "Verdict rilis (GO / CONDITIONAL GO / NO-GO) hanya dari hasil eksekusi yang sudah direview.</i>", body_style))
+    for w in (metrics.get('warnings') or [])[:15]:
+        story.append(Paragraph(f"⚠ {esc(w)}", body_style))
     story.append(Spacer(1, 10))
 
     def render_pdf_table(headers, rows):
