@@ -60,7 +60,7 @@ doc-analyzer/result-testcase/*
 
 doc-analyzer/strukturmenu/**
 !doc-analyzer/strukturmenu/**/
-!doc-analyzer/strukturmenu/**/.gitkeep
+!doc-analyzer/strukturmenu/.gitkeep
 
 # Browser Automation & Testing Folders
 browser-execution/automate-result/*
@@ -86,7 +86,7 @@ automate-support/*
 
 strukturmenu/**
 !strukturmenu/**/
-!strukturmenu/**/.gitkeep
+!strukturmenu/.gitkeep
 
 # IDE & Editors
 .idea/

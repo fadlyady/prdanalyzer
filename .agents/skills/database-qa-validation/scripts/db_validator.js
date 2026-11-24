@@ -153,7 +153,9 @@ class MCPPostgresClient {
         env: procEnv,
       });
 
-      this.proc.on('error', (err) => reject(err));
+      // Binary tidak bisa dijalankan (mis. build macOS di Linux) -> error jelas, bukan crash EPIPE
+      this.proc.on('error', (err) => reject(new Error(`Binary DB MCP tidak bisa dijalankan (${err.code || err.message}). Build ulang untuk OS ini: npm run mcp:db:build`)));
+      this.proc.stdin.on('error', (err) => reject(new Error(`Koneksi ke binary DB MCP terputus (${err.code || err.message}). Pastikan binary sesuai OS/arsitektur: npm run mcp:db:build`)));
 
       const rl = readline.createInterface({ input: this.proc.stdout });
       let stderrBuffer = '';
@@ -438,19 +440,31 @@ function readCheatsheetRecipe(commandKey) {
 async function runHandoffContinuation(targetRunDir) {
   let runDir = targetRunDir;
   if (!runDir) {
-    if (!fs.existsSync(AUTOMATE_RESULT_DIR)) {
-      console.log(`${C.red}Direktori ${AUTOMATE_RESULT_DIR} belum ada.${C.reset}`);
+    // Pondasi: run baru ada di work/<ALIAS>/<fitur>/runs/ (QA_WORK_FEATURE diprioritaskan); lokasi lama tetap dicari.
+    const roots = [];
+    try {
+      const ap = require(path.join(REPO_ROOT, 'scripts', 'lib', 'qa-env.cjs')).activeProfile(REPO_ROOT);
+      const workAlias = ap.alias && path.join(REPO_ROOT, 'work', ap.alias);
+      if (workAlias && fs.existsSync(workAlias)) {
+        const feats = process.env.QA_WORK_FEATURE ? [process.env.QA_WORK_FEATURE] : fs.readdirSync(workAlias);
+        for (const f of feats) roots.push(path.join(workAlias, f, 'runs'));
+      }
+    } catch (e) { /* tanpa profil */ }
+    roots.push(AUTOMATE_RESULT_DIR);
+    const candidates = [];
+    for (const r of roots) {
+      if (!fs.existsSync(r)) continue;
+      for (const f of fs.readdirSync(r)) {
+        const d = path.join(r, f);
+        if (f.startsWith('run_') && fs.statSync(d).isDirectory() && fs.existsSync(path.join(d, 'execution_context.json'))) candidates.push({ d, m: fs.statSync(path.join(d, 'execution_context.json')).mtimeMs });
+      }
+    }
+    if (candidates.length === 0) {
+      console.log(`${C.yellow}Tidak ditemukan run browser dengan execution_context.json (dicari di work/<ALIAS>/*/runs/ dan ${path.relative(REPO_ROOT, AUTOMATE_RESULT_DIR)}). Gunakan --from-run=<folder>.${C.reset}`);
       return;
     }
-    const entries = fs.readdirSync(AUTOMATE_RESULT_DIR)
-      .filter(f => f.startsWith('run_') && fs.statSync(path.join(AUTOMATE_RESULT_DIR, f)).isDirectory())
-      .sort().reverse();
-    
-    if (entries.length === 0) {
-      console.log(`${C.yellow}Tidak ditemukan folder hasil run browser sebelumnya di ${AUTOMATE_RESULT_DIR}.${C.reset}`);
-      return;
-    }
-    runDir = path.join(AUTOMATE_RESULT_DIR, entries[0]);
+    candidates.sort((a, b) => b.m - a.m);
+    runDir = candidates[0].d;
   }
 
   const contextFile = path.join(runDir, 'execution_context.json');
@@ -498,7 +512,7 @@ async function runHandoffContinuation(targetRunDir) {
 
       // Extract table candidate from expected or captured inputs
       let tableFound = null;
-      const expectedWords = item.expected.split(/\s+/);
+      const expectedWords = String(item.expected || '').split(/\s+/);
       for (const w of expectedWords) {
         const clean = w.replace(/[^a-zA-Z0-9_]/g, '');
         if (clean.length > 3 && ['order', 'user', 'channel', 'customer', 'workflow', 'message'].some(k => clean.includes(k))) {
@@ -532,6 +546,8 @@ async function runHandoffContinuation(targetRunDir) {
       }
     } catch (err) {
       console.log(`${C.red}Error validasi DB: ${err.message}${C.reset}`);
+      // Standar status: kegagalan koneksi/alat dicatat, bukan dihilangkan dari evidence
+      evidenceRecords.push({ scenario_id: item.id, target_db: targetDB, status: 'BLOCKED', failure_category: 'environment', reason: err.message });
     } finally {
       await client.close();
     }

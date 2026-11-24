@@ -1003,7 +1003,7 @@ async function main() {
     }
   }
 
-  // Tier B: Fallback check in legacy/manual app directory (e.g. strukturmenu/dashboard-crm/ or chatroom-web/)
+  // Tier B: Fallback check in legacy/manual app directory (e.g. doc-analyzer/strukturmenu/<modul>/)
   if (!previousVisitData) {
     const legacyAppDir = path.join(STRUKTUR_MENU_DIR, appName);
     if (fs.existsSync(legacyAppDir)) {

@@ -2,7 +2,7 @@
 """Parser test case Markdown bersama (kontrak .agents/shared/standards/testcase.md), toleran format lama."""
 import re
 
-ID_RE = re.compile(r'^#{2,4}\s*([A-Za-z][A-Za-z0-9_]*(?:-[A-Za-z0-9_]+)*-\d+[A-Za-z0-9_-]*)\s*[:\-–]\s*(.+?)\s*$')
+ID_RE = re.compile(r'^#{2,4}\s*([A-Za-z][A-Za-z0-9]*(?:[-_][A-Za-z0-9]+)*[-_]\d+[A-Za-z0-9_-]*)\s*[:\-–]\s*(.+?)\s*$')
 FIELD_RE = re.compile(r'^\s*[-*]\s*\*\*([^*]+?)\*\*\s*:?\s*(.*)$')
 ITEM_RE = re.compile(r'^\s*(?:\d+[.)]|[-*])\s+(.*)$')
 

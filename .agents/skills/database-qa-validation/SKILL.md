@@ -8,7 +8,7 @@ description: >-
   supports both data inspection preview (without expected) and deterministic assertion (with expected PASSED/FAILED),
   provides seamless and strictly optional continuation for PARTIAL TEST WITH REASON test cases from browser-qa-execution using execution_context.json,
   preserves existing testcase schemas without adding new columns (extracting DB references naturally from the expected column),
-  reads human-readable non-query multi-table recipes from knowledge-review/db-validation-cheatsheet.md (with a strict prohibition against AI self-generating knowledge without explicit user request),
+  reads human-readable non-query multi-table recipes from profiles/<ALIAS>/knowledge/db/db-validation-cheatsheet.md (with a strict prohibition against AI self-generating knowledge without explicit user request),
   and delivers clean terminal/chat previews with automatic PII masking (passwords, secrets, tokens).
   Activate when the user asks to validate database records, inspect table data, continue partial test verifications, or run state persistence assertions.
 ---
@@ -32,7 +32,7 @@ Skill ini dirancang dengan prinsip **Zero-Mutation (100% Read-Only Guard)**, **Z
 ## 1. Arsitektur Berkas & Lokasi Data (*File Architecture*)
 
 - **Basis Pengetahuan Alur Multi-Tabel (*Human-Readable Cheatsheet*)**:
-  `./knowledge-review/db-validation-cheatsheet.md`
+  `profiles/<ALIAS>/knowledge/db/db-validation-cheatsheet.md` (template: `profiles/_template/knowledge/db/`)
   - Memuat panduan langkah penelusuran data berulang yang melibatkan kombinasi banyak tabel dalam format narasi teks non-query yang mudah dipahami.
   - 🛑 **STRICT MANDATE**: AI **DILARANG KERAS** menambahkan, mengubah, atau mengarang *recipe* ke dalam berkas ini secara otomatis. Berkas ini adalah **100% Manual Input dari User**.
 - **Konteks Handoff dari Eksekutor UI (*Optional Continuation*)**:
@@ -206,12 +206,12 @@ Ketika `browser-qa-execution` selesai dan mendapati skenario yang berstatus `PAR
 
 ---
 
-## 6. Integrasi dengan Knowledge Cheatsheet (`./knowledge-review/db-validation-cheatsheet.md`)
+## 6. Integrasi dengan Knowledge Cheatsheet (`profiles/<ALIAS>/knowledge/db/db-validation-cheatsheet.md` (template: `profiles/_template/knowledge/db/`))
 
 Untuk alur validasi yang kompleks dan melibatkan banyak tabel secara berulang:
 
 1. **Mengecek Cheatsheet Terlebih Dahulu**:
-   Sebelum meraba-raba skema, periksa apakah kata kunci tugas user cocok dengan `Command Key` di `./knowledge-review/db-validation-cheatsheet.md`.
+   Sebelum meraba-raba skema, periksa apakah kata kunci tugas user cocok dengan `Command Key` di `profiles/<ALIAS>/knowledge/db/db-validation-cheatsheet.md` (template: `profiles/_template/knowledge/db/`).
 2. **Mengikuti Alur Langkah Naratif**:
    Jika ditemukan alur yang cocok (contoh: *Channel ID -> Messages Flow*), AI wajib mengeksekusi langkah demi langkah sesuai urutan tabel yang tertulis di cheatsheet.
 3. **Strict Ban on Self-Editing**:

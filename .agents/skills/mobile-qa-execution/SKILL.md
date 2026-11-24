@@ -168,6 +168,7 @@ Field plan tambahan: `targets` (coba beberapa target berurutan — wajib untuk U
 ### Fase 1 — Test case (Gate 1)
 1. Cari `.md` di `work/<ALIAS>/<fitur>/`. Lebih dari 1 → tanya file mana. Hanya `.xlsx` → tawarkan konversi.
 2. Jalankan parser mobile dengan `--platform android`. Tampilkan rekap: valid / invalid (alasan) / skip platform / lint.
+   `contract_status: NO_TESTCASE` = tidak ada heading TC yang terbaca (mis. format tabel lama) → minta TC dikonversi ke format heading (standar testcase) sebelum lanjut; jangan dianggap lulus.
 3. Tanyakan pemetaan file `automate-support/` jika ada langkah upload.
 
 ### Fase 1b — Grounding UI

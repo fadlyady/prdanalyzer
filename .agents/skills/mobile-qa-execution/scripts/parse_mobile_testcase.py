@@ -19,7 +19,7 @@ Output: JSON (contract_status, testcases, invalid_testcases, skipped_platform, l
 """
 import sys, re, json
 
-ID_RE = re.compile(r'^#{2,4}\s*(?:Test Case\s*:?\s*)?([A-Za-z][A-Za-z0-9_]*(?:-[A-Za-z0-9_]+)*-\d+[A-Za-z0-9_-]*)\s*[:\-–]\s*(.+)$')
+ID_RE = re.compile(r'^#{2,4}\s*(?:Test Case\s*:?\s*)?([A-Za-z][A-Za-z0-9]*(?:[-_][A-Za-z0-9]+)*[-_]\d+[A-Za-z0-9_-]*)\s*[:\-–]\s*(.+)$')  # ID boleh pakai '-' atau '_' (selaras scripts/lib/tc_parser.py)
 FIELD_RE = re.compile(r'^\s*[-*]\s*\*\*([^*]+?)\*\*\s*:?\s*(.*)$')
 ITEM_RE = re.compile(r'^\s*(?:\d+[.)]|[-*])\s+(.*)$')
 MUT_KW = re.compile(r'\b(hapus|delete|buat|create|tambah|add|edit|ubah|update|simpan|save|kirim|send|submit|bayar|checkout|aktifkan|nonaktifkan|assign|alihkan|handover|takeover|tutup percakapan|broadcast)\b', re.I)
@@ -87,6 +87,8 @@ def parse(md_path, platform=None):
             cur[{'steps': 'steps', 'expected': 'expected_raw', 'precondition': 'precondition'}[key]].append(it.group(1).strip())
         elif it and key == 'data_setup':
             cur['data_setup'] = (cur['data_setup'] + ' ' + it.group(1)).strip()
+        elif key == 'expected' and raw.strip() and raw[:1] in ' \t' and not cur['expected_raw']:
+            cur['expected_raw'].append(raw.strip())  # expected ditulis sebagai paragraf berindentasi (bukan list) -> tetap dibaca
     close()
 
     valid, invalid, skipped = [], [], []
@@ -124,7 +126,7 @@ def parse(md_path, platform=None):
     }
     return {
         'source_type': 'markdown', 'file_path': md_path, 'platform_filter': platform,
-        'contract_status': 'PASSED' if not invalid else ('PARTIAL' if valid else 'FAILED'),
+        'contract_status': ('NO_TESTCASE' if not tcs else 'PASSED' if not invalid else ('PARTIAL' if valid else 'FAILED')),  # 0 TC terbaca (mis. format tabel lama) bukan PASSED
         'total_testcases': len(tcs), 'valid_count': len(valid), 'invalid_count': len(invalid), 'skipped_platform_count': len(skipped),
         'testcases': valid, 'invalid_testcases': invalid, 'skipped_platform': skipped, 'lint': lint,
     }

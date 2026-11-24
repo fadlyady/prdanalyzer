@@ -105,7 +105,7 @@ Memahami struktur folder membantu siapa saja menemukan berkas dengan cepat:
 | **`browser-execution/`** | Folder kerja untuk pengujian browser otomatis. |
 | ↳ `browser-execution/automate-result/` | Evidence run lama & run fitur yang belum di-`init` (fitur terdaftar → `work/<ALIAS>/<fitur>/runs/`). |
 | ↳ `browser-execution/automate-support/` | File pendukung tes (data CSV dummy, template unggah, dll). |
-| **`knowledge-review/`** | Berkas review manual, template feedback, dan cheatsheet alur multi-tabel database (`db-validation-cheatsheet.md`). |
+| **`knowledge-review/`** | Drop-box berkas review manual & template feedback. Cheatsheet DB kini di `profiles/<ALIAS>/knowledge/db/`. |
 | **`Testcase-support/`** | Catatan pembelajaran QA (`qa-learnings.md`) dan referensi pendukung lainnya. |
 | **`mcp-server-database-qa/`** | Mesin gateway PostgreSQL dengan sistem pertahanan 4-Tier Read-Only Security. |
 | **`mcp-server-browser-qa/`** | Mesin browser guard & automasi Chrome berbasis CDP. |

@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
+    "prepare": "git config core.hooksPath .githooks || true",
     "postinstall": "npm --prefix mcp-server-browser-qa install",
     "mcp:start": "node mcp-server-browser-qa/src/index.js",
     "mcp:db:build": "cd mcp-server-database-qa && go build -o bin/postgres-mcp-go ./cmd/postgres-mcp-go",
@@ -20,7 +21,10 @@
     "browser:list": "node scripts/browser_bridge.js list",
     "browser:inspect": "node scripts/browser_bridge.js inspect",
     "browser:screenshot": "node scripts/browser_bridge.js screenshot",
-    "browser:test": "node scripts/browser_bridge.js run"
+    "browser:test": "node scripts/browser_bridge.js run",
+    "qa:guard": "python3 scripts/qa_guard_scan.py --all",
+    "qa:where": "python3 scripts/qa_feature.py where",
+    "qa:selftest": "cd mcp-server-browser-qa && node test/selftest.mjs && cd ../mcp-server-mobile-qa && node test/selftest.mjs"
   },
   "repository": {
     "type": "git",

@@ -237,8 +237,16 @@ finally {
   await client.close();
 }
 // ---- laporan ----
+// TC yang belum sempat dijalankan karena run terhenti -> BLOCKED (bukan hilang dari laporan)
+if (out.error) {
+  const done = new Set(out.testcases.map(t => t.id));
+  for (const tc of plan.testcases || []) {
+    if (tc.setupRef || tc.charterSlot || done.has(tc.id)) continue;
+    out.testcases.push({ id: tc.id, title: tc.title || '-', status: 'BLOCKED', failure_category: 'environment', steps: [], evidence: [], notes: [`Tidak dijalankan: run terhenti (${out.error})`] });
+  }
+}
 const cnt = st => out.testcases.filter(t => t.status.startsWith(st)).length;
-const total = out.testcases.length, passed = cnt('PASSED'), failedN = cnt('FAILED'), partialN = cnt('PARTIAL'), skipped = cnt('SKIP');
+const total = out.testcases.length, passed = cnt('PASSED'), failedN = cnt('FAILED'), partialN = cnt('PARTIAL'), skipped = cnt('SKIP'), blockedN = cnt('BLOCKED');
 const lowN = out.testcases.filter(t => t.status === 'PASSED (LOW CONFIDENCE)').length;
 const verdict = (out.error || !total) ? 'NO-GO' : failedN ? 'NO-GO' : (partialN || lowN || out.charters.some(c => c.status !== 'PASS')) ? 'CONDITIONAL GO' : 'GO';
 const app = out.init?.app || {}; const dev = out.init?.device || {};
@@ -247,7 +255,7 @@ const report = {
   base_url: `${app.package} v${app.versionName} (${app.versionCode}) • ${dev.brand} ${dev.model} Android ${dev.release}`,
   timestamp: new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' }) + ' WIB', testcase_file: plan.testcaseFile,
   evidence_dir: out.init?.runDir || '-', qa_lead: 'Senior QA Engineer (Mobile QA Guard / Appium)',
-  summary: { total, passed, failed: failedN, partial: partialN, skipped, exploratory: out.charters.length },
+  summary: { total, passed, failed: failedN, partial: partialN, blocked: blockedN, skipped, exploratory: out.charters.length },
   release_recommendation: verdict,
   recommendation_reason: `${passed} passed (${lowN} LOW CONFIDENCE), ${failedN} failed, ${partialN} partial, ${skipped} skip. Mode mutasi: ${out.policy?.mode || (plan.allowMutation ? 'full' : 'safe')} (TAG ${vars.TAG}; dijalankan ${out.close?.mutationLedger?.executed ?? 0}, diblokir ${out.close?.mutationLedger?.blocked ?? 0}).${out.teardown.length ? ` Teardown: ${out.teardown.map(c => `${c.id}=${c.status}`).join(', ')}.` : (out.close?.mutationLedger?.created?.length ? ` ${out.close.mutationLedger.teardownHint}` : '')} Charter: ${out.charters.map(c => `${c.id}=${c.status}`).join(', ')}.${out.setup.length ? ` Data setup: ${out.setup.map(c => `${c.id}=${c.status}`).join(', ')} (TAG ${vars.TAG}).` : ''}${out.error ? ' Run terhenti: ' + out.error : ''}`,
   roles: { [`${plan.role} (${out.login?.credentialKey || plan.suffix})`]: out.testcases.map(t => ({ id: t.id, title: t.title, action: t.steps.filter(s => s.desc).map(s => s.desc).join(' > ').slice(0, 300), status: t.status, notes: t.notes.join(' | ') || '-' })) },
@@ -270,6 +278,9 @@ if (runDir && out.init?.app?.package) {
     log(`Knowledge UI diperbarui: profiles/<profil aktif>/knowledge/mobile/${out.init.app.package}/ui-knowledge.md`);
   } catch { log('Knowledge UI belum diperbarui (jalankan manual update_ui_knowledge.py --run <folder run>).'); }
 }
-log(`\n================ ${out.error ? 'RUN TIDAK SELESAI — ' : ''}${verdict} | ${passed}/${total} passed (${lowN} LOW), ${failedN} failed, ${partialN} partial, ${skipped} skip ================`);
+try {
+  QA.registerRun(ROOT, LOC, { run_id: path.basename(dir), type: 'mobile', path: dir, plan: path.relative(ROOT, PLAN_ABS), status: out.error ? 'INCOMPLETE' : 'COMPLETED', verdict, summary: { total, passed, failed: failedN, partial: partialN, blocked: blockedN, skipped }, report: path.relative(ROOT, docx) });
+} catch (e) { log('runs/index.json belum diperbarui: ' + e.message); }
+log(`\n================ ${out.error ? 'RUN TIDAK SELESAI — ' : ''}${verdict} | ${passed}/${total} passed (${lowN} LOW), ${failedN} failed, ${partialN} partial, ${blockedN} blocked, ${skipped} skip ================`);
 log(`Evidence & hasil: ${path.relative(ROOT, dir)}`);
 process.exit(0);

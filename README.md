@@ -38,7 +38,7 @@ knowledge-review/                 template input review/walkthrough
 ## Mulai
 
 1. Instal dependensi: `pip3 install -r requirements.txt` dan `npm install` (root, `mcp-server-mobile-qa/` bila memakai mobile).
-2. Aktifkan penjaga commit: `git config core.hooksPath .githooks`.
+2. Aktifkan penjaga commit: `git config core.hooksPath .githooks` (otomatis saat `npm install` lewat skrip `prepare`). Cek manual kapan saja: `npm run qa:guard`.
 3. Buat profil aplikasi:
    ```bash
    cp -R profiles/_template profiles/APP_A

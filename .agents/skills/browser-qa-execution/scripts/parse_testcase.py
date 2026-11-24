@@ -29,6 +29,8 @@ def parse_markdown(md_path):
     if matches:
         for match in matches:
             tc_id = match[0].strip()
+            if not re.search(r'\d', tc_id):
+                continue  # heading biasa (mis. "Ringkasan Distribusi"), bukan test case
             title = match[1].strip()
             body = match[2].strip()
 
@@ -46,11 +48,11 @@ def parse_markdown(md_path):
             target_url = url_match.group(1).replace('*', '').strip() if url_match else ""
 
             # Extract steps
-            steps_match = re.search(r'\*{0,2}(?:Steps?|Langkah(?:-langkah)?)\*{0,2}\s*[:\-]\s*([\s\S]*?)(?=(?:\n\s*[-*]?\s*\*{0,2}(?:Expected(?:\s+Results?)?|Hasil|Data|Precondition)\*{0,2}\s*[:\-]|\Z))', body, re.IGNORECASE)
+            steps_match = re.search(r'\*{0,2}(?:Steps?|Langkah(?:-langkah)?)\*{0,2}\s*[:\-]\s*([\s\S]*?)(?=(?:\n\s*[-*]?\s*\*{0,2}(?:Expected(?:\s+Results?)?(?:\s*\([^)\n]*\))?|Hasil|Data|Precondition)\*{0,2}\s*[:\-]|\Z))', body, re.IGNORECASE)
             steps_raw = steps_match.group(1).strip() if steps_match else body
 
             # Extract expected result
-            expected_match = re.search(r'\*{0,2}(?:Expected Result|Expected|Ekspektasi|Hasil yang Diharapkan)\*{0,2}\s*[:\-]\s*([\s\S]*?)(?=(?:\n\s*[-*]\s*\*{0,2}(?:Data|Notes|Catatan|Precondition|Steps?)\*{0,2}\s*[:\-]|\Z))', body, re.IGNORECASE)
+            expected_match = re.search(r'\*{0,2}(?:Expected Results?|Expected|Ekspektasi|Hasil yang Diharapkan)(?:\s*\([^)\n]*\))?\*{0,2}\s*[:\-]\s*([\s\S]*?)(?=(?:\n\s*[-*]\s*\*{0,2}(?:Data|Notes|Catatan|Precondition|Steps?)\*{0,2}\s*[:\-]|\Z))', body, re.IGNORECASE)
             expected = expected_match.group(1).strip() if expected_match else ""
 
             # Extract priority

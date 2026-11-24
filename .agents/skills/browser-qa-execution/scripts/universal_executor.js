@@ -863,6 +863,9 @@ async function executeUniversalSuite(testcaseMdPath) {
   } catch (err) {
     console.error(`[ERROR] Gagal generate docx: ${err.message}`);
   }
+  try {
+    QA_ENV.registerRun(PROJECT_ROOT, RUN_LOC, { run_id: runId, path: runDir, status: 'completed', finished_at: new Date().toISOString(), verdict: reportPayload.release_recommendation, summary: reportPayload.summary, report: path.relative(PROJECT_ROOT, docxOutputPath) });
+  } catch (e) { console.error(`[WARN] runs/index.json belum diperbarui: ${e.message}`); }
 
   if (partialCount > 0) {
     console.log(`\x1b[36m======================================================================\x1b[0m`);
