@@ -25,7 +25,6 @@ Skill ini digunakan untuk menjalankan **Mekanisme Continuous Learning, Retrospec
     - Narasi Markdown: `./knowledge-review/TEMPLATE_Review_Feedback_Sample.md`
 - **Persistent QA Knowledge Base (SSOT)**: `./Testcase-support/qa-learnings.md`
 - **Target Skills yang Dikalibrasi**:
-  - SOP Analisis PRD QA: `.agents/skills/prd-qa-analyzer/SKILL.md`
   - SOP Analisis PRD Bisnis: `.agents/skills/prd-analyzer-business/SKILL.md`
   - SOP Master Test Case Suite: `.agents/skills/generate-testcase/SKILL.md`
   - SOP Konversi Dokumen & Calculation: `.agents/skills/convert-with-calculation/SKILL.md` & `.agents/skills/convert-document/SKILL.md`
@@ -92,7 +91,7 @@ Lakukan evaluasi silang tiga arah secara komprehensif antara **Catatan Review (`
 | Sumber Feedback (*Source*) | Domain Otoritas Utama | Tingkat Severity & Bobot | Target Skill yang Dikalibrasi |
 | :--- | :--- | :--- | :--- |
 | **Product Manager (PM) / Business Owner** | Scope fitur, logika bisnis, aturan kuota/pricing, user flow, terminologi bisnis | **HIGH (Weight 3) - CRITICAL (Weight 4)** | `prd-analyzer-business`<br/>• Clarification Checklist<br/>• Business Risk Chains |
-| **Tech Lead / Backend / Architect** | API contract, DB persistence, konsistensi data, concurrency, idempotency, NFR, error code | **HIGH (Weight 3) - CRITICAL (Weight 4)** | `prd-qa-analyzer` & `generate-testcase`<br/>• Triple-Layer Assertions<br/>• Narasi kontrak API/DB |
+| **Tech Lead / Backend / Architect** | API contract, DB persistence, konsistensi data, concurrency, idempotency, NFR, error code | **HIGH (Weight 3) - CRITICAL (Weight 4)** | `prd-analyzer-business` & `generate-testcase`<br/>• Triple-Layer Assertions<br/>• Narasi kontrak API/DB |
 | **QA Lead / Senior QA Reviewer** | Test coverage, boundary value (BVA), exploratory charters, negative test scenarios | **MEDIUM (Weight 2) - HIGH (Weight 3)** | `generate-testcase`<br/>• Adversarial Edge Cases<br/>• Standar BVA 3-Value depth |
 | **QA Automation / Browser Execution Lead** | Flakiness eksekusi, selector drift, dynamic DOM, delay render dropdown, session reset antar role | **HIGH (Weight 3) - CRITICAL (Weight 4)** | `browser-qa-execution`<br/>• Smart Locators & Dropdown Timing<br/>• Session Reset & Multi-Credential |
 | **Bug Escape (Incident Staging / Prod)** | Kebocoran bug nyata yang lolos ke staging/production | **CRITICAL (Weight 4)** *(Mandatory RCA)* | **Semua Skill Terkait**<br/>• Wajib 5-Whys RCA<br/>• Tambah Anti-Miss Guardrail permanen |
@@ -141,7 +140,7 @@ Catat entri pembelajaran terstruktur ke `./Testcase-support/qa-learnings.md` men
 ---
 🛡️ GUARDRAIL & HEURISTIK BARU:
 - Aturan / checklist baru yang wajib dipatuhi pada proses berikutnya.
-- Target Skill yang Dikalibrasi: [`prd-qa-analyzer`, `generate-testcase`, dll.]
+- Target Skill yang Dikalibrasi: [`prd-analyzer-business`, `generate-testcase`, dll.]
 ```
 
 ---
@@ -150,14 +149,14 @@ Catat entri pembelajaran terstruktur ke `./Testcase-support/qa-learnings.md` men
 
 > [!CAUTION]
 > **PROTOKOL ANTI-REGRESI & PENCEGAHAN KONFLIK ATURAN (UNIVERSAL GUARDRAIL):**
-> 1. **Dilarang Mengubah/Menghapus Rule Tanpa Persetujuan**: Seluruh aturan fundamental yang sudah stabil pada skill (`prd-qa-analyzer`, `prd-analyzer-business`, `generate-testcase`, `convert-document`, `convert-with-calculation`, `qa-review-learning`) **TIDAK BOLEH diubah, diganti, atau dihapus sepihak oleh AI**, kecuali penambahan aturan baru tersebut terbukti objektif lebih baik dan telah disetujui oleh User.
+> 1. **Dilarang Mengubah/Menghapus Rule Tanpa Persetujuan**: Seluruh aturan fundamental yang sudah stabil pada skill (`prd-analyzer-business`, `generate-testcase`, `convert-document`, `convert-with-calculation`, `qa-review-learning`) **TIDAK BOLEH diubah, diganti, atau dihapus sepihak oleh AI**, kecuali penambahan aturan baru tersebut terbukti objektif lebih baik dan telah disetujui oleh User.
 > 2. **Pre-Calibration Sanity & Conflict Check**: Sebelum menyuntikkan aturan baru ke skill target:
 >    - Pastikan aturan baru **TIDAK BERTENTANGAN** dengan guardrail fundamental (seperti: *Zero-Wild-Guess Policy*, grounding visual `./doc-analyzer/strukturmenu/`, penegakan *Triple-Layer Assertions*, dan *Mandatory Clarification Gate*).
 >    - Jika terjadi potensi tumpang tindih (*overlap*), aturan baru harus bersifat **memperketat / melengkapi (additive/enriching)**, bukan membatalkan aturan dasar.
 > 3. **Pemberlakuan Universal**: Protokol ini berlaku mengikat di seluruh berkas `.agents/skills/*/SKILL.md`.
 
 #### Panduan Kalibrasi ke Skill Target:
-1. **Update ke `prd-qa-analyzer/SKILL.md` atau `prd-analyzer-business/SKILL.md`**:
+1. **Update ke `prd-analyzer-business/SKILL.md`**:
    - Tambahkan item spesifik pada *Clarification Checklist* atau *SFDIPOT Heuristic*.
    - Perketat aturan *UI Navigation Grounding* berbasis `./doc-analyzer/strukturmenu/`.
    - Tambahkan *guardrail* mitigasi resiko pada tabel dampak bisnis.

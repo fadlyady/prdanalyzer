@@ -19,7 +19,7 @@ Tujuan utama: Menghasilkan test case dengan **Coverage 3-Dimensi**, **Mandatory 
 
 ## 1. Direktori & Lokasi Berkas Dinamis (*File Architecture*)
 
-- **Input Analisis PRD (SSOT)**: `./doc-analyzer/result-testcase/PRD_Analysis_<Feature_Name>.md` (dihasilkan dari skill `prd-qa-analyzer` atau `prd-analyzer-business`, dengan fallback ke `./result-testcase/`).
+- **Input Analisis PRD (SSOT)**: `./doc-analyzer/result-testcase/PRD_Analysis_<Feature_Name>.md` (dihasilkan dari skill `prd-analyzer-business`, dengan fallback ke `./result-testcase/`).
 - **Support & Knowledge Base**: `./Testcase-support/`
   - Template spreadsheet Excel acuan (15 kolom standar), template Markdown otomasi, dan `qa-learnings.md`.
 - **UI & Interface Knowledge (Parallel 3-Tier Grounding)**:

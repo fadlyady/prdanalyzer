@@ -3,7 +3,7 @@
 Repository ini dirancang untuk tim **Quality Assurance (QA), Product Manager (PM), dan Software Engineer (SWE)** guna mempercepat siklus analisis kebutuhan dan pengujian perangkat lunak di berbagai domain aplikasi (**Web SPA/SSR, Mobile Android/iOS, Backend REST/GraphQL/gRPC APIs, Microservices, Event-Driven/Webhooks, Data Pipelines, hingga IoT**).
 
 Framework ini didukung oleh **Agentic AI Custom Skills** yang mengimplementasikan standar pengujian tingkat lanjut (*Senior QA / Quality Architecture*):
-1. **Analisis PRD Mendalam & Penegakan Strict Interactive Validation Gate (`prd-qa-analyzer` & `prd-analyzer-business`)**: Mengekstraksi requirement bisnis, batasan scope, pemetaan risiko bisnis multi-pilar (Financial, Ops, Customer, Compliance, Reputational, Support), aturan otorisasi (RBAC/ABAC), state transition invariants, NFR (idempotency, concurrency, resilience), dan security guardrails tanpa asumsi liar.
+1. **Analisis PRD Mendalam & Penegakan Strict Interactive Validation Gate (`prd-analyzer-business`)**: Mengekstraksi requirement bisnis, batasan scope, pemetaan risiko bisnis multi-pilar (Financial, Ops, Customer, Compliance, Reputational, Support), aturan otorisasi (RBAC/ABAC), state transition invariants, NFR (idempotency, concurrency, resilience), dan security guardrails tanpa asumsi liar.
 2. **Pembuatan Master Test Case Suite 3-Tier (`generate-testcase`)**: Menghasilkan file Excel berstandar industri (15 kolom terstruktur) dan file Markdown otomasi deklaratif dengan **Triple-Layer Assertions (UI + API Contract + DB State Persistence)**, **Adversarial Edge-Case Candidates**, serta **Exploratory Heuristic Charters**.
 3. **Ekspor Dokumen Resmi Layak Audit (Word `.docx` / PDF `.pdf`) & Weighted Risk Calculation (`convert-document` & `convert-with-calculation`)**: Mengonversi hasil analisis menjadi dokumen berstandar **TIW (Test Idea & Walkthrough)** dengan Traceability Matrix, kalkulasi matematis bobot risiko (4/3/2/1), dan rekomendasi rilis objektif (*Go / Conditional Go / No-Go*).
 4. **Eksekusi Pengujian Browser Staging Berstandar Senior QA (`browser-qa-execution`)**: Mengeksekusi test case secara langsung pada browser Chrome (Staging) dengan **Cross-Device Portability & Browser Lifecycle Management** (multi-path auto-discovery Chrome lintas OS Mac/Windows/Linux, resolusi tab aktif untuk mencegah salah sasaran tab, auto-discovery variabel URL & kredensial `.env`, serta auto-close browser pasca uji), menegakkan 6 gerbang validasi kualitas (Strict Markdown `.md`, Target URL & Active Tab State Gate, Kredensial `.env` 3-Tier, Pre-Flight Action Permission Gate untuk create/edit/delete dengan opsi eksekusi penuh vs Partial Test di mode aman, Flagging transparan `PASSED`/`FAILED`/`PARTIAL TEST`, dan RBAC strict execution), menjalankan 5 skenario exploratory mandatori, mengarsipkan evidence screenshot per run, serta menyusun laporan eksekutif Word (`.docx`) tanpa embedded images ke `./browser-execution/automate-result/`.
@@ -16,7 +16,7 @@ Framework ini didukung oleh **Agentic AI Custom Skills** yang mengimplementasika
 - [Struktur Direktori Workspace](#-struktur-direktori-workspace)
 - [Alur Kerja & Panduan Penggunaan Skill (Step-by-Step)](#-alur-kerja--panduan-penggunaan-skill-step-by-step)
   - [Step 1: Persiapan Dokumen & Input Awal](#step-1-persiapan-dokumen--input-awal)
-  - [Step 2: Menjalankan Analisis PRD (`prd-qa-analyzer` / `prd-analyzer-business`)](#step-2-menjalankan-analisis-prd-prd-qa-analyzer--prd-analyzer-business)
+  - [Step 2: Menjalankan Analisis PRD (`prd-analyzer-business`)](#step-2-menjalankan-analisis-prd-prd-analyzer-business)
   - [Step 3: Gerbang Klarifikasi Terstruktur (Interactive Gate)](#step-3-gerbang-klarifikasi-terstruktur-interactive-gate---wajib)
   - [Step 4: Menghasilkan Test Cases Suite (`generate-testcase`)](#step-4-menghasilkan-test-cases-suite-generate-testcase)
   - [Step 5: Ekspor ke Word / PDF dengan Scorecard (`convert-document` / `convert-with-calculation`)](#step-5-ekspor-ke-word--pdf-dengan-scorecard-convert-document--convert-with-calculation)
@@ -47,7 +47,6 @@ pip3 install python-docx reportlab openpyxl markdown pillow typing-extensions
 
 ```text
 ├── .agents/skills/                       # Custom AI Agent Skills
-│   ├── prd-qa-analyzer/                  # SOP Analisis PRD, SFDIPOT, NFR & Interactive Gate
 │   ├── prd-analyzer-business/            # SOP Analisis PRD Bisnis, 6 Pilar Risiko & Living PM Questions
 │   ├── generate-testcase/                # SOP Master Test Case (Excel 15-Kolom & Markdown Otomasi)
 │   ├── convert-document/                 # SOP Konversi Dokumen ke DOCX & PDF berstandar TIW
@@ -97,7 +96,7 @@ pip3 install python-docx reportlab openpyxl markdown pillow typing-extensions
 
 ```mermaid
 graph TD
-    A["Step 1: Siapkan PRD, UI Refs (doc-analyzer/strukturmenu/), & Dokumen Teknis"] --> B["Step 2: Jalankan Skill prd-qa-analyzer / prd-analyzer-business"]
+    A["Step 1: Siapkan PRD, UI Refs (doc-analyzer/strukturmenu/), & Dokumen Teknis"] --> B["Step 2: Jalankan Skill prd-analyzer-business"]
     B --> C["Step 3: 🛑 INTERACTIVE CLARIFICATION GATE (Konfirmasi User)"]
     C --> D["Finalisasi PRD_Analysis_<Feature>.md di doc-analyzer/result-testcase/"]
     D --> E["Step 4: Jalankan generate-testcase (Excel & Markdown)"]
@@ -115,9 +114,9 @@ Letakkan dokumen PRD (`.docx`, `.pdf`, atau `.md`) di dalam workspace, serta len
 
 ---
 
-### Step 2: Menjalankan Analisis PRD (`prd-qa-analyzer` / `prd-analyzer-business`)
+### Step 2: Menjalankan Analisis PRD (`prd-analyzer-business`)
 Minta agent menganalisis dokumen PRD:
-> *"Tolong lakukan analisis PRD untuk file `[PRD] Nama_Fitur.docx` menggunakan skill `prd-qa-analyzer` (atau `prd-analyzer-business`)."*
+> *"Tolong lakukan analisis PRD untuk file `[PRD] Nama_Fitur.docx` menggunakan skill `prd-analyzer-business`."*
 
 > [!TIP]
 > **On-Demand Live Browser UI Inspection & Parallel 3-Tier Grounding**:
@@ -167,7 +166,6 @@ Agent akan memvalidasi variabel di **Gate 0**, melakukan **Triangulasi 3-Way**, 
 
 | Skill Name | Lokasi | Trigger Prompt Utama |
 | :--- | :--- | :--- |
-| **`prd-qa-analyzer`** | [`.agents/skills/prd-qa-analyzer/`](.agents/skills/prd-qa-analyzer/SKILL.md) | *"Analisis PRD ini...", "Review requirement teknis..."* |
 | **`prd-analyzer-business`** | [`.agents/skills/prd-analyzer-business/`](.agents/skills/prd-analyzer-business/SKILL.md) | *"Analisis PRD dengan dampak bisnis...", "Modelkan konsekuensi risiko..."* |
 | **`generate-testcase`** | [`.agents/skills/generate-testcase/`](.agents/skills/generate-testcase/SKILL.md) | *"Generate test case dari hasil analisa...", "Buat test suite Excel 15 kolom..."* |
 | **`convert-document`** | [`.agents/skills/convert-document/`](.agents/skills/convert-document/SKILL.md) | *"Convert dokumen md ke docx/pdf standar TIW..."* |
