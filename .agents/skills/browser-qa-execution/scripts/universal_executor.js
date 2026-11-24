@@ -8,7 +8,7 @@
  * - Interprets natural language steps (navigate, fill, click, select, assert)
  * - Enforces fast dropdown fallback (no 30s hangs)
  * - Detects backend/DB dependencies and marks PARTIAL TEST WITH REASON
- * - Executes 5 mandatory exploratory charters
+ * - Records exploratory charters from real results only (--charter-results); otherwise 'TIDAK DIJALANKAN'
  * - Compiles executive Word report (.docx) without embedded images
  */
 
@@ -769,41 +769,43 @@ async function executeUniversalSuite(testcaseMdPath) {
 }
 
   // ==========================================
-  // 5 MANDATORY EXPLORATORY CHARTERS
+  // EXPLORATORY CHARTERS — hanya hasil NYATA (standar: tidak pernah PASS default)
   // ==========================================
-  console.log(`\x1b[35m=== MENJALANKAN 5 MANDATORY EXPLORATORY CHARTERS ===\x1b[0m`);
-  const exploratoryScenarios = [
-    {
-      charter: 'The Impatient User (Rapid Double Click CTA)',
-      action: 'Menekan tombol aksi utama secara berulang cepat.',
-      observed: 'Debounce UI menahan submit ganda tanpa race condition.',
-      verdict: 'PASS'
-    },
-    {
-      charter: 'The Boundary & Extreme Input Tester (256 Chars + XSS + Emoji)',
-      action: 'Input 256 karakter string dan tag sanitasi <script> pada textfield.',
-      observed: 'Sanitasi berjalan aman tanpa layout overflow atau script execution.',
-      verdict: 'PASS'
-    },
-    {
-      charter: 'The Refresh & State Retention Tour (F5 / Cmd+R)',
-      action: 'Melakukan reload halaman saat state/filter sedang aktif.',
-      observed: 'Aplikasi memuat ulang halaman secara konsisten tanpa React hydration crash.',
-      verdict: 'PASS'
-    },
-    {
-      charter: 'The Backdrop & Modal Escape Tour (Keyboard Escape)',
-      action: 'Membuka modal/popover lalu menekan tombol Escape.',
-      observed: 'Modal tertutup seketika dan fokus kembali ke halaman dengan mulus.',
-      verdict: 'PASS'
-    },
-    {
-      charter: 'The Reset & Pagination Consistency Tour',
-      action: 'Membersihkan seluruh filter dan kembali ke halaman default.',
-      observed: 'Tabel memulihkan daftar data default secara lengkap.',
-      verdict: 'PASS'
-    }
+  // Charter dijalankan agent/QA via tool MCP browser, hasilnya disimpan sebagai JSON
+  // [{charter, action, observed, verdict: PASS|FAIL|OBSERVATION, evidence?}] lalu diberikan lewat
+  // --charter-results=<file.json>. Tanpa file itu, charter dicatat "TIDAK DIJALANKAN".
+  const CHARTER_CHECKLIST = [
+    'The Impatient User (Rapid Double Click CTA)',
+    'The Boundary & Extreme Input Tester (256 Chars + XSS + Emoji)',
+    'The Refresh & State Retention Tour (F5 / Cmd+R)',
+    'The Backdrop & Modal Escape Tour (Keyboard Escape)',
+    'The Reset & Pagination Consistency Tour'
   ];
+  let exploratoryScenarios = [];
+  const charterArg = process.argv.find(a => a.startsWith('--charter-results='));
+  if (charterArg) {
+    const cf = path.resolve(charterArg.split('=').slice(1).join('='));
+    try {
+      const raw = JSON.parse(fs.readFileSync(cf, 'utf-8'));
+      exploratoryScenarios = (Array.isArray(raw) ? raw : raw.charters || []).map(c => ({
+        charter: c.charter || c.title || '-', action: c.action || '-', observed: c.observed || '-',
+        verdict: String(c.verdict || 'TIDAK DIJALANKAN').toUpperCase(), evidence: c.evidence || null, source: path.relative(PROJECT_ROOT, cf)
+      }));
+      fs.copyFileSync(cf, path.join(runDir, 'charters.json'));
+      console.log(`\x1b[35m=== CHARTER EXPLORATORY: ${exploratoryScenarios.length} hasil dimuat dari ${path.relative(PROJECT_ROOT, cf)} ===\x1b[0m`);
+    } catch (e) {
+      console.error(`[WARN] --charter-results tidak terbaca (${e.message}); charter dicatat TIDAK DIJALANKAN.`);
+    }
+  }
+  const CHARTER_KEYS = ['impatient', 'boundary', 'refresh', 'escape', 'reset'];
+  const doneText = exploratoryScenarios.map(c => c.charter.toLowerCase()).join(' | ');
+  for (const [i, name] of CHARTER_CHECKLIST.entries()) {
+    if (!doneText.includes(CHARTER_KEYS[i])) {
+      exploratoryScenarios.push({ charter: name, action: '-', observed: 'Tidak dijalankan pada run ini (tidak ada hasil charter nyata).', verdict: 'TIDAK DIJALANKAN' });
+    }
+  }
+  const charterExecuted = exploratoryScenarios.filter(c => c.verdict !== 'TIDAK DIJALANKAN').length;
+  if (!charterExecuted) console.log(`\x1b[33m[INFO] Charter exploratory belum dijalankan — laporan menulis "TIDAK DIJALANKAN" (bukan PASS).\x1b[0m`);
 
   // ==========================================
   // COMPILE WORD REPORT (.DOCX)
@@ -828,7 +830,7 @@ async function executeUniversalSuite(testcaseMdPath) {
       failed: failedCount,
       partial: partialCount,
       skipped: skippedCount,
-      exploratory: exploratoryScenarios.length
+      exploratory: charterExecuted
     },
     release_recommendation: failedCount === 0 ? (partialCount > 0 ? 'CONDITIONAL GO' : 'GO') : 'CONDITIONAL GO',
     recommendation_reason: failedCount === 0

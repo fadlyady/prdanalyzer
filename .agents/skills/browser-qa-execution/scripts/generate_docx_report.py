@@ -17,6 +17,9 @@ from docx.enum.table import WD_TABLE_ALIGNMENT, WD_ALIGN_VERTICAL
 from docx.oxml import parse_xml, OxmlElement
 from docx.oxml.ns import nsdecls, qn
 
+
+NOT_RUN = "TIDAK DIJALANKAN"
+
 def set_cell_background(cell, hex_color):
     """Set background color of a table cell."""
     tcPr = cell._tc.get_or_add_tcPr()
@@ -132,7 +135,9 @@ def create_report(data_json_path, output_docx_path):
     failed = summary.get("failed", 0)
     partial = summary.get("partial", 0)
     skipped = summary.get("skipped", 0)
-    exploratory = summary.get("exploratory", 5)
+    exploratory = summary.get("exploratory")
+    if exploratory is None:
+        exploratory = sum(1 for e in (data.get("exploratory_scenarios") or []) if (e.get("verdict") or NOT_RUN) != NOT_RUN)
 
     pass_rate = round((passed / total * 100), 1) if total > 0 else 0.0
 
@@ -231,7 +236,7 @@ def create_report(data_json_path, output_docx_path):
                 s_id = sc.get("id", f"TC-{s_idx+1:03d}")
                 s_title = sc.get("title", "-")
                 s_action = sc.get("action", "-")
-                s_status = sc.get("status", "PASSED")
+                s_status = sc.get("status") or "STATUS TIDAK TERCATAT"
                 s_notes = sc.get("notes", "-")
 
                 vals_row = [s_id, s_title, s_action, s_status, s_notes]
@@ -251,13 +256,16 @@ def create_report(data_json_path, output_docx_path):
                         if s_status == "PASSED":
                             set_cell_background(cell, "DCFCE7")
                             r_c.font.color.rgb = RGBColor(22, 101, 52)
-                        elif s_status == "FAILED":
+                        elif s_status.upper().startswith("FAILED"):
                             set_cell_background(cell, "FEE2E2")
                             r_c.font.color.rgb = RGBColor(153, 27, 27)
                         elif "PARTIAL" in s_status.upper():
                             set_cell_background(cell, "FEF9C3")
                             r_c.font.color.rgb = RGBColor(133, 77, 14)
-                        elif "SKIP" in s_status.upper():
+                        elif "BLOCKED" in s_status.upper() or "LOW CONFIDENCE" in s_status.upper():
+                            set_cell_background(cell, "FEF9C3")
+                            r_c.font.color.rgb = RGBColor(133, 77, 14)
+                        elif "SKIP" in s_status.upper() or "NOT IN SCOPE" in s_status.upper():
                             set_cell_background(cell, "F1F5F9")
                             r_c.font.color.rgb = RGBColor(71, 85, 105)
 
@@ -265,52 +273,27 @@ def create_report(data_json_path, output_docx_path):
 
     # 5. Mandatory Exploratory Testing Scenarios (5 Scenarios)
     sec3 = doc.add_heading(level=1)
-    r3 = sec3.add_run("3. Additional Exploratory Testing Scenarios (5 Charters)")
+    r3 = sec3.add_run("3. Additional Exploratory Testing Scenarios (Charters)")
     r3.font.name = "Arial"
     r3.font.bold = True
 
     exp_p = doc.add_paragraph()
     r_exp_p = exp_p.add_run(
-        "Sesuai standar QA Senior, 5 skenario exploratory mandatori dijalankan untuk menguji ketahanan antarmuka, "
-        "race condition, state persistence, dan boundary edge cases di luar dokumen test case tertulis:"
+        "Charter exploratory menguji ketahanan antarmuka, race condition, state persistence, dan boundary di luar "
+        "test case tertulis. Hanya hasil yang benar-benar dijalankan yang dicatat; sisanya ditulis TIDAK DIJALANKAN:"
     )
     r_exp_p.font.name = "Arial"
     r_exp_p.font.size = Pt(9.5)
 
-    exploratory_list = data.get("exploratory_scenarios", [])
+    # Standar: charter hanya dari hasil nyata; kosong / tanpa verdict = TIDAK DIJALANKAN (tidak pernah PASS default)
+    exploratory_list = data.get("exploratory_scenarios") or []
     if not exploratory_list:
-        exploratory_list = [
-            {
-                "charter": "The Impatient User (Rapid Double Click CTA)",
-                "action": "Melakukan klik berulang cepat pada tombol submit/action utama.",
-                "observed": "Tombol berhasil ter-disable saat request berlangsung, mencegah duplikasi submit.",
-                "verdict": "PASS"
-            },
-            {
-                "charter": "The Boundary / Extreme Input Tester",
-                "action": "Memasukkan 256 karakter string UTF-8 dan special characters / emoji.",
-                "observed": "Input dipotong rapi sesuai max-length tanpa merusak layout / overflow.",
-                "verdict": "PASS"
-            },
-            {
-                "charter": "The Refresh & Navigation State Retention",
-                "action": "Melakukan reload halaman (F5 / Cmd+R) saat form terisi sebagian atau drawer terbuka.",
-                "observed": "Aplikasi kembali ke state aman tanpa error React hydration / white screen.",
-                "verdict": "PASS"
-            },
-            {
-                "charter": "The Backdrop & Modal Escape Tour",
-                "action": "Menekan tombol Escape dan klik area di luar modal drawer.",
-                "observed": "Modal tertutup dengan mulus tanpa memicu aksi form submit yang tidak sengaja.",
-                "verdict": "PASS"
-            },
-            {
-                "charter": "The Session & Tab Resilience Tour",
-                "action": "Membuka tab baru dengan URL yang sama untuk melihat sinkronisasi data antar-tab.",
-                "observed": "Session tetap valid dan data sinkron dengan benar.",
-                "verdict": "PASS"
-            }
-        ]
+        exploratory_list = [{
+            "charter": "-",
+            "action": "-",
+            "observed": "Tidak ada charter exploratory yang dijalankan pada run ini.",
+            "verdict": NOT_RUN,
+        }]
 
     t_exp = doc.add_table(rows=1 + len(exploratory_list), cols=4)
     t_exp.alignment = WD_TABLE_ALIGNMENT.CENTER
@@ -324,7 +307,7 @@ def create_report(data_json_path, output_docx_path):
 
     for e_i, exp in enumerate(exploratory_list):
         row = t_exp.rows[1 + e_i]
-        vals_e = [exp.get("charter", "-"), exp.get("action", "-"), exp.get("observed", "-"), exp.get("verdict", "PASS")]
+        vals_e = [exp.get("charter", "-"), exp.get("action", "-"), exp.get("observed", "-"), (exp.get("verdict") or NOT_RUN)]
         for c_i, v in enumerate(vals_e):
             cell = row.cells[c_i]
             cell.width = exp_widths[c_i]
@@ -340,6 +323,9 @@ def create_report(data_json_path, output_docx_path):
                 if str(v).upper() == "PASS":
                     set_cell_background(cell, "DCFCE7")
                     r.font.color.rgb = RGBColor(22, 101, 52)
+                elif str(v).upper() in (NOT_RUN, "OBSERVATION"):
+                    set_cell_background(cell, "F1F5F9")
+                    r.font.color.rgb = RGBColor(71, 85, 105)
                 else:
                     set_cell_background(cell, "FEE2E2")
                     r.font.color.rgb = RGBColor(153, 27, 27)

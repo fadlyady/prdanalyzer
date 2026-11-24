@@ -9,7 +9,7 @@ description: >-
   verifies credentials against .env with 3-tier checks (multi-credential disambiguation gate for duplicate role prefixes, missing credential alert instructing user to update .env, and active session mismatch gate to switch user vs stay on current role), applies 100% domain-agnostic universal step execution,
   applies a tiered Mutation Policy (QA_MUTATION_MODE safe | full | full_external; asks once only when not configured) where full runs CREATE/UPDATE/DELETE for real on staging with hard rails (TAG-only update/delete, financial blocked, external sends only to allowlisted recipients, staging-only domains) and safe flags mutation steps as PARTIAL TEST WITH REASON, plus a mutation ledger and optional (opt-in) DB validation, handles multi-role RBAC execution,
   applies transparent status flagging (PASSED, FAILED, SKIP WITH REASON, PARTIAL TEST WITH REASON for backend/DB steps and safe-mode skipped mutations),
-  executes 5 mandatory exploratory testing charters, archives screenshots into timestamped run directories,
+  runs 5 exploratory testing charters via MCP browser tools and records only real results (never default PASS), archives screenshots into timestamped run directories,
   and compiles executive corporate Word (.docx) audit reports without embedded images into browser-execution/automate-result/.
   Activate when the user asks to run browser testing, execute test cases live in staging browser, or perform automated QA verification.
 ---
@@ -317,8 +317,15 @@ Jalankan pengujian menggunakan mesin agnostic `scripts/universal_executor.js`. M
 7. **Pemisahan Assertion Backend (Gate 5)**:
    - Jika ekspektasi memuat kata kunci database/webhook/API backend, selesaikan assertion UI lalu sematkan flag `PARTIAL TEST WITH REASON`.
 
-### Fase 4: Eksekusi 5 Skenario Exploratory Mandatori
-Di akhir setiap test suite, Senior QA **WAJIB** mengeksekusi 5 skenario exploratory berikut untuk menguji stabilitas aplikasi:
+### Fase 4: Eksekusi 5 Skenario Exploratory
+Di akhir test suite, jalankan 5 charter berikut **secara nyata** lewat tool MCP browser (klik, ketik, reload, Escape) dan ambil
+screenshot setiap charter. Runner (`universal_executor.js`) **tidak** menjalankan charter sendiri:
+
+- Simpan hasil sebagai JSON: `[{"charter": "...", "action": "yang dilakukan", "observed": "yang terlihat", "verdict": "PASS|FAIL|OBSERVATION", "evidence": "<file screenshot>"}]`,
+  lalu berikan ke runner: `--charter-results=work/<ALIAS>/<fitur>/runs/<run>/charters.json` (atau sertakan di `exploratory_scenarios` data laporan).
+- Charter yang tidak dijalankan otomatis tertulis **TIDAK DIJALANKAN** di laporan — jangan pernah diisi PASS tanpa observasi.
+- Charter tidak memengaruhi verdict TC, tetapi FAIL charter wajib disebut di catatan verdict dan dikonfirmasi lewat screenshot.
+
 
 1. ⚡ **Charter 1: The Impatient User (Rapid Double Click CTA)**:
    Klik cepat 2–3 kali berturut-turut pada tombol submit/action utama. Pastikan tombol otomatis *disabled* dan tidak terjadi *duplicate submission* / *double charge*.
@@ -341,7 +348,7 @@ Di akhir setiap test suite, Senior QA **WAJIB** mengeksekusi 5 skenario explorat
    - Metadata Box lengkap.
    - Executive Summary Scorecard.
    - Tabel Hasil Pengujian per Role.
-   - Tabel 5 Skenario Exploratory.
+   - Tabel charter exploratory (hasil nyata; sisanya TIDAK DIJALANKAN).
    - Index Direktori Bukti Screenshot (path folder run).
    - Pernyataan scope run (layer & TC yang diuji; layer lain NOT IN SCOPE).
    - Release Verdict ([GO] / [CONDITIONAL GO] / [NO-GO]) **dihitung ulang oleh reviewer** sesuai standar verdict bersama

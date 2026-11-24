@@ -65,7 +65,7 @@ Berikut adalah urutan alur kerja dari saat dokumen PRD pertama kali diterima hin
                                     ▼
        5. EKSEKUSI BROWSER STAGING    ➔ [browser-qa-execution]
           - Menjalankan Chrome via CDP port 9222
-          - Menjalankan 6 Skenario Inti + 5 Charter Exploratory Testing
+          - Menjalankan 6 Skenario Inti + 5 Charter Exploratory (hasil nyata via MCP; tidak dijalankan = "TIDAK DIJALANKAN")
           - Mengambil tangkapan layar (screenshot evidence)
           - Menghasilkan: Laporan Word (.docx) + execution_context.json
                                     │
