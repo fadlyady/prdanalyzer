@@ -7,6 +7,8 @@
 import fs from 'fs';
 import path from 'path';
 import { MutationPolicy, list } from './policy.js';
+import { createRequire } from 'node:module';
+const { readQaEnv } = createRequire(import.meta.url)('../../scripts/lib/qa-env.cjs');
 
 export { MutationPolicy, classify, MODES } from './policy.js';
 
@@ -83,19 +85,9 @@ export class CredentialVault {
     this.envPath = path.join(workspaceRoot, '.env');
   }
 
+  /** Membaca .env + .secrets/<profil aktif>.env lewat scripts/lib/qa-env.cjs (satu sumber kebenaran). */
   readRawEnv() {
-    if (!fs.existsSync(this.envPath)) return {};
-    const content = fs.readFileSync(this.envPath, 'utf-8');
-    const env = {};
-    content.split('\n').forEach(line => {
-      const trimmed = line.trim();
-      if (!trimmed || trimmed.startsWith('#')) return;
-      const [key, ...vals] = trimmed.split('=');
-      if (key && vals.length > 0) {
-        env[key.trim()] = vals.join('=').trim().replace(/^["']|["']$/g, '');
-      }
-    });
-    return env;
+    return readQaEnv(this.workspaceRoot);
   }
 
   /**

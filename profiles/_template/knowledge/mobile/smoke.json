@@ -1,0 +1,12 @@
+{
+  "_comment": "Fixture device_smoke.mjs & selftest resolver. Semua nilai dari layar aplikasi profil ini.",
+  "roleSuffix": "1",
+  "tabLabel": "<label tab unik>",
+  "ambiguousLabel": "<label yang muncul 2x, mis. tab & chip>",
+  "containsAmbiguous": "<potongan teks yang cocok dengan >1 elemen>",
+  "listItemId": "<resource-id item list dengan *, mis. app_list_item_*>",
+  "drawerItemId": "<resource-id salah satu item drawer>",
+  "logoutLabel": "<label menu logout>",
+  "settingsLabel": "<label menu pengaturan>",
+  "xmlFixture": "<nama file XML probe, mis. tab_All.xml>"
+}

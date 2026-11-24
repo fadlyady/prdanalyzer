@@ -1,0 +1,6 @@
+# Data set uji per environment. Test case merujuk lewat {{data.<set>.<field>}}.
+# Gunakan data sintetis ber-TAG; jangan simpan PII asli. Akun dirujuk lewat {{role:<role>}}, bukan email.
+staging:
+  example_set:
+    name: "QAAUTO Contoh {{TAG}}"
+    note: "ganti dengan data uji fitur"

@@ -20,7 +20,15 @@ const readline = require('readline');
 
 const REPO_ROOT = path.resolve(__dirname, '../../../../');
 const BINARY_PATH = path.join(REPO_ROOT, 'mcp-server-database-qa/bin/postgres-mcp-go');
-const CHEATSHEET_PATH = path.join(REPO_ROOT, 'knowledge-review/db-validation-cheatsheet.md');
+// Pondasi P1: resep DB adalah knowledge aplikasi -> profil aktif; fallback lokasi lama.
+const CHEATSHEET_PATH = (() => {
+  try {
+    const ap = require(path.join(REPO_ROOT, 'scripts', 'lib', 'qa-env.cjs')).activeProfile(REPO_ROOT);
+    const p = ap.alias && path.join(ap.profileDir, 'knowledge', 'db', 'db-validation-cheatsheet.md');
+    if (p && fs.existsSync(p)) return p;
+  } catch (e) { /* tanpa profil */ }
+  return path.join(REPO_ROOT, 'knowledge-review/db-validation-cheatsheet.md');
+})();
 const AUTOMATE_RESULT_DIR = path.join(REPO_ROOT, 'browser-execution/automate-result');
 
 // ANSI Colors
@@ -58,7 +66,10 @@ function maskPII(row) {
  * Universal Database Discovery from .env and .env.docker
  */
 function discoverDatabasesFromEnv() {
+  const { activeProfile } = require(path.join(REPO_ROOT, 'scripts', 'lib', 'qa-env.cjs'));
+  const ap = activeProfile(REPO_ROOT);
   const envFiles = [
+    ...(ap.secretsFile ? [ap.secretsFile] : []),
     path.join(REPO_ROOT, '.env'),
     path.join(REPO_ROOT, 'mcp-server-database-qa/.env.docker'),
     path.join(REPO_ROOT, '.env.docker'),
@@ -126,7 +137,10 @@ class MCPPostgresClient {
     }
 
     return new Promise((resolve, reject) => {
-      const procEnv = { ...process.env };
+      // Pondasi P8: kredensial dari .secrets/<QA_ACTIVE_PROFILE>.env (alias db:main -> DB_MAIN_* = target primary)
+      let qaEnv = {};
+      try { qaEnv = require(path.join(REPO_ROOT, 'scripts', 'lib', 'qa-env.cjs')).readQaEnv(REPO_ROOT); } catch (e) { /* mode lama */ }
+      const procEnv = { ...qaEnv, ...process.env };
       if (this.dbName) {
         const pfx = this.targetDB.toUpperCase().replace(/-/g, '_').replace(/^DEV_/, '');
         procEnv[`DB_${pfx}_NAME`] = this.dbName;

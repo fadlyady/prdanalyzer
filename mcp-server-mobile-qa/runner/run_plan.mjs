@@ -259,7 +259,7 @@ catch { log('\nDOCX belum dibuat (python-docx tidak tersedia?). report_data.json
 if (runDir && out.init?.app?.package) {
   try {
     execFileSync('python3', [path.join(ROOT, '.agents/skills/mobile-qa-execution/scripts/update_ui_knowledge.py'), '--run', runDir, '--package', out.init.app.package], { stdio: 'ignore' });
-    log(`Knowledge UI diperbarui: doc-analyzer/strukturmenu/mobile-apps/knowledge/${out.init.app.package}/ui-knowledge.md`);
+    log(`Knowledge UI diperbarui: profiles/<profil aktif>/knowledge/mobile/${out.init.app.package}/ui-knowledge.md`);
   } catch { log('Knowledge UI belum diperbarui (jalankan manual update_ui_knowledge.py --run <folder run>).'); }
 }
 log(`\n================ ${out.error ? 'RUN TIDAK SELESAI — ' : ''}${verdict} | ${passed}/${total} passed (${lowN} LOW), ${failedN} failed, ${partialN} partial, ${skipped} skip ================`);

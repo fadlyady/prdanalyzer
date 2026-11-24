@@ -33,7 +33,11 @@ const AUTOMATE_RESULT_DIR = fs.existsSync(path.join(PROJECT_ROOT, 'browser-execu
 const CDP_URL = process.env.CDP_URL || 'http://localhost:9222';
 
 // 1. Parse .env credentials & role mappings
+const { readQaEnv } = require(path.join(PROJECT_ROOT, 'scripts', 'lib', 'qa-env.cjs'));
 function parseEnv() {
+  return readQaEnv(PROJECT_ROOT);
+}
+function parseEnvLegacy() {
   if (!fs.existsSync(ENV_PATH)) return {};
   const content = fs.readFileSync(ENV_PATH, 'utf-8');
   const env = {};

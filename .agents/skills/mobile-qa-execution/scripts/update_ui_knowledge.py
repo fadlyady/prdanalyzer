@@ -2,10 +2,11 @@
 """
 UI Knowledge Base per aplikasi (mobile-qa-execution).
 
-Struktur (1 folder = 1 package, tidak pernah dicampur):
-  doc-analyzer/strukturmenu/mobile-apps/knowledge/<package>/ui-knowledge.json   <- SSOT mesin
-  doc-analyzer/strukturmenu/mobile-apps/knowledge/<package>/ui-knowledge.md     <- tampilan manusia (di-generate)
-  doc-analyzer/strukturmenu/mobile-apps/knowledge/_system/<package>/...          <- UI komponen OS (picker Files, kamera, dialog izin)
+Struktur (1 folder = 1 package, tidak pernah dicampur), di dalam profil aplikasi aktif (lokal, tidak di-commit):
+  profiles/<QA_ACTIVE_PROFILE>/knowledge/mobile/<package>/ui-knowledge.json   <- SSOT mesin
+  profiles/<QA_ACTIVE_PROFILE>/knowledge/mobile/<package>/ui-knowledge.md     <- tampilan manusia (di-generate)
+  profiles/<QA_ACTIVE_PROFILE>/knowledge/mobile/_system/<package>/...          <- UI komponen OS (picker Files, kamera, dialog izin)
+  Tanpa QA_ACTIVE_PROFILE -> lokasi lama doc-analyzer/strukturmenu/mobile-apps/knowledge/ (kompatibilitas).
 
 Sumber:
   --run   <folder run_*>   : run_meta.json (package & build) + *_inspect.json
@@ -25,7 +26,18 @@ import argparse, json, os, re, glob
 from datetime import datetime
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..', '..'))
-KB = os.path.join(ROOT, 'doc-analyzer', 'strukturmenu', 'mobile-apps', 'knowledge')
+def _active_profile():
+    alias = os.environ.get('QA_ACTIVE_PROFILE', '').strip()
+    envf = os.path.join(ROOT, '.env')
+    if not alias and os.path.exists(envf):
+        for line in open(envf, encoding='utf-8'):
+            if line.strip().startswith('QA_ACTIVE_PROFILE='):
+                alias = line.split('=', 1)[1].strip().strip('"\'')
+    return alias if re.match(r'^[A-Za-z0-9_-]+$', alias or '') else None
+
+ALIAS = _active_profile()
+KB = (os.path.join(ROOT, 'profiles', ALIAS, 'knowledge', 'mobile') if ALIAS
+      else os.path.join(ROOT, 'doc-analyzer', 'strukturmenu', 'mobile-apps', 'knowledge'))
 NOW = datetime.now().strftime('%Y-%m-%d %H:%M')
 DYN_ID = re.compile(r'_(\d+)$')
 TIME_LIKE = re.compile(r'^(\d{1,2}[.:]\d{2}|hari ini|kemarin|\d{1,2}/\d{1,2}/\d{4}.*)$', re.I)

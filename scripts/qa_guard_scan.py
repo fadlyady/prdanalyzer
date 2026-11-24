@@ -39,6 +39,8 @@ GENERIC = [
     ('literal-secret', re.compile(r'(?i)\b(password|passwd|pwd|secret|token|api_?key)\b\s*[:=]\s*["\'](?!your[-_]|xxx|\*{3}|<|\$\{|example)[^"\'\s]{6,}["\']')),
 ]
 EMAIL = re.compile(r'\b[A-Za-z0-9._%+-]+@([A-Za-z0-9-]+\.)+[A-Za-z]{2,}\b')
+NON_SECRET_KEYS = {'QA_ACTIVE_PROFILE', 'QA_DATA_TAG_PREFIX', 'QA_DEFAULT_MOBILE_ROLE', 'QA_MUTATION_MODE', 'QA_REQUIRE_DATA_TAG',
+                   'QA_TAG_CONTEXT_WINDOW', 'QA_FINANCIAL_SANDBOX', 'QA_ALLOW_ANCHORED_COORDINATE_MUTATION', 'E2E_ENV', 'MOBILE_QUIET_NOTIFICATIONS'}
 PLACEHOLDER = re.compile(r'(?i)^(x+|\*+|your[-_].*|example.*|changeme|placeholder|true|false|safe|full|full_external|off|staging|delete,update|\d{1,5}|https?://(staging\.)?example\.com.*)$')
 
 def read_env_values():
@@ -54,7 +56,10 @@ def read_env_values():
             line = line.strip()
             if not line or line.startswith('#') or '=' not in line:
                 continue
-            v = line.split('=', 1)[1].strip().strip('"\'')
+            k, v = line.split('=', 1)
+            k, v = k.strip(), v.strip().strip('"\'')
+            if k in NON_SECRET_KEYS or k.endswith('_PORT'):
+                continue
             if len(v) >= 6 and not PLACEHOLDER.match(v):
                 vals.add(v)
     return vals

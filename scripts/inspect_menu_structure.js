@@ -23,7 +23,9 @@ const { spawn } = require('child_process');
 const PROJECT_ROOT = path.resolve(__dirname, '..');
 const ENV_PATH = path.join(PROJECT_ROOT, '.env');
 const docAnalyzerStrukturDir = path.join(PROJECT_ROOT, 'doc-analyzer', 'strukturmenu');
-const STRUKTUR_MENU_DIR = fs.existsSync(docAnalyzerStrukturDir)
+// Pondasi P1: knowledge web disimpan di profil aplikasi aktif (lokal); tanpa profil -> lokasi lama.
+const ACTIVE_PROFILE = require(path.join(PROJECT_ROOT, 'scripts', 'lib', 'qa-env.cjs')).activeProfile(PROJECT_ROOT);
+const STRUKTUR_MENU_DIR = ACTIVE_PROFILE.alias ? path.join(ACTIVE_PROFILE.profileDir, 'knowledge', 'web') : fs.existsSync(docAnalyzerStrukturDir)
   ? docAnalyzerStrukturDir
   : (fs.existsSync(path.join(PROJECT_ROOT, 'strukturmenu'))
       ? path.join(PROJECT_ROOT, 'strukturmenu')
@@ -33,15 +35,7 @@ const CDP_URL = process.env.CDP_URL || `http://localhost:${CDP_PORT}`;
 
 // 1. Parse .env and find all owner credentials
 function getOwnerCredentials() {
-  if (!fs.existsSync(ENV_PATH)) return { owners: {}, rawEnv: {} };
-  const content = fs.readFileSync(ENV_PATH, 'utf-8');
-  const rawEnv = {};
-  content.split('\n').forEach(line => {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith('#')) return;
-    const [k, ...v] = trimmed.split('=');
-    if (k && v.length) rawEnv[k.trim()] = v.join('=').trim().replace(/^["']|["']$/g, '');
-  });
+  const rawEnv = require(path.join(PROJECT_ROOT, 'scripts', 'lib', 'qa-env.cjs')).readQaEnv(PROJECT_ROOT);
 
   const owners = {};
   for (const [key, val] of Object.entries(rawEnv)) {
@@ -854,7 +848,7 @@ async function main() {
     return idx !== -1 && args[idx + 1] ? args[idx + 1] : null;
   };
 
-  const appName = getArg('--app') || 'chatreborn';
+  const appName = getArg('--app') || ACTIVE_PROFILE.alias || 'app';
   const specifiedOwnerKey = getArg('--owner-key');
   const targetUrl = getArg('--url');
   const maxPages = parseInt(getArg('--max-pages') || '35', 10);
@@ -1221,7 +1215,7 @@ async function main() {
     appName,
     baseUrl,
     latestTimestamp: timestamp,
-    latestRunDir: currentRunDir,
+    latestRunDir: path.relative(PROJECT_ROOT, currentRunDir),
     updatedAt: now.toISOString()
   };
   fs.writeFileSync(path.join(liveAppDir, 'latest_run.json'), JSON.stringify(runMetadata, null, 2), 'utf-8');
@@ -1286,8 +1280,8 @@ function resolveLatestLiveAnalysis(targetAppOrUrl) {
   if (fs.existsSync(metaPath)) {
     try {
       const meta = JSON.parse(fs.readFileSync(metaPath, 'utf-8'));
-      if (meta && meta.latestRunDir && fs.existsSync(meta.latestRunDir)) {
-        return meta;
+      if (meta && meta.latestRunDir && fs.existsSync(path.resolve(PROJECT_ROOT, meta.latestRunDir))) {
+        return { ...meta, latestRunDir: path.resolve(PROJECT_ROOT, meta.latestRunDir) };
       }
     } catch (e) {}
   }
