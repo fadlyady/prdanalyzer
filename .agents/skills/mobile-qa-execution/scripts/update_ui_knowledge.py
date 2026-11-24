@@ -249,6 +249,8 @@ def main():
         base = os.path.join(ROOT, 'mobile-execution')
         items = [(os.path.getmtime(p), 'probe', p) for p in glob.glob(os.path.join(base, 'probe-result', 'probe_*'))]
         items += [(os.path.getmtime(p), 'run', p) for p in glob.glob(os.path.join(base, 'automate-result', 'run_*')) if os.path.isdir(p)]
+        if ALIAS:  # run baru tersimpan di work/<ALIAS>/<fitur>/runs/
+            items += [(os.path.getmtime(p), 'run', p) for p in glob.glob(os.path.join(ROOT, 'work', ALIAS, '*', 'runs', 'run_*')) if os.path.isdir(p)]
         for _, t, p in sorted(items): (ingest_probe if t == 'probe' else ingest_run)(p, a.package)
     if a.rebuild:
         for sd in sorted(glob.glob(os.path.join(KB, '*', 'seed.json')) + glob.glob(os.path.join(KB, '_system', '*', 'seed.json'))): apply_seed(sd, a.package)

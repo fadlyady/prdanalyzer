@@ -18,6 +18,7 @@ import { MutationGuard, BuildGuard, CredentialVault } from './guards.js';
 import { Device, listDevices, apkInfo, ensureAppium, appiumUp, sleep } from './device.js';
 import { MobileSession } from './session.js';
 import { screenType } from './ui-tree.js';
+import { createRequire } from 'node:module';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export const ROOT = process.env.QA_WORKSPACE_ROOT || path.resolve(__dirname, '../../');
@@ -26,6 +27,7 @@ const DIRS = {
   result: path.join(ROOT, 'mobile-execution', 'automate-result'),
   support: path.join(ROOT, 'mobile-execution', 'automate-support'),
 };
+const QA = createRequire(import.meta.url)(path.join(ROOT, 'scripts', 'lib', 'qa-env.cjs'));
 const vault = new CredentialVault(ROOT);
 const mutationGuard = new MutationGuard(vault.readRawEnv());
 const S = { device: null, session: null, appium: null, run: null, app: null };
@@ -126,7 +128,10 @@ H.qa_init_app = async (a) => {
     throw e;
   }
   const ts = stamp(); const feature = (a.featureName || 'mobile').replace(/[^\w-]+/g, '_').slice(0, 40);
-  const dir = path.join(DIRS.result, `run_${feature}_${ts}`); fs.mkdirSync(dir, { recursive: true });
+  // Pondasi: fitur terdaftar di work/<ALIAS>/<fitur>/ -> evidence ke runs/ fitur itu; selain itu folder lama.
+  const loc = QA.resolveRunLocation(ROOT, a.featureName || feature, DIRS.result);
+  const dir = path.join(loc.runsDir, `run_${feature}_${ts}`); fs.mkdirSync(dir, { recursive: true });
+  QA.registerRun(ROOT, loc, { run_id: path.basename(dir), path: dir, executor: 'mobile-qa-guard', started_at: new Date().toISOString(), status: 'started' });
   Object.assign(S, { device: dev, session: sess, run: { dir, feature, ts }, app });
   mutationGuard.reload(vault.readRawEnv()); mutationGuard.setLedgerFile(path.join(dir, 'mutation_ledger.jsonl'));
   if (mutationGuard.mode === 'safe' && mutationGuard.defaultMode) mutationGuard.setMode(mutationGuard.defaultMode, { actor: '.env QA_MUTATION_MODE' });

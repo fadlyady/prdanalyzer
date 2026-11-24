@@ -23,7 +23,7 @@ ROOT = subprocess.run(['git', 'rev-parse', '--show-toplevel'], capture_output=Tr
 
 FORBIDDEN_PATHS = [
     r'(^|/)\.env$', r'(^|/)\.env\.(?!example$|docker\.example$)[^/]+$', r'(^|/)\.secrets/', r'(^|/)\.backup/',
-    r'^profiles/(?!_template/)[^/]+/', r'^work/(?!\.gitkeep$)',
+    r'^profiles/(?!_template/)[^/]+/', r'^work/(?!\.gitkeep$|README\.md$)',
     r'(^|/)automate-result/(?!\.gitkeep$)', r'(^|/)probe-result/(?!\.gitkeep$)', r'(^|/)build-apk/(?!\.gitkeep$)',
     r'(^|/)result-testcase/(?!\.gitkeep$)', r'(^|/)adhoc-document/(?!\.gitkeep$)', r'(^|/)otherTasks/(?!\.gitkeep$)',
     r'(^|/)strukturmenu/.*\.(png|jpe?g|json|md|xml)$', r'(^|/)Testcase-support/.*\.(xlsx|docx|pdf)$',

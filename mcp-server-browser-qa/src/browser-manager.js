@@ -9,6 +9,7 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import { spawn } from 'child_process';
+import { createRequire } from 'module';
 
 export class BrowserManager {
   constructor(options = {}) {
@@ -191,11 +192,13 @@ export class BrowserManager {
     }
     this.evidenceFeature = runFeatureName || 'test';
     const timestamp = new Date().toISOString().replace(/[-:]/g, '').replace('T', '_').split('.')[0];
-    const targetBase = path.join(projectRoot, 'browser-execution', 'automate-result');
+    const QA = createRequire(import.meta.url)(path.join(projectRoot, 'scripts', 'lib', 'qa-env.cjs'));
+    const loc = QA.resolveRunLocation(projectRoot, runFeatureName, path.join(projectRoot, 'browser-execution', 'automate-result'));
     const folderName = `run_${runFeatureName || 'test'}_${timestamp}`;
-    this.evidenceDir = path.join(targetBase, folderName);
+    this.evidenceDir = path.join(loc.runsDir, folderName);
     if (!fs.existsSync(this.evidenceDir)) {
       fs.mkdirSync(this.evidenceDir, { recursive: true });
+      QA.registerRun(projectRoot, loc, { run_id: folderName, path: this.evidenceDir, executor: 'browser-qa-guard', started_at: new Date().toISOString(), status: 'started' });
     }
     return this.evidenceDir;
   }

@@ -27,13 +27,19 @@
  */
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
+import { createRequire } from 'node:module';
 import fs from 'node:fs'; import path from 'node:path'; import { fileURLToPath } from 'node:url'; import { execFileSync } from 'node:child_process';
 
 const here = path.dirname(fileURLToPath(import.meta.url)); const ROOT = path.resolve(here, '../..');
 const planPath = process.argv[2]; if (!planPath) { console.log('Usage: node runner/run_plan.mjs <plan.json>'); process.exit(1); }
 const plan = JSON.parse(fs.readFileSync(path.resolve(process.cwd(), planPath), 'utf8'));
+// Pondasi: plan di work/<ALIAS>/<fitur>/plans/ -> semua evidence & laporan ke fitur itu (MCP ikut lewat QA_WORK_FEATURE).
+const QA = createRequire(import.meta.url)(path.join(path.dirname(fileURLToPath(import.meta.url)), '../..', 'scripts', 'lib', 'qa-env.cjs'));
+const PLAN_ABS = path.resolve(process.cwd(), planPath);
+const PLAN_FEATURE = QA.featureFromPath(path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..'), PLAN_ABS);
+if (PLAN_FEATURE && !process.env.QA_WORK_FEATURE) process.env.QA_WORK_FEATURE = PLAN_FEATURE;
 const client = new Client({ name: 'mobile-plan-runner', version: '1.0.0' });
-await client.connect(new StdioClientTransport({ command: 'node', args: [path.join(here, '../src/index.js')] }));
+await client.connect(new StdioClientTransport({ command: 'node', args: [path.join(here, '../src/index.js')], env: { ...process.env } }));
 const call = async (name, args = {}) => { const r = await client.callTool({ name, arguments: args }); return JSON.parse(r.content[0].text); };
 const cliArg = (n) => { const i = process.argv.indexOf(`--${n}`); return i > 0 ? process.argv[i + 1] : undefined; };
 const vars = { TAG: cliArg('tag') || new Date().toTimeString().slice(0, 5).replace(':', '') }; const sub = v => typeof v === 'string' ? v.replace(/\$\{(\w+)\}/g, (_, k) => vars[k] ?? '') : v;
@@ -248,11 +254,13 @@ const report = {
   exploratory_scenarios: out.charters.map(c => ({ charter: c.title, action: c.steps.filter(s => s.desc).map(s => s.desc).join(' > ').slice(0, 250), observed: c.notes.join(' | ') || c.steps.map(s => s.detail).join(' | ').slice(0, 300), verdict: c.status })),
   evidence_files: [...out.testcases, ...out.charters].flatMap(t => (t.evidence || []).map(f => ({ filename: path.basename(f), scenario: t.id, timestamp: '-' }))),
 };
-const dir = runDir || (() => { const d = path.join(ROOT, 'mobile-execution', 'automate-result', `run_${plan.feature}_INCOMPLETE_${Date.now()}`); fs.mkdirSync(d, { recursive: true }); return d; })();
+const LOC = QA.resolveRunLocation(ROOT, plan.feature, path.join(ROOT, 'mobile-execution', 'automate-result'), PLAN_ABS);
+const dir = runDir || (() => { const d = path.join(LOC.runsDir, `run_${plan.feature}_INCOMPLETE_${Date.now()}`); fs.mkdirSync(d, { recursive: true }); return d; })();
 fs.writeFileSync(path.join(dir, 'run_results.json'), JSON.stringify(out, null, 2));
 fs.writeFileSync(path.join(dir, 'report_data.json'), JSON.stringify(report, null, 2));
 const ts = path.basename(dir).match(/\d{8}_\d{6}$/)?.[0] || Date.now();
-const docx = path.join(ROOT, 'mobile-execution', 'automate-result', `Report_${plan.feature}_${ts}.docx`);
+fs.mkdirSync(LOC.reportsDir, { recursive: true });
+const docx = path.join(LOC.reportsDir, `Report_${plan.feature}_${ts}.docx`);
 try { execFileSync('python3', [path.join(ROOT, '.agents/skills/browser-qa-execution/scripts/generate_docx_report.py'), path.join(dir, 'report_data.json'), docx], { stdio: 'ignore' }); log(`\nLaporan: ${path.relative(ROOT, docx)}`); }
 catch { log('\nDOCX belum dibuat (python-docx tidak tersedia?). report_data.json tersimpan; laporan bisa dibuat ulang.'); }
 // ---- perbarui UI knowledge per app (hanya package app yang diuji; picker OS ke _system/) ----

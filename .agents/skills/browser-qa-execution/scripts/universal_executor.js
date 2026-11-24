@@ -58,14 +58,18 @@ function loadEnvLegacy() {
 }
 
 // 2. Create timestamped run directory
-function createRunDir(featureName = 'test') {
+const QA_ENV = require(path.join(PROJECT_ROOT, 'scripts', 'lib', 'qa-env.cjs'));
+let RUN_LOC = null; // lokasi run & laporan (work/<ALIAS>/<fitur>/ bila terdaftar)
+function createRunDir(featureName = 'test', sourceFile = null) {
+  RUN_LOC = QA_ENV.resolveRunLocation(PROJECT_ROOT, featureName, AUTOMATE_RESULT_DIR, sourceFile);
   const now = new Date();
   const pad = n => String(n).padStart(2, '0');
   const timestamp = `${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
   const cleanFeature = featureName.toLowerCase().replace(/[^a-z0-9_-]/g, '_').slice(0, 30);
   const runId = `run_${cleanFeature}_${timestamp}`;
-  const runDir = path.join(AUTOMATE_RESULT_DIR, runId);
+  const runDir = path.join(RUN_LOC.runsDir, runId);
   fs.mkdirSync(runDir, { recursive: true });
+  QA_ENV.registerRun(PROJECT_ROOT, RUN_LOC, { run_id: runId, path: runDir, executor: 'universal_executor', started_at: new Date().toISOString(), status: 'started' });
   return { runId, runDir, timestamp };
 }
 
@@ -237,7 +241,7 @@ async function executeUniversalSuite(testcaseMdPath) {
   }
 
   const baseFileName = path.basename(testcaseMdPath, '.md');
-  const { runId, runDir, timestamp } = createRunDir(baseFileName);
+  const { runId, runDir, timestamp } = createRunDir(QA_ENV.featureFromPath(PROJECT_ROOT, testcaseMdPath) || baseFileName, testcaseMdPath);
 
   console.log(`\n\x1b[32m=== MEMULAI UNIVERSAL QA TEST EXECUTION ===\x1b[0m`);
   console.log(`Source File : ${testcaseMdPath}`);
@@ -849,7 +853,8 @@ async function executeUniversalSuite(testcaseMdPath) {
     }, null, 2));
   }
 
-  const docxOutputPath = path.join(AUTOMATE_RESULT_DIR, `Report_${baseFileName}_${timestamp}.docx`);
+  const reportDir = (RUN_LOC && RUN_LOC.reportsDir) || AUTOMATE_RESULT_DIR; fs.mkdirSync(reportDir, { recursive: true });
+  const docxOutputPath = path.join(reportDir, `Report_${RUN_LOC && RUN_LOC.feature || baseFileName}_${timestamp}.docx`);
   const pythonScript = path.resolve(__dirname, 'generate_docx_report.py');
 
   try {
